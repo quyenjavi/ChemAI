@@ -21,10 +21,16 @@ export default function QuizPage() {
   const [answers, setAnswers] = useState<Record<string, 'A'|'B'|'C'|'D'>>({})
   const [attemptId, setAttemptId] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [initError, setInitError] = useState('')
   const router = useRouter()
 
   useEffect(() => {
     if (!lessonId) return
+    supabaseBrowser.auth.getUser().then(({ data }) => {
+      if (!data.user) {
+        router.push('/login')
+      }
+    })
     supabaseBrowser
       .from('questions')
       .select('id, content, choice_a, choice_b, choice_c, choice_d')
@@ -43,9 +49,19 @@ export default function QuizPage() {
     fetch('/api/attempts/create', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ lessonId })
-    }).then(r => r.json()).then(json => setAttemptId(json.attemptId))
-  }, [lessonId, desiredCount])
+      body: JSON.stringify({ lessonId }),
+      credentials: 'include',
+    })
+      .then(async r => {
+        if (!r.ok) {
+          const j = await r.json().catch(() => ({}))
+          throw new Error(j.error || 'Không thể khởi tạo bài làm. Vui lòng đăng nhập lại.')
+        }
+        return r.json()
+      })
+      .then(json => setAttemptId(json.attemptId))
+      .catch(err => setInitError(err.message || 'Lỗi khởi tạo bài'))
+  }, [lessonId, desiredCount, router])
 
   const canSubmit = useMemo(() => {
     return !submitting && attemptId && questions.length > 0
@@ -81,6 +97,7 @@ export default function QuizPage() {
       <div className="text-sm" style={{color:'var(--text-muted)'}}>
         Số câu: {questions.length}
       </div>
+      {initError ? <div className="text-sm text-red-600">{initError}</div> : null}
       <div className="space-y-6">
         {questions.map((q, idx) => (
           <Card key={q.id}>

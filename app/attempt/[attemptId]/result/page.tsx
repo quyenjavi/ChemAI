@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -19,6 +20,7 @@ export default function ResultPage() {
   const [feedback, setFeedback] = useState<Feedback | null>(null)
   const [loadingReport, setLoadingReport] = useState(true)
   const [seededThreadId, setSeededThreadId] = useState<string | null>(null)
+  const [chatKey, setChatKey] = useState(0)
 
   useEffect(() => {
     if (!attemptId) return
@@ -33,16 +35,24 @@ export default function ResultPage() {
       if (j.report?.feedback) {
         setFeedback(j.report.feedback)
         setLoadingReport(false)
-        // seed chat: reset previous and start new conversation with full feedback
-        const seedRes = await fetch('/api/chat/seed', {
+        // Create thread immediately for faster chat mounting
+        const tRes = await fetch('/api/chat/thread', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ attemptId })
-        })
-        if (seedRes.ok) {
-          const sj = await seedRes.json()
-          setSeededThreadId(sj.threadId || null)
-        }
+        }).catch(()=>null)
+        const tj = await tRes?.json().catch(()=>({})) as any
+        if (tj?.threadId) setSeededThreadId(tj.threadId)
+        // Seed in background; when done, bump key to refetch history
+        fetch('/api/chat/seed', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ attemptId })
+        }).then(r => r.ok ? r.json() : null)
+          .then(sj => {
+            if (sj?.threadId && !seededThreadId) setSeededThreadId(sj.threadId)
+            setChatKey(k => k + 1)
+          })
       } else {
         tries += 1
         if (tries * 2000 >= 20000) {
@@ -116,12 +126,15 @@ export default function ResultPage() {
         <CardHeader><CardTitle>Chat với Uyển Sensei</CardTitle></CardHeader>
         <CardContent>
         {seededThreadId ? (
-          <ChatBox attemptId={attemptId || ''} initialThreadId={seededThreadId} />
+          <ChatBox key={chatKey} attemptId={attemptId || ''} initialThreadId={seededThreadId} />
         ) : (
           <div className="text-sm" style={{color:'var(--text-muted)'}}>Đang khởi tạo hội thoại…</div>
         )}
         </CardContent>
       </Card>
+      <div className="pt-2 flex justify-center">
+        <Link href="/"><Button variant="outline">Trở về trang chủ</Button></Link>
+      </div>
     </div>
   )
 }

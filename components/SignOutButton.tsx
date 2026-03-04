@@ -7,7 +7,8 @@ export default function SignOutButton() {
   const router = useRouter()
   async function signOut() {
     await supabaseBrowser.auth.signOut()
-    router.push('/login')
+    router.replace('/login')
+    router.refresh()
   }
   return <Button size="sm" variant="outline" onClick={signOut}>Đăng xuất</Button>
 }

@@ -38,6 +38,17 @@ export default function LoginPage() {
       }
       return
     }
+    const session = data.session
+    if (session?.access_token && session?.refresh_token) {
+      await fetch('/api/auth/cookie', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          access_token: session.access_token,
+          refresh_token: session.refresh_token
+        })
+      }).catch(()=>{})
+    }
     await fetch('/api/profile/migrate', { method: 'POST' }).catch(()=>{})
     router.push('/dashboard')
   }

@@ -1,7 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
-import { supabaseBrowser } from '@/lib/supabase/client'
-import { useRouter } from 'next/navigation'
+import { useState } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -9,39 +7,9 @@ import { Poppins } from 'next/font/google'
 
 const poppins = Poppins({ subsets: ['latin'], weight: ['500','600','700'] })
 
-export default function LoginPage() {
+export default function LoginPreviewPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
-  const router = useRouter()
-
-  useEffect(() => {
-    supabaseBrowser.auth.getUser().then(({ data }) => {
-      if (data.user) {
-        router.replace('/')
-      }
-    })
-  }, [router])
-
-  async function onSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    setLoading(true)
-    setError('')
-    const { data, error } = await supabaseBrowser.auth.signInWithPassword({ email, password })
-    setLoading(false)
-    if (error) {
-      if (error.message?.toLowerCase().includes('confirm') || error.message?.toLowerCase().includes('not confirmed')) {
-        setError('Email chưa xác nhận. Vui lòng kiểm tra hộp thư và xác thực.')
-      } else {
-        setError(error.message)
-      }
-      return
-    }
-    await fetch('/api/profile/migrate', { method: 'POST' }).catch(()=>{})
-    router.push('/dashboard')
-  }
-
   return (
     <div className="min-h-[70vh] relative overflow-hidden">
       <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 items-center px-4">
@@ -59,13 +27,10 @@ export default function LoginPage() {
             <div className={`${poppins.className} text-[22px] font-semibold`} style={{color:'var(--text)'}}>Vào lớp thôi!</div>
             <div className="text-[14px]" style={{color:'var(--text-muted)'}}>Mỗi học sinh, một Uyển Sensei đồng hành!</div>
             </div>
-            <form className="space-y-4" onSubmit={onSubmit}>
+            <form className="space-y-4" onSubmit={(e)=>{e.preventDefault()}}>
               <Input placeholder="Email" type="email" value={email} onChange={e=>setEmail(e.target.value)} />
               <Input placeholder="Mật khẩu" type="password" value={password} onChange={e=>setPassword(e.target.value)} />
-              {error ? <div className="text-red-500 text-sm">{error}</div> : null}
-              <Button disabled={loading} className="w-full gradient-btn">
-                {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
-              </Button>
+              <Button className="w-full gradient-btn">Đăng nhập</Button>
             </form>
             <div className="text-sm mt-4" style={{color:'var(--text-muted)'}}>Chưa có tài khoản? <a href="/signup" className="underline">Đăng ký</a></div>
           </CardContent>
@@ -84,5 +49,3 @@ export default function LoginPage() {
     </div>
   )
 }
-
- 

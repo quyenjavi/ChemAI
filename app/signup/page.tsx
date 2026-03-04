@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { supabaseBrowser } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -11,14 +11,22 @@ export default function SignupPage() {
   const [password, setPassword] = useState('')
   const [password2, setPassword2] = useState('')
   const [fullName, setFullName] = useState('')
-  const [school, setSchool] = useState('')
+  const [school, setSchool] = useState('Trường THPT Phạm Phú Thứ')
   const [className, setClassName] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [cooldown, setCooldown] = useState(0)
   const router = useRouter()
+
+  useEffect(() => {
+    if (cooldown <= 0) return
+    const t = setInterval(() => setCooldown(s => (s > 0 ? s - 1 : 0)), 1000)
+    return () => clearInterval(t)
+  }, [cooldown])
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
+    if (cooldown > 0) return
     setLoading(true)
     setError('')
     if (password !== password2) {
@@ -26,23 +34,25 @@ export default function SignupPage() {
       setError('Mật khẩu nhập lại không khớp')
       return
     }
-    const { data, error } = await supabaseBrowser.auth.signUp({
-      email,
-      password,
-      options: { data: { full_name: fullName } }
-    })
-    setLoading(false)
-    if (error) {
-      setError(error.message)
-      return
-    }
-    // Lưu pending_signups để sau khi verify sẽ tạo hồ sơ
-    await fetch('/api/signup/pending', {
+    const r = await fetch('/api/auth/instant-signup', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, full_name: fullName, school, class_name: className })
-    }).catch(()=>{})
-    router.push('/verify')
+      body: JSON.stringify({ email, password, full_name: fullName, school, class_name: className })
+    })
+    if (!r.ok) {
+      const j = await r.json().catch(()=>({}))
+      setLoading(false)
+      setError(j.error || 'Đăng ký thất bại')
+      return
+    }
+    const { error: signInErr } = await supabaseBrowser.auth.signInWithPassword({ email, password })
+    setLoading(false)
+    if (signInErr) {
+      setError(signInErr.message)
+      return
+    }
+    await fetch('/api/profile/migrate', { method: 'POST' }).catch(()=>{})
+    router.push('/profile')
   }
 
   return (
@@ -59,8 +69,8 @@ export default function SignupPage() {
           <Input placeholder="Trường" value={school} onChange={e=>setSchool(e.target.value)} />
           <Input placeholder="Lớp" value={className} onChange={e=>setClassName(e.target.value)} />
           {error ? <div className="text-red-600 text-sm">{error}</div> : null}
-          <Button disabled={loading} className="w-full">
-            {loading ? 'Đang đăng ký...' : 'Đăng ký'}
+          <Button disabled={loading || cooldown>0} className="w-full">
+            {loading ? 'Đang đăng ký...' : (cooldown>0 ? `Thử lại sau ${cooldown}s` : 'Đăng ký')}
           </Button>
         </form>
       </CardContent>

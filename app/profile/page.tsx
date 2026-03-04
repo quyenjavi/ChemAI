@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 
 export default function ProfilePage() {
   const [fullName, setFullName] = useState('')
-  const [school, setSchool] = useState('')
+  const [school, setSchool] = useState('Trường THPT Phạm Phú Thứ')
   const [className, setClassName] = useState('')
   const [academicYear, setAcademicYear] = useState('')
   const [birthDate, setBirthDate] = useState('')

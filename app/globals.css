@@ -3,13 +3,18 @@
 @tailwind utilities;
 
 :root{
-  --bg: #0B1224;
-  --card: #0F1A33;
-  --text: #E9ECF5;
-  --text-muted: #A8B4CC;
-  --gold: #E8D7A4;
-  --accent: #7EA7FF;
-  --divider: rgba(255,255,255,.08);
+  --bg: #0F172A;
+  --bg-2: #020617;
+  --card: #1E293B;
+  --text: #F1F5F9;
+  --text-secondary: #94A3B8;
+  --text-muted: #64748B;
+  --divider: #334155;
+  --brand: #2563EB;
+  --brand-hover: #1D4ED8;
+  --success: #22C55E;
+  --danger: #EF4444;
+  --warning: #F59E0B;
   --shadow: 0 10px 30px rgba(0,0,0,.35);
 }
 
@@ -17,8 +22,9 @@ html, body, #__next { height: 100%; }
 
 body{
   font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+  font-size: 15px;
   color: var(--text);
-  background: radial-gradient(1200px 800px at 70% -10%, #1A2444 0%, var(--bg) 60%) fixed;
+  background: var(--bg);
 }
 
 /* Soulmap-like Chat Styles */

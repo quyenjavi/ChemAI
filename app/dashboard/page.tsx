@@ -52,9 +52,9 @@ export default function Dashboard() {
   }, [activeGradeId])
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-xl font-semibold">Chọn bài luyện tập</h1>
-      <div className="flex gap-2 overflow-x-auto" role="tablist" aria-label="Chọn lớp">
+    <div className="space-y-10">
+      <h1 className="text-[32px] font-semibold">Chọn bài luyện tập</h1>
+      <div className="flex gap-3 overflow-x-auto" role="tablist" aria-label="Chọn lớp">
         {grades.map(g => (
           <Button
             key={g.id}
@@ -70,15 +70,15 @@ export default function Dashboard() {
       <div className="flex items-center">
         <Input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Tìm bài theo tiêu đề..." />
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {filtered.map(ls => (
-          <Card key={ls.id} className="hover:shadow-md transition">
+          <Card key={ls.id} className="hover:shadow-[0_10px_30px_rgba(0,0,0,0.45)] transition">
             <CardHeader>
               <CardTitle>{ls.title}</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-slate-600 line-clamp-2">{ls.description}</p>
-              <div className="text-xs text-slate-500 mt-2">{counts[ls.id] ?? 0} câu hỏi</div>
+              <p className="text-[15px]" style={{color:'var(--text-secondary)'}}>{ls.description}</p>
+              <div className="text-[14px] mt-2" style={{color:'var(--text-muted)'}}>{counts[ls.id] ?? 0} câu hỏi</div>
               <div className="mt-2 flex items-center gap-2">
                 {(() => {
                   const maxBank = counts[ls.id] ?? 0
@@ -87,7 +87,7 @@ export default function Dashboard() {
                   const val = questionCounts[ls.id] ?? Math.min(10, Math.max(1, max))
                   return (
                     <>
-                      <label className="text-xs" style={{color:'var(--text-muted)'}}>Số câu:</label>
+                      <label className="text-[14px]" style={{color:'var(--text-muted)'}}>Số câu:</label>
                       <input
                         type="number"
                         min={1}
@@ -98,7 +98,7 @@ export default function Dashboard() {
                           const n = Math.max(1, Math.min(Number(e.target.value || 1), max || 1))
                           setQuestionCounts(m => ({ ...m, [ls.id]: n }))
                         }}
-                        className="w-20 rounded border border-[var(--divider)] bg-white text-slate-900 px-2 py-1"
+                        className="w-24 h-10 rounded-md border border-[var(--divider)] bg-[var(--bg)] text-[var(--text)] px-3"
                         aria-label="Chọn số câu hỏi"
                         title={`Chọn số câu (tối đa ${max})`}
                       />
@@ -108,7 +108,7 @@ export default function Dashboard() {
               </div>
               <div className="mt-3">
                 <a href={`/lesson/${ls.id}/quiz?n=${questionCounts[ls.id] ?? Math.min(10, Math.max(1, Math.min(30, counts[ls.id] ?? 0)))}`}>
-                  <Button size="sm" disabled={(counts[ls.id] ?? 0) === 0}>Làm bài</Button>
+                  <Button size="md" disabled={(counts[ls.id] ?? 0) === 0}>Làm bài</Button>
                 </a>
               </div>
             </CardContent>

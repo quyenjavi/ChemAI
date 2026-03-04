@@ -7,17 +7,17 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 }
 
 const variantClass: Record<NonNullable<ButtonProps['variant']>, string> = {
-  default: 'bg-brand text-white hover:brightness-95',
-  outline: 'border border-slate-300 hover:bg-slate-50',
-  ghost: 'hover:bg-slate-100',
-  secondary: 'bg-slate-900 text-white hover:brightness-95',
+  default: 'bg-brand text-white hover:bg-brand-dark',
+  outline: 'border border-[var(--divider)] text-[var(--text)] hover:bg-[rgba(255,255,255,0.04)]',
+  ghost: 'hover:bg-[rgba(255,255,255,0.06)]',
+  secondary: 'bg-[var(--card)] text-[var(--text)] border border-[var(--divider)] hover:bg-[rgba(255,255,255,0.06)]',
   destructive: 'bg-red-600 text-white hover:brightness-95'
 }
 
 const sizeClass: Record<NonNullable<ButtonProps['size']>, string> = {
-  sm: 'h-9 px-3 text-sm',
-  md: 'h-10 px-4',
-  lg: 'h-11 px-5 text-base'
+  sm: 'h-9 px-4 text-[14px]',
+  md: 'h-10 px-5 text-[15px]',
+  lg: 'h-11 px-6 text-[16px]'
 }
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
@@ -26,7 +26,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       <button
         ref={ref}
         className={cn(
-          'inline-flex items-center justify-center gap-2 rounded-md font-medium transition-colors disabled:opacity-50',
+          'inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-colors disabled:opacity-50',
           variantClass[variant],
           sizeClass[size],
           className

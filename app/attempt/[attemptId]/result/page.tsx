@@ -68,11 +68,11 @@ export default function ResultPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-semibold">Kết quả</h1>
+      <h1 className="text-[32px] font-semibold">Kết quả</h1>
       {attempt ? (
         <Card>
           <CardContent className="py-4">
-            <div className="text-lg font-medium">Điểm: {attempt.correct}/{attempt.total} ({attempt.score_percent}%)</div>
+            <div className="text-2xl font-semibold">Điểm: {attempt.correct}/{attempt.total} ({attempt.score_percent}%)</div>
           </CardContent>
         </Card>
       ) : null}
@@ -83,12 +83,12 @@ export default function ResultPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Card>
             <CardHeader><CardTitle>Nhận xét chung</CardTitle></CardHeader>
-            <CardContent><p className="text-slate-700 whitespace-pre-line">{feedback.praise}</p></CardContent>
+            <CardContent><p className="whitespace-pre-line" style={{color:'var(--text)'}}>{feedback.praise}</p></CardContent>
           </Card>
           <Card>
             <CardHeader><CardTitle>Điểm mạnh</CardTitle></CardHeader>
             <CardContent>
-              <ul className="list-disc pl-5 text-slate-700">
+              <ul className="list-disc pl-5" style={{color:'var(--text)'}}>
                 {feedback.strengths.map((s,i)=><li key={i}>{s}</li>)}
               </ul>
             </CardContent>
@@ -98,11 +98,15 @@ export default function ResultPage() {
             <CardContent>
               <ul className="space-y-3">
                 {feedback.mistakes.map((m,i)=>(
-                  <li key={i} className="border rounded p-3">
+                  <li key={i} className="border rounded p-3" style={{borderColor:'var(--divider)'}}>
                     <div className="text-sm font-medium">{m.brief_question}</div>
-                    <div className="text-xs text-slate-600 mt-1">Bạn chọn: {m.chosen} — Đúng: {m.correct}</div>
+                    <div className="text-xs mt-1">
+                      <span style={{color:'#EF4444'}}>Bạn chọn: {m.chosen}</span>
+                      <span style={{color:'var(--text-muted)'}}> — </span>
+                      <span style={{color:'#22C55E'}}>Đúng: {m.correct}</span>
+                    </div>
                     {m.explain ? <div className="text-sm mt-1">{m.explain}</div> : null}
-                    {m.tip ? <div className="text-sm mt-1 italic text-slate-700">Mẹo: {m.tip}</div> : null}
+                    {m.tip ? <div className="text-sm mt-1 italic" style={{color:'var(--warning)'}}>Mẹo: {m.tip}</div> : null}
                   </li>
                 ))}
               </ul>
@@ -111,7 +115,7 @@ export default function ResultPage() {
           <Card className="md:col-span-2">
             <CardHeader><CardTitle>Kế hoạch ôn tập</CardTitle></CardHeader>
             <CardContent>
-              <ul className="list-disc pl-5 text-slate-700">
+              <ul className="list-disc pl-5" style={{color:'var(--text)'}}>
                 {feedback.plan.map((p,i)=><li key={i}>{p}</li>)}
               </ul>
             </CardContent>

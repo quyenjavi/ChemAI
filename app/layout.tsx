@@ -1,9 +1,17 @@
 import './globals.css'
 import type { ReactNode } from 'react'
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import { cookies } from 'next/headers'
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
 import SignOutButton from '@/components/SignOutButton'
+
+export const metadata: Metadata = {
+  icons: [
+    { rel: 'icon', url: '/favicon', type: 'image/png' },
+    { rel: 'shortcut icon', url: '/favicon', type: 'image/png' }
+  ]
+}
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
   const cookieStore = cookies()

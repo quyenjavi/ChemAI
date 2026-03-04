@@ -9,8 +9,11 @@ export async function POST(request: Request) {
     const full_name = String(body.full_name || '')
     const school = String(body.school || '')
     const class_name = String(body.class_name || '')
-    if (!email || !password) {
-      return NextResponse.json({ error: 'Email và mật khẩu là bắt buộc' }, { status: 400 })
+    const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+    if (!emailOk) return NextResponse.json({ error: 'Email không hợp lệ' }, { status: 400 })
+    if (!password) return NextResponse.json({ error: 'Mật khẩu là bắt buộc' }, { status: 400 })
+    if (!full_name || !school || !class_name) {
+      return NextResponse.json({ error: 'Vui lòng nhập đầy đủ Họ tên, Trường, Lớp' }, { status: 400 })
     }
     const svc = serviceRoleClient()
     const { data, error } = await svc.auth.admin.createUser({

@@ -17,7 +17,8 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
             <Link href="/" className="font-semibold text-lg" style={{color:'var(--gold)'}}>
               ChemAI Uyển Sensei
             </Link>
-            <div>
+            <div className="flex items-center gap-2">
+              {session ? <Link href="/profile" className="text-sm underline" style={{color:'var(--gold)'}}>Hồ sơ</Link> : null}
               {session ? <SignOutButton /> : null}
             </div>
           </div>

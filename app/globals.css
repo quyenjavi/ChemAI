@@ -53,3 +53,21 @@ body{
 .chat-input-row { display:flex; gap:8px; align-items:center; margin-top: 10px; background: rgba(255,255,255,0.06); border: 1px solid rgba(198,160,255,0.25); border-radius: 16px; padding: 8px; }
 .chat-input-row .input { flex:1; border-radius: 12px; background: rgba(255,255,255,0.08); color: var(--text); border: 1px solid rgba(255,255,255,0.18); padding: 10px 12px; outline: none; }
 .button.magic { appearance:none; border:none; background: linear-gradient(90deg, #6C5CE7 0%, #C6A0FF 50%, #FFDCA8 100%); color:#0B1224; font-weight:600; border-radius: 12px; padding: 10px 14px; box-shadow: 0 0 18px rgba(198,160,255,0.45); cursor: pointer; }
+
+/* Transparent select for dark theme */
+.select-clean {
+  appearance: none;
+  -webkit-appearance: none;
+  background-color: transparent !important;
+  color: var(--text-muted) !important;
+  -webkit-text-fill-color: var(--text-muted) !important;
+}
+.select-clean:disabled {
+  background-color: transparent !important;
+  color: var(--text-secondary) !important;
+  opacity: 0.6;
+}
+.select-clean option {
+  color: #000;
+  background-color: #fff;
+}

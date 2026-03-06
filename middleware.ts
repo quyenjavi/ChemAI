@@ -33,7 +33,7 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  if (session && (pathname === '/login' || pathname === '/signup' || pathname === '/verify')) {
+  if (session && (pathname === '/login' || pathname === '/verify')) {
     const url = req.nextUrl.clone()
     url.pathname = '/'
     return NextResponse.redirect(url)

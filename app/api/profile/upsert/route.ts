@@ -20,7 +20,6 @@ export async function POST(request: Request) {
       class_id: body.class_id ?? null,
       academic_year_id: body.academic_year_id ?? null,
       school: body.school ?? '',
-      class_name: body.class_name ?? '',
       academic_year: body.academic_year ?? '',
       birth_date: body.birth_date ? new Date(body.birth_date) : null
     }

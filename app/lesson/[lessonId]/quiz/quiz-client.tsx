@@ -8,13 +8,15 @@ import { Button } from '@/components/ui/button'
 type Q = {
   id: string,
   content: string,
-  choice_a: string, choice_b: string, choice_c: string, choice_d: string
+  question_type: 'single_choice' | 'true_false' | 'short_answer',
+  order_index: number,
+  options: Array<{ key: string, text: string }>
 }
 
 export default function QuizClient({ lessonId, n }: { lessonId: string, n?: string }) {
   const desiredCount = Math.max(1, Math.min(30, Number(n || 0) || 0)) || null
   const [questions, setQuestions] = useState<Q[]>([])
-  const [answers, setAnswers] = useState<Record<string, 'A'|'B'|'C'|'D'>>({})
+  const [answers, setAnswers] = useState<Record<string, string>>({})
   const [attemptId, setAttemptId] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [initError, setInitError] = useState('')
@@ -27,16 +29,9 @@ export default function QuizClient({ lessonId, n }: { lessonId: string, n?: stri
         router.push('/login')
       }
     })
-    supabaseBrowser
-      .from('questions')
-      .select('id, content, choice_a, choice_b, choice_c, choice_d')
-      .eq('lesson_id', lessonId)
-      .then(({ data }) => {
-        const list = (data || []) as any as Q[]
-        for (let i = list.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1))
-          ;[list[i], list[j]] = [list[j], list[i]]
-        }
+    fetch(`/api/lessons/${lessonId}/questions`)
+      .then(r => r.ok ? r.json() : [])
+      .then((list: Q[]) => {
         const sliceN = desiredCount ? Math.min(desiredCount, list.length) : Math.min(20, list.length)
         setQuestions(list.slice(0, sliceN))
       })
@@ -66,10 +61,12 @@ export default function QuizClient({ lessonId, n }: { lessonId: string, n?: stri
     setSubmitting(true)
     const payload = {
       attemptId,
-      answers: questions.map(q => ({
-        questionId: q.id,
-        chosenOption: answers[q.id] || ''
-      }))
+      answers: questions.map(q => {
+        if (q.question_type === 'short_answer') {
+          return { questionId: q.id, answer_text: answers[q.id] || '' }
+        }
+        return { questionId: q.id, selected_answer: answers[q.id] || '' }
+      })
     }
     const res = await fetch('/api/attempts/submit', {
       method: 'POST',
@@ -99,20 +96,27 @@ export default function QuizClient({ lessonId, n }: { lessonId: string, n?: stri
               <CardTitle>{idx+1}. {q.content}</CardTitle>
             </CardHeader>
             <CardContent>
-            {(['A','B','C','D'] as const).map(opt => {
-              const text = opt === 'A' ? q.choice_a : opt === 'B' ? q.choice_b : opt === 'C' ? q.choice_c : q.choice_d
-              return (
-                <label key={opt} className="flex items-center gap-2 py-1">
+            {q.question_type === 'short_answer' ? (
+              <textarea
+                className="w-full rounded border border-[var(--divider)] bg-[var(--bg)] text-[var(--text)] p-2"
+                rows={4}
+                value={answers[q.id] || ''}
+                onChange={e => setAnswers(a => ({ ...a, [q.id]: e.target.value }))}
+                placeholder="Nhập câu trả lời của bạn..."
+              />
+            ) : (
+              q.options.map(opt => (
+                <label key={opt.key} className="flex items-center gap-2 py-1">
                   <input
                     type="radio"
                     name={`q-${q.id}`}
-                    checked={answers[q.id] === opt}
-                    onChange={() => setAnswers(a => ({ ...a, [q.id]: opt }))}
+                    checked={(answers[q.id] || '') === opt.key}
+                    onChange={() => setAnswers(a => ({ ...a, [q.id]: opt.key }))}
                   />
-                  <span>{opt}. {text}</span>
+                  <span>{opt.key}. {opt.text}</span>
                 </label>
-              )
-            })}
+              ))
+            )}
             </CardContent>
           </Card>
         ))}

@@ -19,63 +19,55 @@ export default function ResultPage() {
   const [attempt, setAttempt] = useState<AttemptInfo | null>(null)
   const [feedback, setFeedback] = useState<Feedback | null>(null)
   const [loadingReport, setLoadingReport] = useState(true)
-  const [seededThreadId, setSeededThreadId] = useState<string | null>(null)
-  const [chatKey, setChatKey] = useState(0)
+  // Chatbot tạm ngừng hoạt động
+  const [answers, setAnswers] = useState<Array<{ question_id: string, content: string, question_type: string, selected_answer: string | null, selected_text?: string | null, answer_text: string | null, correct_key: string | null, correct_text?: string | null, ai_score: number | null, ai_feedback: string | null }>>([])
+  const [finalCorrect, setFinalCorrect] = useState<number | null>(null)
+  const [finalTotal, setFinalTotal] = useState<number | null>(null)
+  const [finalAccuracy, setFinalAccuracy] = useState<number | null>(null)
+  const [mistakes, setMistakes] = useState<Array<{ question_id: string|null, brief_question: string, chosen_answer: string, correct_answer: string, explanation: string, tip: string }>>([])
 
   useEffect(() => {
     if (!attemptId) return
-    let mounted = true
-    let tries = 0
-    const load = async () => {
+    ;(async () => {
       const res = await fetch(`/api/attempts/${attemptId}/report`)
-      if (!res.ok) return
-      const j = await res.json()
-      if (!mounted) return
-      setAttempt(j.attempt)
-      if (j.report?.feedback) {
-        setFeedback(j.report.feedback)
-        setLoadingReport(false)
-        // Create thread immediately for faster chat mounting
-        const tRes = await fetch('/api/chat/thread', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ attemptId })
-        }).catch(()=>null)
-        const tj = await tRes?.json().catch(()=>({})) as any
-        if (tj?.threadId) setSeededThreadId(tj.threadId)
-        // Seed in background; when done, bump key to refetch history
-        fetch('/api/chat/seed', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ attemptId })
-        }).then(r => r.ok ? r.json() : null)
-          .then(sj => {
-            if (sj?.threadId && !seededThreadId) setSeededThreadId(sj.threadId)
-            setChatKey(k => k + 1)
-          })
-      } else {
-        tries += 1
-        if (tries * 2000 >= 20000) {
-          setLoadingReport(false)
-        } else {
-          setTimeout(load, 2000)
+      if (res.ok) {
+        const j = await res.json()
+        setAttempt(j.attempt)
+        if (j.report) {
+          const toNum = (v: any) => {
+            const n = typeof v === 'string' ? parseFloat(String(v).replace('%','').trim()) : Number(v)
+            return Number.isFinite(n) ? n : 0
+          }
+          if (j.report.final_correct != null) setFinalCorrect(toNum(j.report.final_correct))
+          if (j.report.final_total != null) setFinalTotal(toNum(j.report.final_total))
+          if (j.report.final_accuracy != null) setFinalAccuracy(toNum(j.report.final_accuracy))
+          if (j.report.feedback) {
+            setFeedback(j.report.feedback)
+          }
         }
       }
-    }
-    load()
-    return () => { mounted = false }
+      setLoadingReport(false)
+    })()
+    fetch(`/api/attempts/${attemptId}/answers`).then(r => r.ok ? r.json() : null).then(j => {
+      if (j?.answers) setAnswers(j.answers)
+    })
+    fetch(`/api/attempts/${attemptId}/mistakes`).then(r => r.ok ? r.json() : null).then(j => {
+      if (j?.mistakes) setMistakes(j.mistakes)
+    })
   }, [attemptId])
-
+ 
   return (
     <div className="space-y-6">
       <h1 className="text-[32px] font-semibold">Kết quả</h1>
-      {attempt ? (
+      {finalCorrect != null && finalTotal != null && finalAccuracy != null ? (
         <Card>
           <CardContent className="py-4">
-            <div className="text-2xl font-semibold">Điểm: {attempt.correct}/{attempt.total} ({attempt.score_percent}%)</div>
+            <div className="text-2xl font-semibold">Đúng: {finalCorrect}/{finalTotal} — Tỷ lệ đúng: {finalAccuracy}%</div>
           </CardContent>
         </Card>
       ) : null}
+
+      {null}
 
       {loadingReport ? (
         <div className="text-slate-600">Uyển Sensei đang viết nhận xét…</div>
@@ -97,16 +89,16 @@ export default function ResultPage() {
             <CardHeader><CardTitle>Các lỗi cần sửa</CardTitle></CardHeader>
             <CardContent>
               <ul className="space-y-3">
-                {feedback.mistakes.map((m,i)=>(
+                {(mistakes.length ? mistakes : (feedback.mistakes || [])).map((m:any,i:number)=>(
                   <li key={i} className="border rounded p-3" style={{borderColor:'var(--divider)'}}>
                     <div className="text-sm font-medium">{m.brief_question}</div>
                     <div className="text-xs mt-1">
-                      <span style={{color:'#EF4444'}}>Bạn chọn: {m.chosen}</span>
+                      <span style={{color:'#EF4444'}}>Bạn trả lời: {m.chosen || m.chosen_answer}</span>
                       <span style={{color:'var(--text-muted)'}}> — </span>
-                      <span style={{color:'#22C55E'}}>Đúng: {m.correct}</span>
+                      <span style={{color:'#22C55E'}}>Đáp án: {m.correct || m.correct_answer}</span>
                     </div>
-                    {m.explain ? <div className="text-sm mt-1">{m.explain}</div> : null}
-                    {m.tip ? <div className="text-sm mt-1 italic" style={{color:'var(--warning)'}}>Mẹo: {m.tip}</div> : null}
+                    {(m.explain || m.explanation) ? <div className="text-sm mt-1">{m.explain || m.explanation}</div> : null}
+                    {(m.tip) ? <div className="text-sm mt-1 italic" style={{color:'var(--warning)'}}>Mẹo: {m.tip}</div> : null}
                   </li>
                 ))}
               </ul>
@@ -125,15 +117,12 @@ export default function ResultPage() {
         <div className="text-slate-600">Chưa có nhận xét.</div>
       )}
 
-      {/* Placeholder for chatbot container; UI & API wired below */}
       <Card>
-        <CardHeader><CardTitle>Chat với Uyển Sensei</CardTitle></CardHeader>
+        <CardHeader><CardTitle>Chatbot Uyển Sensei</CardTitle></CardHeader>
         <CardContent>
-        {seededThreadId ? (
-          <ChatBox key={chatKey} attemptId={attemptId || ''} initialThreadId={seededThreadId} />
-        ) : (
-          <div className="text-sm" style={{color:'var(--text-muted)'}}>Đang khởi tạo hội thoại…</div>
-        )}
+          <div className="text-sm" style={{color:'var(--text-muted)'}}>
+            Chức năng chat đang được nâng cấp và sẽ trở lại sớm.
+          </div>
         </CardContent>
       </Card>
       <div className="pt-2 flex justify-center">
@@ -143,74 +132,4 @@ export default function ResultPage() {
   )
 }
 
-function ChatBox({ attemptId, initialThreadId }: { attemptId: string, initialThreadId?: string }) {
-  const [threadId, setThreadId] = useState<string | null>(null)
-  const [messages, setMessages] = useState<{ role: 'user'|'assistant', content: string }[]>([])
-  const [input, setInput] = useState('')
-  const [sending, setSending] = useState(false)
-
-  useEffect(() => {
-    if (!attemptId) return
-    const establish = async () => {
-      let tId = initialThreadId
-      if (!tId) {
-        const r = await fetch('/api/chat/thread', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ attemptId })
-        })
-        const j = await r.json()
-        tId = j.threadId
-      }
-      setThreadId(tId || null)
-      if (tId) {
-        const res = await fetch(`/api/chat/history?threadId=${tId}`)
-        if (res.ok) {
-          const h = await res.json()
-          setMessages(h.messages || [])
-        }
-      }
-    }
-    establish()
-  }, [attemptId, initialThreadId])
-
-  async function send() {
-    if (!input || !threadId) return
-    const text = input
-    setInput('')
-    setMessages(m => [...m, { role: 'user', content: text }])
-    setSending(true)
-    const res = await fetch('/api/chat/send', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ threadId, content: text })
-    })
-    setSending(false)
-    if (!res.ok) return
-    const j = await res.json()
-    setMessages(m => [...m, { role: 'assistant', content: j.reply || '' }])
-  }
-
-  return (
-    <div className="chat-box">
-      <div className="chat-hero">
-        <div className="coach-avatar"><div className="galaxy-orb" /></div>
-        <div className="hero-text">
-          <div className="chat-hero-title">Uyển Sensei</div>
-          <div className="chat-subtitle">Hỏi đáp Hóa THPT</div>
-        </div>
-      </div>
-      <div className="chat-messages">
-        {(messages.length > 2 ? messages.slice(2) : messages).map((m, i) => (
-          <div key={i} className={`chat-msg ${m.role}`}>
-            <div className="bubble">{m.content}</div>
-          </div>
-        ))}
-      </div>
-      <div className="chat-input-row">
-        <input className="input" value={input} onChange={e=>setInput(e.target.value)} placeholder="Nhập câu hỏi..." />
-        <button className="button magic" onClick={send} disabled={sending || !input}>Gửi</button>
-      </div>
-    </div>
-  )
-}
+// ChatBox tạm dừng trong giai đoạn nâng cấp

@@ -20,6 +20,24 @@ export async function GET(_: Request, { params }: { params: { attemptId: string 
       .select('report_content')
       .eq('attempt_id', params.attemptId)
       .maybeSingle()
+    const raw = report?.report_content ? JSON.parse(report.report_content) : null
+    let normalized: any = null
+    if (raw && raw.outputs && raw.outputs.feedback) {
+      const f = raw.outputs.feedback
+      normalized = {
+        feedback: {
+          praise: f.praise || '',
+          strengths: Array.isArray(f.strengths) ? f.strengths : [],
+          mistakes: Array.isArray(f.mistakes) ? f.mistakes : [],
+          plan: Array.isArray(f.plan) ? f.plan : []
+        },
+        final_correct: f.final_correct ?? null,
+        final_total: f.final_total ?? null,
+        final_accuracy: f.final_accuracy ?? null
+      }
+    } else {
+      normalized = raw
+    }
     return NextResponse.json({
       attempt: {
         id: attempt.id,
@@ -27,7 +45,7 @@ export async function GET(_: Request, { params }: { params: { attemptId: string 
         correct: attempt.correct_answers,
         score_percent: attempt.score_percent
       },
-      report: report?.report_content ? JSON.parse(report.report_content) : null
+      report: normalized
     })
   } catch (e: any) {
     return NextResponse.json({ error: e.message || 'Server error' }, { status: 500 })

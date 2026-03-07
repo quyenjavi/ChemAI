@@ -15,7 +15,6 @@ export async function POST() {
       user_id: user.id,
       full_name: pending.full_name || '',
       school: pending.school || '',
-      class_name: pending.class_name || '',
       academic_year: pending.academic_year || '',
       birth_date: pending.birth_date || null
     }

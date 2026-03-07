@@ -1,0 +1,63 @@
+import { NextResponse } from 'next/server'
+import { createSupabaseServer, serviceRoleClient } from '@/lib/supabase/server'
+
+export async function GET(_: Request, { params }: { params: { lessonId: string } }) {
+  try {
+    const supabase = createSupabaseServer()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const svc = serviceRoleClient()
+    const { data: qs } = await svc
+      .from('questions')
+      .select('id, content, question_type, order_index, choice_a, choice_b, choice_c, choice_d, correct_answer')
+      .eq('lesson_id', params.lessonId)
+      .order('order_index', { ascending: true })
+    const questions = (qs || []) as Array<{ id: string, content: string, question_type: string, order_index: number, choice_a?: string, choice_b?: string, choice_c?: string, choice_d?: string, correct_answer?: string }>
+    const ids = questions
+      .filter(q => q.question_type === 'single_choice' || q.question_type === 'true_false')
+      .map(q => q.id)
+    let optionsByQ: Record<string, Array<{ key: string, text: string }>> = {}
+    if (ids.length) {
+      const { data: opts } = await svc
+        .from('question_options')
+        .select('question_id, option_key, option_text, sort_order')
+        .in('question_id', ids)
+        .order('sort_order', { ascending: true })
+      for (const o of (opts || []) as Array<any>) {
+        const arr = optionsByQ[o.question_id] || []
+        arr.push({ key: o.option_key, text: o.option_text })
+        optionsByQ[o.question_id] = arr
+      }
+    }
+    const payload = questions.map(q => {
+      let opts = optionsByQ[q.id] || []
+      // Fallback for legacy data when question_options chưa có
+      if ((!opts || opts.length === 0) && (q.question_type === 'single_choice' || q.question_type === 'true_false')) {
+        if (q.question_type === 'single_choice') {
+          const legacy = [
+            q.choice_a ? { key: 'A', text: q.choice_a } : null,
+            q.choice_b ? { key: 'B', text: q.choice_b } : null,
+            q.choice_c ? { key: 'C', text: q.choice_c } : null,
+            q.choice_d ? { key: 'D', text: q.choice_d } : null,
+          ].filter(Boolean) as Array<{ key: string, text: string }>
+          opts = legacy
+        } else if (q.question_type === 'true_false') {
+          opts = [
+            { key: 'A', text: 'Đúng' },
+            { key: 'B', text: 'Sai' }
+          ]
+        }
+      }
+      return {
+        id: q.id,
+        content: q.content,
+        question_type: q.question_type,
+        order_index: q.order_index,
+        options: opts
+      }
+    })
+    return NextResponse.json(payload)
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message || 'Server error' }, { status: 500 })
+  }
+}

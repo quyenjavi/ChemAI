@@ -49,7 +49,6 @@ export async function POST(request: Request) {
         academic_year_id = ay?.id
       }
       const { data: schoolRow } = await svc.from('schools').select('name').eq('id', school_id).maybeSingle()
-      const { data: classRow } = await svc.from('classes').select('name').eq('id', class_id).maybeSingle()
       const { data: ayRow } = academic_year_id ? await svc.from('academic_years').select('name').eq('id', academic_year_id).maybeSingle() : { data: null }
       const payload = {
         user_id: userId,
@@ -59,7 +58,6 @@ export async function POST(request: Request) {
         class_id,
         academic_year_id,
         school: schoolRow?.name || '',
-        class_name: classRow?.name || '',
         academic_year: ayRow?.name || '',
         birth_date: null
       }

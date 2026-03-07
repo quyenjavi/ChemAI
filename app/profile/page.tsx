@@ -38,7 +38,6 @@ export default function ProfilePage() {
       if (existing) {
         setFullName(existing.full_name || '')
         setSchool(existing.school || '')
-        setClassName(existing.class_name || '')
         setAcademicYear(existing.academic_year || '')
         setBirthDate(existing.birth_date || '')
         setSchoolId(existing.school_id || '')
@@ -110,6 +109,13 @@ export default function ProfilePage() {
       })
   }, [schoolId, gradeId, academicYearId])
 
+  useEffect(() => {
+    if (!classId) { setClassName(''); return }
+    supabaseBrowser.from('classes').select('name').eq('id', classId).maybeSingle().then(({ data }) => {
+      setClassName(data?.name || '')
+    })
+  }, [classId])
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
@@ -124,7 +130,6 @@ export default function ProfilePage() {
         class_id: classId || null,
         academic_year_id: academicYearId || null,
         school,
-        class_name: className,
         academic_year: academicYear,
         birth_date: birthDate
       })

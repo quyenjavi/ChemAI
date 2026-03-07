@@ -39,13 +39,11 @@ export default function Dashboard() {
       .then(async ({ data }) => {
         const list = (data || []) as any as Lesson[]
         setLessons(list)
-        // fetch counts in parallel (N+1 acceptable for now)
+        // fetch counts via internal API to avoid cross-origin REST aborts
         const entries = await Promise.all(list.map(async (ls) => {
-          const { count } = await supabaseBrowser
-            .from('questions')
-            .select('id', { count: 'exact', head: true })
-            .eq('lesson_id', ls.id)
-          return [ls.id, count || 0] as const
+          const res = await fetch(`/api/lessons/${ls.id}/questions`)
+          const arr = res.ok ? await res.json() : []
+          return [ls.id, (arr || []).length] as const
         }))
         setCounts(Object.fromEntries(entries))
       })

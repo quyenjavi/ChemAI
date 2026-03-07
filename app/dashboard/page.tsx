@@ -14,6 +14,7 @@ export default function Dashboard() {
   const [search, setSearch] = useState('')
   const [counts, setCounts] = useState<Record<string, number>>({})
   const [questionCounts, setQuestionCounts] = useState<Record<string, number>>({})
+  const [slogan, setSlogan] = useState('')
   const filtered = useMemo(() => {
     const s = search.trim().toLowerCase()
     if (!s) return lessons
@@ -49,9 +50,51 @@ export default function Dashboard() {
       })
   }, [activeGradeId])
 
+  useEffect(() => {
+    const slogans = [
+      'Hóa học là ngôn ngữ của tự nhiên. Ai hiểu nó sẽ hiểu thế giới.',
+      'Mỗi phản ứng hóa học là một câu chuyện về sự biến đổi.',
+      'Khoa học bắt đầu từ sự tò mò, và hóa học là hành trình đi tìm câu trả lời.',
+      'Một phương trình cân bằng là minh chứng cho sự hài hòa của tự nhiên.',
+      'Sai lầm trong thí nghiệm không phải thất bại, đó là dữ liệu cho khám phá mới.',
+      'Hóa học giúp chúng ta nhìn thấy điều kỳ diệu trong những thứ nhỏ bé nhất.',
+      'Đằng sau mỗi phân tử là cả một thế giới đang chuyển động.',
+      'Hiểu hóa học là hiểu cách vật chất biến đổi và tồn tại.',
+      'Hóa học không chỉ nằm trong phòng thí nghiệm, nó có trong mọi hơi thở của cuộc sống.',
+      'Từ một tia lửa tò mò có thể bùng lên cả một khám phá khoa học.',
+      'Những phản ứng nhỏ có thể tạo nên những thay đổi lớn.',
+      'Trong hóa học, sự kiên nhẫn chính là chất xúc tác cho thành công.',
+      'Mỗi thí nghiệm là một bước tiến gần hơn đến tri thức.',
+      'Hóa học dạy chúng ta rằng mọi thứ đều có thể biến đổi.',
+      'Một nhà hóa học giỏi không chỉ nhớ công thức, mà còn hiểu bản chất.',
+      'Tri thức giống như phản ứng dây chuyền: càng học càng lan tỏa.',
+      'Mỗi câu hỏi khoa học đều là khởi đầu của một khám phá.',
+      'Thế giới được xây dựng từ những nguyên tử nhỏ bé nhưng kỳ diệu.',
+      'Đừng sợ những phương trình phức tạp, chúng chỉ đang kể một câu chuyện sâu sắc.',
+      'Hóa học là nghệ thuật hiểu và điều khiển sự biến đổi của vật chất.',
+      'Mỗi sai lầm hôm nay là một bước tiến cho thành công ngày mai.',
+      'Kiến thức hóa học là chìa khóa mở ra nhiều công nghệ của tương lai.',
+      'Một nhà khoa học giỏi luôn bắt đầu bằng câu hỏi “tại sao”.',
+      'Hóa học cho ta thấy rằng những điều nhỏ bé nhất có thể tạo nên thế giới.',
+      'Mỗi phản ứng là một cuộc gặp gỡ của các nguyên tử.',
+      'Học hóa học là học cách nhìn thế giới ở cấp độ sâu hơn.',
+      'Trong khoa học, tò mò là động lực mạnh mẽ nhất.',
+      'Hóa học biến sự bí ẩn của tự nhiên thành tri thức.',
+      'Khám phá khoa học bắt đầu từ những thí nghiệm nhỏ nhất.',
+      'Khi hiểu hóa học, bạn sẽ thấy thế giới trở nên thú vị hơn bao giờ hết.'
+    ]
+    const msg = slogans[Math.floor(Math.random() * slogans.length)]
+    setSlogan(msg)
+  }, [])
+
   return (
     <div className="space-y-10">
       <h1 className="text-[32px] font-semibold">Chọn bài luyện tập</h1>
+      {slogan ? (
+        <div className="text-[14px] mt-1 italic font-medium" style={{color:'var(--gold)'}} aria-live="polite">
+          {slogan}
+        </div>
+      ) : null}
       <div className="flex gap-3 overflow-x-auto" role="tablist" aria-label="Chọn lớp">
         {grades.map(g => (
           <Button

@@ -31,11 +31,10 @@ export default function QuizClient({ lessonId, n }: { lessonId: string, n?: stri
         router.push('/login')
       }
     })
-    fetch(`/api/lessons/${lessonId}/questions`)
+    fetch(`/api/lessons/${lessonId}/questions?n=${desiredCount || ''}`)
       .then(r => r.ok ? r.json() : [])
       .then((list: Q[]) => {
-        const sliceN = desiredCount ? Math.min(desiredCount, list.length) : Math.min(20, list.length)
-        setQuestions(list.slice(0, sliceN))
+        setQuestions(list)
       })
     fetch('/api/attempts/create', {
       method: 'POST',

@@ -1,11 +1,14 @@
 import { NextResponse } from 'next/server'
 import { createSupabaseServer, serviceRoleClient } from '@/lib/supabase/server'
 
-export async function GET(_: Request, { params }: { params: { lessonId: string } }) {
+export async function GET(req: Request, { params }: { params: { lessonId: string } }) {
   try {
     const supabase = createSupabaseServer()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const url = new URL(req.url)
+    const nParam = Number(url.searchParams.get('n') || 0)
+    const desiredCount = Math.max(0, Math.min(30, isFinite(nParam) ? nParam : 0))
     const svc = serviceRoleClient()
     const { data: qs } = await svc
       .from('questions')
@@ -27,6 +30,25 @@ export async function GET(_: Request, { params }: { params: { lessonId: string }
         const arr = optionsByQ[o.question_id] || []
         arr.push({ key: o.option_key, text: o.option_text })
         optionsByQ[o.question_id] = arr
+      }
+    }
+    let answeredCountByQ: Record<string, number> = {}
+    if (desiredCount > 0) {
+      const { data: atts } = await svc
+        .from('quiz_attempts')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('lesson_id', params.lessonId)
+      const attemptIds = (atts || []).map(a => (a as any).id).filter(Boolean)
+      if (attemptIds.length) {
+        const { data: ans } = await svc
+          .from('quiz_attempt_answers')
+          .select('question_id, attempt_id')
+          .in('attempt_id', attemptIds)
+        for (const r of (ans || []) as any[]) {
+          const qid = r.question_id
+          answeredCountByQ[qid] = (answeredCountByQ[qid] || 0) + 1
+        }
       }
     }
     const payload = questions.map(q => {
@@ -59,7 +81,17 @@ export async function GET(_: Request, { params }: { params: { lessonId: string }
         options: opts
       }
     })
-    return NextResponse.json(payload)
+    let selected = payload
+    if (desiredCount > 0) {
+      const shuffled = [...payload].sort((a, b) => {
+        const ca = answeredCountByQ[a.id] || 0
+        const cb = answeredCountByQ[b.id] || 0
+        if (ca !== cb) return ca - cb
+        return Math.random() < 0.5 ? -1 : 1
+      })
+      selected = shuffled.slice(0, Math.min(desiredCount, shuffled.length))
+    }
+    return NextResponse.json(selected)
   } catch (e: any) {
     return NextResponse.json({ error: e.message || 'Server error' }, { status: 500 })
   }

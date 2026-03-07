@@ -42,7 +42,25 @@ export default function ResultPage() {
           if (j.report.final_total != null) setFinalTotal(toNum(j.report.final_total))
           if (j.report.final_accuracy != null) setFinalAccuracy(toNum(j.report.final_accuracy))
           if (j.report.feedback) {
-            setFeedback(j.report.feedback)
+            const uv = (v: any) => (v && typeof v === 'object' && 'value' in v) ? v.value : v
+            const ua = (v: any) => {
+              const r = uv(v)
+              return Array.isArray(r) ? r : []
+            }
+            const f = j.report.feedback as any
+            const sanitized = {
+              praise: uv(f.praise) || '',
+              strengths: ua(f.strengths),
+              mistakes: ua(f.mistakes).map((m: any) => ({
+                brief_question: uv(m?.brief_question) || '',
+                chosen: uv(m?.chosen) || '',
+                correct: uv(m?.correct) || '',
+                explain: uv(m?.explain) || '',
+                tip: uv(m?.tip) || ''
+              })),
+              plan: ua(f.plan)
+            } as Feedback
+            setFeedback(sanitized)
           }
         }
       }

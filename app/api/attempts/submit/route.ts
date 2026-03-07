@@ -77,8 +77,7 @@ export async function POST(request: Request) {
       const brief = briefContentById[qid] || contentById[qid] || ''
       const chosenText = textByQKey[qid]?.[a.selected_answer || ''] || (a.selected_answer || '')
       const correctText = correctTextById[qid] || (correctById[qid] || '')
-      const exp = explainById[qid] || ''
-      return `- Câu: ${brief} | Em chọn: ${chosenText} | Đáp án đúng: ${correctText} | Giải thích: ${exp}`
+      return `- Câu: ${brief} | Em chọn ${chosenText} | Đáp án ${correctText}`
     }).join('\n')
     // compute objective-only score/total for workflow input
     const objectiveIds = qIds.filter(id => typeById[id] === 'single_choice' || typeById[id] === 'true_false')
@@ -153,12 +152,28 @@ export async function POST(request: Request) {
       student_name: profile?.full_name || '',
       grade: gradeRow?.name || '',
       lesson_title: lessonRow?.title || '',
-      score: correctObjective,
-      total: totalObjective,
-      correct_by_topic,
-      wrong_list,
-      essay
+      score: String(correctObjective),
+      total: String(totalObjective),
+      correct_by_topic: correct_by_topic || '',
+      wrong_list: wrong_list || '',
+      essay: ''
     }
+    if (essay && typeof essay === 'string') {
+      wfInputs.essay = essay
+    }
+    try {
+      const { student_name, grade, lesson_title, score, total, correct_by_topic, wrong_list, essay } = wfInputs
+      console.log("DIFY INPUT:", JSON.stringify({
+        student_name,
+        grade,
+        lesson_title,
+        score,
+        total,
+        correct_by_topic,
+        wrong_list,
+        essay
+      }, null, 2))
+    } catch {}
     let final_correct = correctObjective
     let final_total = totalObjective
     let final_accuracy = totalObjective ? Math.round((correctObjective / totalObjective) * 100) : 0
@@ -170,12 +185,15 @@ export async function POST(request: Request) {
         const wfRes = await callDifyWorkflow(wfInputs)
         const data = wfRes?.data || wfRes
         report_json = data
+        const unwrap = (v: any) => (v && typeof v === 'object' && 'value' in v) ? v.value : v
         const f = data?.outputs?.feedback || data?.feedback || null
-        if (f?.final_correct != null) final_correct = Number(f.final_correct) || final_correct
-        if (f?.final_total != null) final_total = Number(f.final_total) || final_total
-        if (f?.final_accuracy != null) {
-          const raw = f.final_accuracy
-          const parsed = typeof raw === 'string' ? parseFloat(String(raw).replace('%','').trim()) : Number(raw)
+        const fc = unwrap(f?.final_correct)
+        const ft = unwrap(f?.final_total)
+        const fa = unwrap(f?.final_accuracy)
+        if (fc != null) final_correct = Number(fc) || final_correct
+        if (ft != null) final_total = Number(ft) || final_total
+        if (fa != null) {
+          const parsed = typeof fa === 'string' ? parseFloat(String(fa).replace('%','').trim()) : Number(fa)
           if (isFinite(parsed)) final_accuracy = parsed
         }
       } catch (err) {
@@ -190,22 +208,53 @@ export async function POST(request: Request) {
     await svc.from('attempt_reports')
       .upsert({ attempt_id: attemptId, user_id: uid, report_content: JSON.stringify(report_json) }, { onConflict: 'attempt_id' })
     // insert essay mistakes into mistakes table if workflow returns them
-    const mistakesArr = ((report_json?.outputs?.feedback?.mistakes) || (report_json?.mistakes) || []) as Array<{ brief_question: string, chosen: string, correct: string, explain?: string, tip?: string }>
+    const unwrap = (v: any) => (v && typeof v === 'object' && 'value' in v) ? v.value : v
+    const arrMistakes = ((report_json?.outputs?.feedback?.mistakes) || (report_json?.mistakes) || [])
+    const mistakesArr = (Array.isArray(arrMistakes) ? arrMistakes : []) as Array<any>
     if (Array.isArray(mistakesArr) && mistakesArr.length) {
       const briefToId: Record<string, string> = {}
       for (const [qid, brief] of Object.entries(briefContentById)) {
         if (brief) briefToId[brief] = qid
       }
       for (const mk of mistakesArr) {
-        const qid = briefToId[mk.brief_question] || Object.entries(contentById).find(([, c]) => (c || '') === mk.brief_question)?.[0] || null
+        const brief = unwrap(mk?.brief_question) || ''
+        const chosen = unwrap(mk?.chosen) || ''
+        const correctAns = unwrap(mk?.correct) || ''
+        const explain = unwrap(mk?.explain) || ''
+        const tip = unwrap(mk?.tip) || ''
+        const qid = briefToId[brief] || Object.entries(contentById).find(([, c]) => (c || '') === brief)?.[0] || null
         await svc.from('mistakes').insert({
           attempt_id: attemptId,
           question_id: qid,
-          brief_question: mk.brief_question,
-          chosen_answer: mk.chosen,
-          correct_answer: mk.correct,
-          explanation: mk.explain || '',
-          tip: mk.tip || '',
+          brief_question: brief,
+          chosen_answer: chosen,
+          correct_answer: correctAns,
+          explanation: explain,
+          tip: tip,
+          created_at: new Date()
+        })
+      }
+    } else {
+      const wrongObjective = answers.filter(a => {
+        const typ = typeById[a.questionId]
+        if (typ === 'short_answer') return false
+        const chosen = a.selected_answer || ''
+        return chosen && correctById[a.questionId] && correctById[a.questionId] !== chosen
+      })
+      for (const a of wrongObjective) {
+        const qid = a.questionId
+        const brief = briefContentById[qid] || contentById[qid] || ''
+        const chosenText = textByQKey[qid]?.[a.selected_answer || ''] || (a.selected_answer || '')
+        const correctText = correctTextById[qid] || (correctById[qid] || '')
+        const exp = explainById[qid] || ''
+        await svc.from('mistakes').insert({
+          attempt_id: attemptId,
+          question_id: qid,
+          brief_question: brief,
+          chosen_answer: chosenText,
+          correct_answer: correctText,
+          explanation: exp,
+          tip: '',
           created_at: new Date()
         })
       }

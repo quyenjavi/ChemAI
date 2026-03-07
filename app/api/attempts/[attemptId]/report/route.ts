@@ -24,16 +24,28 @@ export async function GET(_: Request, { params }: { params: { attemptId: string 
     let normalized: any = null
     if (raw && raw.outputs && raw.outputs.feedback) {
       const f = raw.outputs.feedback
+      const unwrap = (v: any) => (v && typeof v === 'object' && 'value' in v) ? v.value : v
+      const unwrapArray = (v: any) => {
+        const arr = unwrap(v)
+        return Array.isArray(arr) ? arr : []
+      }
+      const mistakesArr = unwrapArray(f.mistakes).map((m: any) => ({
+        brief_question: unwrap(m?.brief_question) || '',
+        chosen: unwrap(m?.chosen) || '',
+        correct: unwrap(m?.correct) || '',
+        explain: unwrap(m?.explain) || '',
+        tip: unwrap(m?.tip) || ''
+      }))
       normalized = {
         feedback: {
-          praise: f.praise || '',
-          strengths: Array.isArray(f.strengths) ? f.strengths : [],
-          mistakes: Array.isArray(f.mistakes) ? f.mistakes : [],
-          plan: Array.isArray(f.plan) ? f.plan : []
+          praise: unwrap(f.praise) || '',
+          strengths: unwrapArray(f.strengths),
+          mistakes: mistakesArr,
+          plan: unwrapArray(f.plan)
         },
-        final_correct: f.final_correct ?? null,
-        final_total: f.final_total ?? null,
-        final_accuracy: f.final_accuracy ?? null
+        final_correct: unwrap(f.final_correct) ?? null,
+        final_total: unwrap(f.final_total) ?? null,
+        final_accuracy: unwrap(f.final_accuracy) ?? null
       }
     } else {
       normalized = raw

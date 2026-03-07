@@ -40,17 +40,22 @@ export default function LoginPage() {
     }
     const session = data.session
     if (session?.access_token && session?.refresh_token) {
-      await fetch('/api/auth/cookie', {
+      const r = await fetch('/api/auth/cookie', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           access_token: session.access_token,
           refresh_token: session.refresh_token
         })
-      }).catch(()=>{})
+      }).catch(()=>null)
+      if (!r || !r.ok) {
+        setError('Không thể thiết lập phiên đăng nhập. Vui lòng thử lại.')
+        return
+      }
     }
     await fetch('/api/profile/migrate', { method: 'POST' }).catch(()=>{})
-    router.push('/dashboard')
+    router.replace('/dashboard')
+    router.refresh()
   }
 
   return (

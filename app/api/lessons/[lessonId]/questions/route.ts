@@ -9,10 +9,10 @@ export async function GET(_: Request, { params }: { params: { lessonId: string }
     const svc = serviceRoleClient()
     const { data: qs } = await svc
       .from('questions')
-      .select('id, content, question_type, order_index, choice_a, choice_b, choice_c, choice_d, correct_answer')
+      .select('id, content, question_type, order_index, topic, lesson_id, choice_a, choice_b, choice_c, choice_d, correct_answer')
       .eq('lesson_id', params.lessonId)
       .order('order_index', { ascending: true })
-    const questions = (qs || []) as Array<{ id: string, content: string, question_type: string, order_index: number, choice_a?: string, choice_b?: string, choice_c?: string, choice_d?: string, correct_answer?: string }>
+    const questions = (qs || []) as Array<{ id: string, content: string, question_type: string, order_index: number, topic?: string, lesson_id?: string, choice_a?: string, choice_b?: string, choice_c?: string, choice_d?: string, correct_answer?: string }>
     const ids = questions
       .filter(q => q.question_type === 'single_choice' || q.question_type === 'true_false')
       .map(q => q.id)
@@ -50,9 +50,12 @@ export async function GET(_: Request, { params }: { params: { lessonId: string }
       }
       return {
         id: q.id,
+        question_id: q.id,
         content: q.content,
         question_type: q.question_type,
         order_index: q.order_index,
+        topic: q.topic || '',
+        lesson_id: q.lesson_id || params.lessonId,
         options: opts
       }
     })

@@ -10,6 +10,8 @@ type Q = {
   content: string,
   question_type: 'single_choice' | 'true_false' | 'short_answer',
   order_index: number,
+  topic?: string,
+  lesson_id?: string,
   options: Array<{ key: string, text: string }>
 }
 

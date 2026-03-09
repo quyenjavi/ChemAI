@@ -30,10 +30,16 @@ export async function GET() {
       academic_year_id: c.academic_year_id || null,
       total_students: totalByClass[c.id] || 0
     })).sort((a: any, b: any) => {
-      const ga = String(a.grade_name || '')
-      const gb = String(b.grade_name || '')
-      if (ga === gb) return String(a.class_name || '').localeCompare(String(b.class_name || ''))
-      return ga.localeCompare(gb)
+      const parse = (name: string) => {
+        const [g, c] = String(name || '').split('.')
+        const gi = parseInt(g || '0', 10)
+        const ci = parseInt(c || '0', 10)
+        return [isNaN(gi) ? 0 : gi, isNaN(ci) ? 0 : ci]
+      }
+      const [ga, ca] = parse(a.class_name || '')
+      const [gb, cb] = parse(b.class_name || '')
+      if (ga !== gb) return ga - gb
+      return ca - cb
     })
     return NextResponse.json({ classes: payload })
   } catch (e: any) {

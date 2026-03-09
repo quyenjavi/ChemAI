@@ -34,7 +34,13 @@ export default function QuizClient({ lessonId, n }: { lessonId: string, n?: stri
     fetch(`/api/lessons/${lessonId}/questions?n=${desiredCount || ''}`)
       .then(r => r.ok ? r.json() : [])
       .then((list: Q[]) => {
-        setQuestions(list)
+        const prio = (t: Q['question_type']) => t === 'single_choice' ? 0 : (t === 'true_false' ? 1 : 2)
+        const sorted = [...list].sort((a, b) => {
+          const d = prio(a.question_type) - prio(b.question_type)
+          if (d !== 0) return d
+          return (a.order_index || 0) - (b.order_index || 0)
+        })
+        setQuestions(sorted)
       })
     fetch('/api/attempts/create', {
       method: 'POST',

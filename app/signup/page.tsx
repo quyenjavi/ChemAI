@@ -76,9 +76,15 @@ export default function SignupPage() {
       .eq('school_id', schoolId)
       .eq('grade_id', gradeId)
       .eq('academic_year_id', academicYearId)
-      .order('name', { ascending: true })
       .then(({ data }) => {
-        setClasses(data || [])
+        const list = (data || []).slice()
+        list.sort((a, b) => {
+          const [ga, ca] = String(a.name || '').split('.').map(v => parseInt(v || '0', 10))
+          const [gb, cb] = String(b.name || '').split('.').map(v => parseInt(v || '0', 10))
+          if ((ga || 0) !== (gb || 0)) return (ga || 0) - (gb || 0)
+          return (ca || 0) - (cb || 0)
+        })
+        setClasses(list)
         setClassId('')
       })
   }, [schoolId, gradeId, academicYearId])

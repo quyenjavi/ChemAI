@@ -51,8 +51,8 @@ export default async function TeacherDashboard() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Teacher Dashboard</h1>
         <div className="flex items-center gap-2">
-          <Link href="/teacher_dashboard/classes" className="underline">Lớp phụ trách</Link>
-          <Link href="/teacher_dashboard/analytics" className="underline">Phân tích</Link>
+          <Link href="/teacher_dashboard/questions" prefetch={false} className="underline">Quản lí câu hỏi</Link>
+          <Link href="/teacher_dashboard/analytics" prefetch={false} className="underline">Quản lí bài học</Link>
         </div>
       </div>
 
@@ -66,7 +66,7 @@ export default async function TeacherDashboard() {
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-semibold">Lớp phụ trách</h2>
-          <Link href="/teacher_dashboard/classes" className="underline">Xem toàn màn hình</Link>
+          <Link href="/teacher_dashboard/classes" prefetch={false} className="underline">Xem toàn màn hình</Link>
         </div>
         <div>
           <label className="text-sm">Chọn lớp</label>

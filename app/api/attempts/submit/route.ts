@@ -100,7 +100,7 @@ export async function POST(request: Request) {
       }
     }
     // build wrong_list for choice questions
-    const wrong_list = answers.filter(a => {
+    const wrongListArr = answers.filter(a => {
       const typ = typeById[a.questionId]
       if (typ === 'short_answer') return false
       const chosen = a.selected_answer || ''
@@ -111,7 +111,8 @@ export async function POST(request: Request) {
       const chosenText = textByQKey[qid]?.[a.selected_answer || ''] || (a.selected_answer || '')
       const correctText = correctTextById[qid] || (correctById[qid] || '')
       return `- Câu: ${brief} | Em chọn ${chosenText} | Đáp án ${correctText}`
-    }).join('\n')
+    })
+    const wrong_list = wrongListArr.join('\n')
     // compute objective-only score/total for workflow input
     const objectiveIds = qIds.filter(id => typeById[id] === 'single_choice' || typeById[id] === 'true_false')
     const totalObjective = objectiveIds.length
@@ -179,6 +180,9 @@ export async function POST(request: Request) {
       wfInputs.essay = essay
     }
     try {
+      console.log("ATTEMPT_ID", attemptId)
+      console.log("WRONG_LIST_COUNT", wrongListArr.length)
+      console.log("WRONG_LIST", JSON.stringify(wrongListArr, null, 2))
       const { student_name, grade, lesson_title, score, total, correct_by_topic, wrong_list, essay } = wfInputs
       console.log("DIFY INPUT:", JSON.stringify({
         student_name,

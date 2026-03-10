@@ -21,34 +21,26 @@ export async function GET(_: Request, { params }: { params: { attemptId: string 
       .eq('attempt_id', params.attemptId)
       .maybeSingle()
     const raw = report?.report_content ? JSON.parse(report.report_content) : null
-    let normalized: any = null
-    if (raw && raw.outputs && raw.outputs.feedback) {
-      const f = raw.outputs.feedback
-      const unwrap = (v: any) => (v && typeof v === 'object' && 'value' in v) ? v.value : v
-      const unwrapArray = (v: any) => {
-        const arr = unwrap(v)
-        return Array.isArray(arr) ? arr : []
+    const unwrap = (v: any) => (v && typeof v === 'object' && 'value' in v) ? v.value : v
+    const unwrapArray = (v: any) => {
+      const arr = unwrap(v)
+      return Array.isArray(arr) ? arr : []
+    }
+    const f = raw?.outputs?.feedback || raw?.feedback || null
+    const mistakesArr = (f ? unwrapArray(f.mistakes) : []).map((m: any) => ({
+      brief_question: unwrap(m?.brief_question) || '',
+      chosen: unwrap(m?.chosen) || '',
+      correct: unwrap(m?.correct) || '',
+      explain: unwrap(m?.explain) || '',
+      tip: unwrap(m?.tip) || ''
+    }))
+    const normalized = {
+      feedback: {
+        praise: (f ? (unwrap(f.praise) || '') : ''),
+        strengths: (f ? unwrapArray(f.strengths) : []),
+        mistakes: mistakesArr,
+        plan: (f ? unwrapArray(f.plan) : [])
       }
-      const mistakesArr = unwrapArray(f.mistakes).map((m: any) => ({
-        brief_question: unwrap(m?.brief_question) || '',
-        chosen: unwrap(m?.chosen) || '',
-        correct: unwrap(m?.correct) || '',
-        explain: unwrap(m?.explain) || '',
-        tip: unwrap(m?.tip) || ''
-      }))
-      normalized = {
-        feedback: {
-          praise: unwrap(f.praise) || '',
-          strengths: unwrapArray(f.strengths),
-          mistakes: mistakesArr,
-          plan: unwrapArray(f.plan)
-        },
-        final_correct: unwrap(f.final_correct) ?? null,
-        final_total: unwrap(f.final_total) ?? null,
-        final_accuracy: unwrap(f.final_accuracy) ?? null
-      }
-    } else {
-      normalized = raw
     }
     return NextResponse.json({
       attempt: {

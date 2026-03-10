@@ -73,7 +73,7 @@ export default function LoginPage() {
           <CardContent>
             <div className="text-center mb-4">
             <div className={`${poppins.className} text-[22px] font-semibold`} style={{color:'var(--text)'}}>Vào lớp thôi!</div>
-            <div className="text-[14px]" style={{color:'var(--text-muted)'}}>Mỗi học sinh, một Uyển Sensei đồng hành!</div>
+            <div className="text-[14px]" style={{color:'var(--text-muted)'}}>Học mọi lúc, mọi nơi!</div>
             </div>
             <form className="space-y-4" onSubmit={onSubmit}>
               <Input placeholder="Email" type="email" value={email} onChange={e=>setEmail(e.target.value)} />

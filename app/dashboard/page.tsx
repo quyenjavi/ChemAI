@@ -32,21 +32,26 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (!activeGradeId) return
-    supabaseBrowser
-      .from('lessons')
-      .select('id, grade_id, title, description')
-      .eq('grade_id', activeGradeId)
-      .order('created_at', { ascending: true })
-      .then(async ({ data }) => {
-        const list = (data || []) as any as Lesson[]
+    fetch(`/api/grades/${activeGradeId}/lessons`, { credentials: 'include' })
+      .then(async r => {
+        if (!r.ok) {
+          const j = await r.json().catch(() => ({}))
+          throw new Error(j.error || 'Lỗi tải danh sách bài học')
+        }
+        return r.json()
+      })
+      .then(async (data: Lesson[]) => {
+        const list = (data || []) as Lesson[]
         setLessons(list)
-        // fetch counts via internal API to avoid cross-origin REST aborts
         const entries = await Promise.all(list.map(async (ls) => {
-          const res = await fetch(`/api/lessons/${ls.id}/questions`)
+          const res = await fetch(`/api/lessons/${ls.id}/questions`, { credentials: 'include' })
           const arr = res.ok ? await res.json() : []
           return [ls.id, (arr || []).length] as const
         }))
         setCounts(Object.fromEntries(entries))
+      })
+      .catch(err => {
+        console.error('Load lessons failed:', err)
       })
   }, [activeGradeId])
 
@@ -125,7 +130,7 @@ export default function Dashboard() {
                   const maxBank = counts[ls.id] ?? 0
                   const max = Math.min(30, maxBank)
                   const disabled = max === 0
-                  const val = questionCounts[ls.id] ?? Math.min(10, Math.max(1, max))
+                  const val = questionCounts[ls.id] ?? (max || 1)
                   return (
                     <>
                       <label className="text-[14px]" style={{color:'var(--text-muted)'}}>Số câu:</label>
@@ -148,7 +153,7 @@ export default function Dashboard() {
                 })()}
               </div>
               <div className="mt-3">
-                <a href={`/lesson/${ls.id}/quiz?n=${questionCounts[ls.id] ?? Math.min(10, Math.max(1, Math.min(30, counts[ls.id] ?? 0)))}`}>
+                <a href={`/lesson/${ls.id}/quiz?n=${questionCounts[ls.id] ?? (Math.min(30, counts[ls.id] ?? 0) || 1)}`}>
                   <Button size="md" disabled={(counts[ls.id] ?? 0) === 0}>Làm bài</Button>
                 </a>
               </div>

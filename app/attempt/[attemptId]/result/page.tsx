@@ -77,10 +77,19 @@ export default function ResultPage() {
   return (
     <div className="space-y-6">
       <h1 className="text-[32px] font-semibold">Kết quả</h1>
-      {finalCorrect != null && finalTotal != null && finalAccuracy != null ? (
+      {attempt ? (
         <Card>
           <CardContent className="py-4">
-            <div className="text-2xl font-semibold">Đúng: {finalCorrect}/{finalTotal} — Tỷ lệ đúng: {finalAccuracy}%</div>
+            {(() => {
+              const correct = attempt?.correct ?? (finalCorrect ?? 0)
+              const total = attempt?.total ?? (finalTotal ?? 0)
+              const accuracy = (attempt?.score_percent != null)
+                ? attempt.score_percent
+                : (finalAccuracy != null ? finalAccuracy : (total ? Math.round((correct/total)*100) : 0))
+              return (
+                <div className="text-2xl font-semibold">Đúng: {correct}/{total} — Tỷ lệ đúng: {accuracy}%</div>
+              )
+            })()}
           </CardContent>
         </Card>
       ) : null}

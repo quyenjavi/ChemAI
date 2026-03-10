@@ -7,15 +7,17 @@ export async function GET(req: Request, { params }: { params: { lessonId: string
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     const url = new URL(req.url)
-    const nParam = Number(url.searchParams.get('n') || 0)
-    const desiredCount = Math.max(0, Math.min(30, isFinite(nParam) ? nParam : 0))
+    const rawN = url.searchParams.get('n')
+    const parsedN = Number(rawN)
+    const desiredCount = (rawN && Number.isFinite(parsedN) && parsedN > 0) ? Math.min(50, parsedN) : null
     const svc = serviceRoleClient()
     const { data: qs } = await svc
       .from('questions')
-      .select('id, content, question_type, order_index, topic, lesson_id, choice_a, choice_b, choice_c, choice_d, correct_answer')
+      .select('id, content, question_type, order_index, topic, lesson_id')
       .eq('lesson_id', params.lessonId)
       .order('order_index', { ascending: true })
-    const questions = (qs || []) as Array<{ id: string, content: string, question_type: string, order_index: number, topic?: string, lesson_id?: string, choice_a?: string, choice_b?: string, choice_c?: string, choice_d?: string, correct_answer?: string }>
+      .limit(50)
+    const questions = (qs || []) as Array<{ id: string, content: string, question_type: string, order_index: number, topic?: string, lesson_id?: string }>
     const ids = questions
       .filter(q => q.question_type === 'single_choice' || q.question_type === 'true_false')
       .map(q => q.id)
@@ -32,44 +34,33 @@ export async function GET(req: Request, { params }: { params: { lessonId: string
         optionsByQ[o.question_id] = arr
       }
     }
-    let answeredCountByQ: Record<string, number> = {}
-    if (desiredCount > 0) {
-      const { data: atts } = await svc
-        .from('quiz_attempts')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('lesson_id', params.lessonId)
-      const attemptIds = (atts || []).map(a => (a as any).id).filter(Boolean)
-      if (attemptIds.length) {
-        const { data: ans } = await svc
-          .from('quiz_attempt_answers')
-          .select('question_id, attempt_id')
-          .in('attempt_id', attemptIds)
-        for (const r of (ans || []) as any[]) {
-          const qid = r.question_id
-          answeredCountByQ[qid] = (answeredCountByQ[qid] || 0) + 1
-        }
+    // Fisher–Yates shuffle utility
+    function shuffle<T>(arr: T[]): T[] {
+      const a = [...arr]
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1))
+        const tmp = a[i]
+        a[i] = a[j]
+        a[j] = tmp
+      }
+      return a
+    }
+    const shortIds = questions.filter(q => q.question_type === 'short_answer').map(q => q.id)
+    let acceptedByQ: Record<string, string[]> = {}
+    if (shortIds.length) {
+      const { data: sa } = await svc
+        .from('question_short_answers')
+        .select('question_id, answer_text')
+        .in('question_id', shortIds)
+      for (const r of (sa || []) as Array<any>) {
+        const arr = acceptedByQ[r.question_id] || []
+        if (r.answer_text) arr.push(r.answer_text)
+        acceptedByQ[r.question_id] = arr
       }
     }
     const payload = questions.map(q => {
-      let opts = optionsByQ[q.id] || []
-      // Fallback for legacy data when question_options chưa có
-      if ((!opts || opts.length === 0) && (q.question_type === 'single_choice' || q.question_type === 'true_false')) {
-        if (q.question_type === 'single_choice') {
-          const legacy = [
-            q.choice_a ? { key: 'A', text: q.choice_a } : null,
-            q.choice_b ? { key: 'B', text: q.choice_b } : null,
-            q.choice_c ? { key: 'C', text: q.choice_c } : null,
-            q.choice_d ? { key: 'D', text: q.choice_d } : null,
-          ].filter(Boolean) as Array<{ key: string, text: string }>
-          opts = legacy
-        } else if (q.question_type === 'true_false') {
-          opts = [
-            { key: 'A', text: 'Đúng' },
-            { key: 'B', text: 'Sai' }
-          ]
-        }
-      }
+      const opts = optionsByQ[q.id] || []
+      const accepted_answers = acceptedByQ[q.id] || []
       return {
         id: q.id,
         question_id: q.id,
@@ -78,19 +69,19 @@ export async function GET(req: Request, { params }: { params: { lessonId: string
         order_index: q.order_index,
         topic: q.topic || '',
         lesson_id: q.lesson_id || params.lessonId,
-        options: opts
+        options: opts,
+        accepted_answers
       }
     })
-    let selected = payload
-    if (desiredCount > 0) {
-      const shuffled = [...payload].sort((a, b) => {
-        const ca = answeredCountByQ[a.id] || 0
-        const cb = answeredCountByQ[b.id] || 0
-        if (ca !== cb) return ca - cb
-        return Math.random() < 0.5 ? -1 : 1
-      })
-      selected = shuffled.slice(0, Math.min(desiredCount, shuffled.length))
-    }
+    const shuffled = shuffle(payload)
+    const selectedBase = desiredCount ? shuffled.slice(0, Math.min(desiredCount, shuffled.length)) : payload
+    const typeOrder = (t: string) => (t === 'single_choice' ? 1 : (t === 'true_false' ? 2 : 3))
+    const selected = [...selectedBase].sort((a, b) => {
+      const ta = typeOrder(a.question_type || '')
+      const tb = typeOrder(b.question_type || '')
+      if (ta !== tb) return ta - tb
+      return (a.order_index || 0) - (b.order_index || 0)
+    })
     return NextResponse.json(selected)
   } catch (e: any) {
     return NextResponse.json({ error: e.message || 'Server error' }, { status: 500 })

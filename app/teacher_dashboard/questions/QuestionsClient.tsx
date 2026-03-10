@@ -12,7 +12,7 @@ type QuestionRow = {
   grade_name: string
   total_attempts: number
   correct_rate: number
-  question_created_at: string | null
+  created_at: string | null
   difficulty: string
   topic: string
   options: { key: string, text: string, is_correct: boolean, order: number }[]
@@ -33,7 +33,7 @@ export default function QuestionsClient() {
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
   const [schoolName, setSchoolName] = useState('')
   const [page, setPage] = useState(1)
-  const pageSize = 30
+  const pageSize = 20
   const [total, setTotal] = useState(0)
   const [detail, setDetail] = useState<QuestionRow | null>(null)
   const [detailIndex, setDetailIndex] = useState<number | null>(null)
@@ -62,9 +62,12 @@ export default function QuestionsClient() {
     if (lesson !== 'all') qs.set('lesson_id', lesson)
     if (type !== 'all') qs.set('question_type', type)
     if (search.trim()) qs.set('search', search.trim())
-    fetch(`/api/teacher/questions?${qs.toString()}`, { credentials: 'include' })
+    fetch(`/api/teacher/questions?${qs.toString()}`, { credentials: 'include', cache: 'no-store', headers: { 'Cache-Control': 'no-cache' } })
       .then(r => r.ok ? r.json() : Promise.reject(new Error('Failed to load questions')))
       .then(json => {
+        console.log('API response', json)
+        console.log('Questions list', json?.questions)
+        if (json?.debug) console.log('debug info', json.debug)
         setRows(json?.questions || [])
         setTotal(json?.total || 0)
         setSchoolName(json?.school_name || '')
@@ -81,7 +84,7 @@ export default function QuestionsClient() {
     <div className="space-y-4">
       <style jsx>{`
         .question-cell {
-          max-width: 420px;
+          max-width: 600px;
           display: -webkit-box;
           -webkit-line-clamp: 2;
           -webkit-box-orient: vertical;
@@ -104,7 +107,7 @@ export default function QuestionsClient() {
           background: #1e293b;
         }
       `}</style>
-      <div className="text-sm" style={{color:'var(--text-muted)'}}>Trong phạm vi trường: <span className="font-medium">{schoolName || '—'}</span></div>
+      <div className="text-sm" style={{color:'var(--text-muted)'}}>Phạm vi: <span className="font-medium">Toàn hệ thống</span></div>
       <div className="flex flex-wrap items-center gap-2">
         <div className="flex items-center gap-2">
           <label className="text-sm">Khối</label>
@@ -184,15 +187,17 @@ export default function QuestionsClient() {
             ) : rows.length === 0 ? (
               <tr><td className="p-3 text-sm" style={{color:'var(--text-muted)'}} colSpan={9}>Chưa có câu hỏi nào được làm</td></tr>
             ) : rows.map((q, idx) => {
+              console.log('ROW DATA', q)
+              console.log('total_attempts type', typeof (q as any).total_attempts)
+              console.log('correct_rate type', typeof (q as any).correct_rate)
               const rank = (page - 1) * pageSize + idx + 1
-              const rate = q.correct_rate || 0
+              const rate = Number(q.correct_rate || 0)
               let rateColor = '#16a34a'
-              let rateEmoji = '🟢'
-              if (rate < 30) { rateColor = '#ef4444'; rateEmoji = '🔴' }
-              else if (rate < 60) { rateColor = '#f59e0b'; rateEmoji = '🟡' }
-              else if (rate < 80) { rateColor = '#22c55e'; rateEmoji = '🟢' }
-              else { rateColor = '#15803d'; rateEmoji = '🟢' }
-              const createdLabel = q.question_created_at ? new Date(q.question_created_at).toLocaleDateString('vi-VN', { day:'2-digit', month:'2-digit', year:'numeric' }) : '—'
+              if (rate < 40) { rateColor = '#ef4444' }
+              else if (rate < 70) { rateColor = '#f59e0b' }
+              else { rateColor = '#22c55e' }
+              const createdLabel = (q as any).question_created_at ? new Date((q as any).question_created_at).toLocaleDateString('vi-VN', { day:'2-digit', month:'2-digit', year:'numeric' }) : '—'
+              const typeLabel = q.question_type === 'single_choice' ? 'Trắc nghiệm' : (q.question_type === 'true_false' ? 'Đúng/Sai' : (q.question_type === 'short_answer' ? 'Tự luận' : (q.question_type || '—')))
               return (
               <tr key={q.question_id}>
                 <td className="p-2">{rank}</td>
@@ -201,9 +206,9 @@ export default function QuestionsClient() {
                 </td>
                 <td className="p-2"><span className="badge">{q.lesson_title || '—'}</span></td>
                 <td className="p-2"><span className="badge">{q.grade_name ? `Khối ${q.grade_name}` : '—'}</span></td>
-                <td className="p-2"><span className="badge">{q.question_type || '—'}</span></td>
+                <td className="p-2"><span className="badge">{typeLabel}</span></td>
                 <td className="p-2">{Number.isFinite(Number(q.total_attempts)) ? Number(q.total_attempts) : 0}</td>
-                <td className="p-2" style={{color: rateColor}}>{rateEmoji} {Number.isFinite(Number(rate)) ? Number(rate) : 0}%</td>
+                <td className="p-2" style={{color: rateColor}}>{Number.isFinite(rate) ? rate.toFixed(2) : '0.00'}%</td>
                 <td className="p-2">{createdLabel}</td>
                 <td className="p-2">
                   <button className="border rounded px-2 py-1 text-sm" onClick={() => { setDetail(q); setDetailIndex(rank - 1) }}>👁 Xem</button>

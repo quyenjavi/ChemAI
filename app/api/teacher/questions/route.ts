@@ -5,7 +5,7 @@ export async function GET(req: Request) {
   try {
     const url = new URL(req.url)
     const page = Math.max(1, parseInt(url.searchParams.get('page') || '1', 10))
-    const pageSize = Math.max(1, parseInt(url.searchParams.get('page_size') || '30', 10))
+    const pageSize = Math.max(1, parseInt(url.searchParams.get('page_size') || '20', 10))
     const sortKey = (url.searchParams.get('sort_key') || 'total_attempts') as 'total_attempts' | 'correct_rate' | 'created_at' | 'grade_name' | 'lesson_title'
     const sortDir = (url.searchParams.get('sort_dir') || 'desc') as 'asc' | 'desc'
     const gradeNameFilter = url.searchParams.get('grade_name') || ''
@@ -19,20 +19,48 @@ export async function GET(req: Request) {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     const svc = serviceRoleClient()
     const { data: tp } = await svc.from('teacher_profiles').select('id,school_id').eq('user_id', user.id).maybeSingle()
-    if (!tp?.school_id) return NextResponse.json({ questions: [], total: 0, page, page_size: pageSize })
-    const { data: school } = await svc.from('schools').select('id,name').eq('id', tp.school_id).maybeSingle()
 
-    const { data: students } = await svc.from('student_profiles').select('user_id').eq('school_id', tp.school_id)
-    const userIds = Array.from(new Set((students || []).map((s: any) => s.user_id).filter(Boolean)))
-    if (userIds.length === 0) return NextResponse.json({ questions: [], total: 0, page, page_size: pageSize, school_name: school?.name || '', debug: { students_count: 0, attempts_count: 0, answers_count: 0, question_ids_count: 0 } })
-
-    const { data: attempts } = await svc.from('quiz_attempts').select('id,user_id,lesson_id').in('user_id', userIds)
-    const attemptIds = Array.from(new Set((attempts || []).map((a: any) => a.id).filter(Boolean)))
-    if (attemptIds.length === 0) return NextResponse.json({ questions: [], total: 0, page, page_size: pageSize, school_name: school?.name || '', debug: { students_count: userIds.length, attempts_count: 0, answers_count: 0, question_ids_count: 0 } })
-
-    const { data: answers } = await svc.from('quiz_attempt_answers').select('id,question_id,is_correct,attempt_id').in('attempt_id', attemptIds)
+    console.log('teacher user id', user.id)
+    console.log('teacher school id', tp?.school_id)
+    // Build base query from questions
+    let qQuery = svc.from('questions').select('id,content,question_type,explanation,difficulty,topic,lesson_id,created_at')
+    if (typeFilter) qQuery = qQuery.eq('question_type', typeFilter)
+    if (difficultyFilter) qQuery = qQuery.eq('difficulty', difficultyFilter)
+    if (lessonIdFilter) qQuery = qQuery.eq('lesson_id', lessonIdFilter)
+    const { data: qRows } = await qQuery
+    console.log('questions count', (qRows || []).length)
+    const questionIds = Array.from(new Set((qRows || []).map((q: any) => q.id)))
+    console.log('sample question ids', (qRows || []).slice(0, 5).map((q: any) => q.id))
+    // Resolve lessons/grades metadata
+    const lessonIds = Array.from(new Set((qRows || []).map((q: any) => q.lesson_id).filter(Boolean)))
+    const { data: lessons } = lessonIds.length ? await svc.from('lessons').select('id,title,grade_id').in('id', lessonIds) : { data: [] }
+    const gradeIds = Array.from(new Set((lessons || []).map((l: any) => l.grade_id).filter(Boolean)))
+    const { data: grades } = gradeIds.length ? await svc.from('grades').select('id,name').in('id', gradeIds) : { data: [] }
+    const titleByLesson: Record<string, string> = Object.fromEntries((lessons || []).map((l: any) => [l.id, l.title || '']))
+    const gradeByLesson: Record<string, string> = Object.fromEntries((lessons || []).map((l: any) => [l.id, (grades || []).find((g: any) => g.id === l.grade_id)?.name || '']))
+    // Fetch answers for these questions (left-join semantics handled in code)
+    const { data: answersAll } = questionIds.length ? await svc.from('quiz_attempt_answers').select('id,question_id,is_correct,attempt_id').in('question_id', questionIds) : { data: [] }
+    console.log('answersAll count', (answersAll || []).length)
+    // Fetch attempts to map answer -> user, then filter by teacher school
+    const attemptIdsForAnswers = Array.from(new Set((answersAll || []).map((a: any) => a.attempt_id).filter(Boolean)))
+    console.log('attemptIdsForAnswers count', attemptIdsForAnswers.length)
+    const { data: attemptsMapRows } = attemptIdsForAnswers.length ? await svc.from('quiz_attempts').select('id,user_id').in('id', attemptIdsForAnswers) : { data: [] }
+    console.log('attemptsMapRows count', (attemptsMapRows || []).length)
+    const attemptUserById: Record<string, string> = Object.fromEntries((attemptsMapRows || []).map((a: any) => [a.id, a.user_id]))
+    const userIdsFromAnswers = Array.from(new Set((attemptsMapRows || []).map((a: any) => a.user_id).filter(Boolean)))
+    console.log('userIdsFromAnswers count', userIdsFromAnswers.length)
+    const { data: studentsFromAnswers } = userIdsFromAnswers.length ? await svc.from('student_profiles').select('user_id,school_id').in('user_id', userIdsFromAnswers) : { data: [] }
+    console.log('studentsFromAnswers count', (studentsFromAnswers || []).length)
+    const allowedUsersSet = new Set<string>((studentsFromAnswers || []).filter((s: any) => !tp?.school_id || s.school_id === tp.school_id).map((s: any) => s.user_id))
+    console.log('allowedUsersSet size', allowedUsersSet.size)
+    const answersFiltered = (answersAll || [])
+    console.log('answersFiltered count', (answersFiltered || []).length)
+    console.log('sample answersAll', (answersAll || []).slice(0, 3))
+    console.log('sample attemptsMapRows', (attemptsMapRows || []).slice(0, 3))
+    console.log('sample studentsFromAnswers', (studentsFromAnswers || []).slice(0, 3))
+    // Aggregate counts
     const byQuestion: Record<string, { total: number, correct: number }> = {}
-    for (const r of (answers || []) as any[]) {
+    for (const r of (answersFiltered || []) as any[]) {
       const qid = r.question_id
       if (!qid) continue
       const st = byQuestion[qid] || { total: 0, correct: 0 }
@@ -40,35 +68,8 @@ export async function GET(req: Request) {
       if (r.is_correct === true) st.correct += 1
       byQuestion[qid] = st
     }
-    let questionIds = Object.keys(byQuestion)
-    const lessonIdsFromAttempts = Array.from(new Set((attempts || []).map((a: any) => a.lesson_id).filter(Boolean)))
 
-    let allowedLessonIds: string[] = []
-    if (lessonIdFilter) {
-      allowedLessonIds = [lessonIdFilter]
-    } else if (gradeNameFilter) {
-      const { data: allLessons } = await svc.from('lessons').select('id,title,grade_id')
-      const { data: allGrades } = await svc.from('grades').select('id,name')
-      const gradeIndex: Record<string, string> = Object.fromEntries((allGrades || []).map((g: any) => [g.id, g.name || '']))
-      allowedLessonIds = (allLessons || []).filter((l: any) => (gradeIndex[l.grade_id] || '') === gradeNameFilter).map((l: any) => l.id)
-    } else if (lessonIdsFromAttempts.length) {
-      allowedLessonIds = lessonIdsFromAttempts
-    }
-    let qQuery = svc.from('questions').select('id,content,question_type,correct_answer,choice_a,choice_b,choice_c,choice_d,explanation,difficulty,topic,lesson_id,created_at')
-    if (allowedLessonIds.length) {
-      qQuery = qQuery.in('lesson_id', allowedLessonIds)
-    } else if (questionIds.length) {
-      qQuery = qQuery.in('id', questionIds)
-    }
-    if (typeFilter) qQuery = qQuery.eq('question_type', typeFilter)
-    if (difficultyFilter) qQuery = qQuery.eq('difficulty', difficultyFilter)
-    const { data: qRows } = await qQuery
-    const lessonIds = Array.from(new Set((qRows || []).map((q: any) => q.lesson_id).filter(Boolean)))
-    const { data: lessons } = lessonIds.length ? await svc.from('lessons').select('id,title,grade_id').in('id', lessonIds) : { data: [] }
-    const gradeIds = Array.from(new Set((lessons || []).map((l: any) => l.grade_id).filter(Boolean)))
-    const { data: grades } = gradeIds.length ? await svc.from('grades').select('id,name').in('id', gradeIds) : { data: [] }
-    const titleByLesson: Record<string, string> = Object.fromEntries((lessons || []).map((l: any) => [l.id, l.title || '']))
-    const gradeByLesson: Record<string, string> = Object.fromEntries((lessons || []).map((l: any) => [l.id, (grades || []).find((g: any) => g.id === l.grade_id)?.name || '']))
+    // Optional grade filter applied on payload after aggregation
 
     const { data: qOpts } = await svc.from('question_options').select('question_id,option_key,option_text,is_correct,sort_order').in('question_id', (qRows || []).map((x: any) => x.id)).order('sort_order', { ascending: true })
     const optsByQuestion: Record<string, any[]> = {}
@@ -79,9 +80,11 @@ export async function GET(req: Request) {
     }
     const shortIds = (qRows || []).filter((q: any) => String(q.question_type || '') === 'short_answer').map((q: any) => q.id)
     const { data: shortRows } = shortIds.length ? await svc.from('question_short_answers').select('question_id,answer_text').in('question_id', shortIds) : { data: [] }
-    const shortByQuestion: Record<string, string> = {}
+    const acceptedByQuestion: Record<string, string[]> = {}
     for (const s of (shortRows || []) as any[]) {
-      if (!shortByQuestion[s.question_id]) shortByQuestion[s.question_id] = s.answer_text || ''
+      const arr = acceptedByQuestion[s.question_id] || []
+      if (s.answer_text) arr.push(s.answer_text)
+      acceptedByQuestion[s.question_id] = arr
     }
 
     let payload = (qRows || []).map((q: any) => {
@@ -89,12 +92,9 @@ export async function GET(req: Request) {
       const rate = st.total ? Math.round((100 * st.correct / st.total) * 100) / 100 : 0
       const lessonTitle = titleByLesson[q.lesson_id] || ''
       const gradeName = gradeByLesson[q.lesson_id] || ''
-      const options = (optsByQuestion[q.id] && optsByQuestion[q.id].length) ? optsByQuestion[q.id] : [
-        { key: 'A', text: q.choice_a || '', is_correct: String(q.correct_answer || '').toUpperCase() === 'A', order: 1 },
-        { key: 'B', text: q.choice_b || '', is_correct: String(q.correct_answer || '').toUpperCase() === 'B', order: 2 },
-        { key: 'C', text: q.choice_c || '', is_correct: String(q.correct_answer || '').toUpperCase() === 'C', order: 3 },
-        { key: 'D', text: q.choice_d || '', is_correct: String(q.correct_answer || '').toUpperCase() === 'D', order: 4 },
-      ].filter(x => x.text)
+      const options = optsByQuestion[q.id] || []
+      const correctKey = (options.find(o => o.is_correct) || { key: '' }).key
+      const accepted_answers = acceptedByQuestion[q.id] || []
       return {
         question_id: q.id,
         lesson_id: q.lesson_id || '',
@@ -109,54 +109,12 @@ export async function GET(req: Request) {
         topic: q.topic || '',
         options,
         explanation: q.explanation || '',
-        correct_key: String(q.correct_answer || '').toUpperCase(),
-        correct_text: String(q.question_type || '') === 'short_answer' ? (shortByQuestion[q.id] || '') : ''
+        correct_key: correctKey,
+        accepted_answers
       }
     })
 
-    if (questionIds.length === 0) {
-      const { data: lessons2 } = lessonIdsFromAttempts.length ? await svc.from('lessons').select('id,title,grade_id').in('id', lessonIdsFromAttempts) : { data: [] }
-      const gradeIds2 = Array.from(new Set((lessons2 || []).map((l: any) => l.grade_id).filter(Boolean)))
-      const { data: grades2 } = gradeIds2.length ? await svc.from('grades').select('id,name').in('id', gradeIds2) : { data: [] }
-      const titleByLesson2: Record<string, string> = Object.fromEntries((lessons2 || []).map((l: any) => [l.id, l.title || '']))
-      const gradeByLesson2: Record<string, string> = Object.fromEntries((lessons2 || []).map((l: any) => [l.id, (grades2 || []).find((g: any) => g.id === l.grade_id)?.name || '']))
-      let q2 = lessonIdsFromAttempts.length ? svc
-        .from('questions')
-        .select('id,content,question_type,correct_answer,choice_a,choice_b,choice_c,choice_d,explanation,difficulty,topic,lesson_id,created_at')
-        .in('lesson_id', lessonIdsFromAttempts) : null
-      if (q2) {
-        if (typeFilter) q2 = q2.eq('question_type', typeFilter)
-        if (difficultyFilter) q2 = q2.eq('difficulty', difficultyFilter)
-      }
-      const { data: qRows2 } = q2 ? await q2 : { data: [] as any[] }
-      payload = (qRows2 || []).map((q: any) => {
-        const lessonTitle = titleByLesson2[q.lesson_id] || ''
-        const gradeName = gradeByLesson2[q.lesson_id] || ''
-        const options = [
-          { key: 'A', text: q.choice_a || '', is_correct: String(q.correct_answer || '').toUpperCase() === 'A', order: 1 },
-          { key: 'B', text: q.choice_b || '', is_correct: String(q.correct_answer || '').toUpperCase() === 'B', order: 2 },
-          { key: 'C', text: q.choice_c || '', is_correct: String(q.correct_answer || '').toUpperCase() === 'C', order: 3 },
-          { key: 'D', text: q.choice_d || '', is_correct: String(q.correct_answer || '').toUpperCase() === 'D', order: 4 },
-        ].filter(x => x.text)
-        return {
-          question_id: q.id,
-          lesson_id: q.lesson_id || '',
-          question_content: q.content || '',
-          question_type: q.question_type || '',
-          lesson_title: lessonTitle,
-          grade_name: gradeName,
-          total_attempts: 0,
-          correct_rate: 0,
-          question_created_at: q.created_at || null,
-          difficulty: q.difficulty || '',
-          topic: q.topic || '',
-          options,
-          explanation: q.explanation || '',
-          correct_key: String(q.correct_answer || '').toUpperCase(),
-          correct_text: String(q.question_type || '') === 'short_answer' ? '' : ''
-        }
-      })
-    }
+    // No fallback branch: always start from questions, unanswered remain with counts = 0
 
     if (gradeNameFilter) payload = payload.filter(p => (p.grade_name || '') === gradeNameFilter)
     if (lessonIdFilter) payload = payload.filter(p => (p.lesson_id || '') === lessonIdFilter)
@@ -186,7 +144,21 @@ export async function GET(req: Request) {
     const start = (page - 1) * pageSize
     const paged = payload.slice(start, start + pageSize)
 
-    return NextResponse.json({ questions: paged, total, page, page_size: pageSize, school_name: school?.name || '', debug: { students_count: userIds.length, attempts_count: attemptIds.length, answers_count: (answers || []).length, question_ids_count: questionIds.length } })
+    const students_count = (studentsFromAnswers || []).length
+    const attempts_count = (attemptsMapRows || []).length
+    const answers_count = (answersAll || []).length
+    const answers_filtered_count = (answersFiltered || []).length
+    const question_ids_count = questionIds.length
+    console.log('students count', students_count)
+    console.log('attempts count', attempts_count)
+    console.log('answers count', answers_count)
+    console.log('answers filtered count', answers_filtered_count)
+    console.log('question ids count', question_ids_count)
+    console.log('first analytics row', paged?.[0])
+    return NextResponse.json(
+      { questions: paged, total, page, page_size: pageSize, scope: 'all', debug: { students_count, attempts_count, answers_count, answers_filtered_count, question_ids_count } },
+      { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } }
+    )
   } catch (e: any) {
     return NextResponse.json({ error: e.message || 'Server error' }, { status: 500 })
   }

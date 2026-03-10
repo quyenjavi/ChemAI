@@ -14,16 +14,9 @@ export async function GET(req: Request) {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const svc = serviceRoleClient()
-    const { data: tp } = await svc.from('teacher_profiles').select('id,school_id').eq('user_id', user.id).maybeSingle()
-    if (!tp?.school_id) return NextResponse.json({ lessons: [] })
-    const { data: school } = await svc.from('schools').select('id,name').eq('id', tp.school_id).maybeSingle()
-
-    const { data: students } = await svc.from('student_profiles').select('user_id').eq('school_id', tp.school_id)
-    const userIds = Array.from(new Set((students || []).map((s: any) => s.user_id).filter(Boolean)))
-    if (userIds.length === 0) return NextResponse.json({ lessons: [] })
 
     const sinceISO = days ? new Date(Date.now() - days * 24 * 3600 * 1000).toISOString() : undefined
-    let qaQuery = svc.from('quiz_attempts').select('id,user_id,lesson_id,score_percent,created_at').in('user_id', userIds)
+    let qaQuery = svc.from('quiz_attempts').select('id,user_id,lesson_id,score_percent,created_at')
     if (sinceISO) qaQuery = qaQuery.gte('created_at', sinceISO)
     const { data: attempts } = await qaQuery
 
@@ -93,7 +86,7 @@ export async function GET(req: Request) {
     const end = start + pageSize
     const paged = payload.slice(start, end)
 
-    return NextResponse.json({ lessons: paged, total, page, page_size: pageSize, school_name: school?.name || '' })
+    return NextResponse.json({ lessons: paged, total, page, page_size: pageSize, scope: 'all' })
   } catch (e: any) {
     return NextResponse.json({ error: e.message || 'Server error' }, { status: 500 })
   }

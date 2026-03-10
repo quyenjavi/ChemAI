@@ -16,7 +16,10 @@ type Q = {
 }
 
 export default function QuizClient({ lessonId, n }: { lessonId: string, n?: string }) {
-  const desiredCount = Math.max(1, Math.min(30, Number(n || 0) || 0)) || null
+  const desiredCount = (() => {
+    const parsedN = Number(n)
+    return (Number.isFinite(parsedN) && parsedN > 0) ? Math.min(30, parsedN) : null
+  })()
   const [questions, setQuestions] = useState<Q[]>([])
   const [answers, setAnswers] = useState<Record<string, string>>({})
   const [attemptId, setAttemptId] = useState<string | null>(null)
@@ -26,14 +29,20 @@ export default function QuizClient({ lessonId, n }: { lessonId: string, n?: stri
 
   useEffect(() => {
     if (!lessonId) return
-    supabaseBrowser.auth.getUser().then(({ data }) => {
+    ;(async () => {
+      const { data } = await supabaseBrowser.auth.getUser()
       if (!data.user) {
         router.push('/login')
+        return
       }
-    })
-    fetch(`/api/lessons/${lessonId}/questions?n=${desiredCount || ''}`)
-      .then(r => r.ok ? r.json() : [])
-      .then((list: Q[]) => {
+      try {
+        const qUrl = desiredCount ? `/api/lessons/${lessonId}/questions?n=${desiredCount}` : `/api/lessons/${lessonId}/questions`
+        const qRes = await fetch(qUrl, { credentials: 'include' })
+        if (!qRes.ok) {
+          const j = await qRes.json().catch(async () => ({ error: await qRes.text().catch(()=> 'Lỗi tải câu hỏi') }))
+          throw new Error(j.error || 'Lỗi tải câu hỏi')
+        }
+        const list: Q[] = await qRes.json()
         const prio = (t: Q['question_type']) => t === 'single_choice' ? 0 : (t === 'true_false' ? 1 : 2)
         const sorted = [...list].sort((a, b) => {
           const d = prio(a.question_type) - prio(b.question_type)
@@ -41,22 +50,27 @@ export default function QuizClient({ lessonId, n }: { lessonId: string, n?: stri
           return (a.order_index || 0) - (b.order_index || 0)
         })
         setQuestions(sorted)
-      })
-    fetch('/api/attempts/create', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ lessonId }),
-      credentials: 'include',
-    })
-      .then(async r => {
+      } catch (err: any) {
+        setInitError(err?.message || 'Lỗi tải câu hỏi')
+        return
+      }
+      try {
+        const r = await fetch('/api/attempts/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ lessonId }),
+          credentials: 'include',
+        })
         if (!r.ok) {
           const j = await r.json().catch(() => ({}))
           throw new Error(j.error || 'Không thể khởi tạo bài làm. Vui lòng đăng nhập lại.')
         }
-        return r.json()
-      })
-      .then(json => setAttemptId(json.attemptId))
-      .catch(err => setInitError(err.message || 'Lỗi khởi tạo bài'))
+        const json = await r.json()
+        setAttemptId(json.attemptId)
+      } catch (err: any) {
+        setInitError(err?.message || 'Lỗi khởi tạo bài')
+      }
+    })()
   }, [lessonId, desiredCount, router])
 
   const canSubmit = useMemo(() => {
@@ -66,14 +80,19 @@ export default function QuizClient({ lessonId, n }: { lessonId: string, n?: stri
   async function onSubmit() {
     if (!attemptId) return
     setSubmitting(true)
+    const answered: Array<{ questionId: string, selected_answer?: string, answer_text?: string }> = []
+    for (const q of questions) {
+      const val = (answers[q.id] || '')
+      if (q.question_type === 'short_answer') {
+        const txt = (val || '').trim()
+        if (txt) answered.push({ questionId: q.id, answer_text: txt })
+      } else {
+        if (val) answered.push({ questionId: q.id, selected_answer: val })
+      }
+    }
     const payload = {
       attemptId,
-      answers: questions.map(q => {
-        if (q.question_type === 'short_answer') {
-          return { questionId: q.id, answer_text: answers[q.id] || '' }
-        }
-        return { questionId: q.id, selected_answer: answers[q.id] || '' }
-      })
+      answers: answered
     }
     const res = await fetch('/api/attempts/submit', {
       method: 'POST',

@@ -51,15 +51,48 @@ export async function POST(request: Request) {
         }
       }
     }
-    // insert objective answers (skip short_answer here)
+    const saIds = qIds.filter(id => typeById[id] === 'short_answer')
+    let refById: Record<string, string> = {}
+    if (saIds.length) {
+      const { data: refs } = await svc
+        .from('question_short_answers')
+        .select('question_id, answer_text')
+        .in('question_id', saIds)
+      const grouped: Record<string, string[]> = {}
+      for (const r of (refs || []) as any[]) {
+        grouped[r.question_id] = grouped[r.question_id] || []
+        grouped[r.question_id].push(r.answer_text || '')
+      }
+      for (const k of Object.keys(grouped)) {
+        refById[k] = grouped[k].filter(Boolean).join('; ')
+      }
+    }
+    function normalizeText(s: string) {
+      return s.toLowerCase().trim().replace(/\s+/g, ' ')
+    }
     for (const a of answers) {
-      const typ = typeById[a.questionId]
-      if (typ !== 'short_answer') {
-        const chosen = a.selected_answer || ''
-        const is_correct = !!(chosen && correctById[a.questionId] && correctById[a.questionId] === chosen)
+      const qid = a.questionId
+      const typ = typeById[qid]
+      if (typ === 'short_answer') {
+        const txt = (a.answer_text || '').trim()
+        if (!txt) continue
+        const studentNorm = normalizeText(txt)
+        const refs = (refById[qid] || '').split(';').map(x => normalizeText(x)).filter(Boolean)
+        const is_correct = refs.length ? refs.includes(studentNorm) : false
         await svc.from('quiz_attempt_answers').insert({
           attempt_id: attemptId,
-          question_id: a.questionId,
+          question_id: qid,
+          answer_text: txt,
+          is_correct,
+          created_at: new Date()
+        })
+      } else {
+        const chosen = (a.selected_answer || '').trim()
+        if (!chosen) continue
+        const is_correct = !!(correctById[qid] && correctById[qid] === chosen)
+        await svc.from('quiz_attempt_answers').insert({
+          attempt_id: attemptId,
+          question_id: qid,
           selected_answer: chosen,
           is_correct,
           created_at: new Date()
@@ -96,22 +129,6 @@ export async function POST(request: Request) {
     }
     const score_percent = totalObjective ? Math.round((correctObjective / totalObjective) * 100) : 0
     // build essay string from short_answer questions
-    const saIds = qIds.filter(id => typeById[id] === 'short_answer')
-    let refById: Record<string, string> = {}
-    if (saIds.length) {
-      const { data: refs } = await svc
-        .from('question_short_answers')
-        .select('question_id, answer_text')
-        .in('question_id', saIds)
-      const grouped: Record<string, string[]> = {}
-      for (const r of (refs || []) as any[]) {
-        grouped[r.question_id] = grouped[r.question_id] || []
-        grouped[r.question_id].push(r.answer_text || '')
-      }
-      for (const k of Object.keys(grouped)) {
-        refById[k] = grouped[k].filter(Boolean).join('; ')
-      }
-    }
     const saEntries = answers.filter(a => typeById[a.questionId] === 'short_answer')
       .map(a => ({
         id: a.questionId,

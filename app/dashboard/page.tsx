@@ -128,7 +128,7 @@ export default function Dashboard() {
               <div className="mt-2 flex items-center gap-2">
                 {(() => {
                   const maxBank = counts[ls.id] ?? 0
-                  const max = Math.min(30, maxBank)
+                  const max = Math.min(50, maxBank)
                   const disabled = max === 0
                   const val = questionCounts[ls.id] ?? (max || 1)
                   return (
@@ -153,7 +153,7 @@ export default function Dashboard() {
                 })()}
               </div>
               <div className="mt-3">
-                <a href={`/lesson/${ls.id}/quiz?n=${questionCounts[ls.id] ?? (Math.min(30, counts[ls.id] ?? 0) || 1)}`}>
+                <a href={`/lesson/${ls.id}/quiz?n=${questionCounts[ls.id] ?? (Math.min(50, counts[ls.id] ?? 0) || 1)}`}>
                   <Button size="md" disabled={(counts[ls.id] ?? 0) === 0}>Làm bài</Button>
                 </a>
               </div>

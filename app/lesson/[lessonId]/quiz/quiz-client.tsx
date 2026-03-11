@@ -18,7 +18,7 @@ type Q = {
 export default function QuizClient({ lessonId, n }: { lessonId: string, n?: string }) {
   const desiredCount = (() => {
     const parsedN = Number(n)
-    return (Number.isFinite(parsedN) && parsedN > 0) ? Math.min(30, parsedN) : null
+    return (Number.isFinite(parsedN) && parsedN > 0) ? Math.min(50, parsedN) : null
   })()
   const [questions, setQuestions] = useState<Q[]>([])
   const [answers, setAnswers] = useState<Record<string, string>>({})

@@ -6,6 +6,7 @@ type LessonStat = {
   lesson_title: string
   grade_name: string
   lesson_created_at: string | null
+  is_visible: boolean
   total_attempts: number
   avg_score_percent: number
 }
@@ -21,10 +22,11 @@ export default function LessonStatsClient() {
   const [sortKey, setSortKey] = useState<SortKey>('total_attempts')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
   const [search, setSearch] = useState('')
-  const [schoolName, setSchoolName] = useState('')
   const [page, setPage] = useState(1)
   const pageSize = 30
   const [total, setTotal] = useState(0)
+  const [visibilityDraft, setVisibilityDraft] = useState<Record<string, boolean>>({})
+  const [savingLessonId, setSavingLessonId] = useState<string | null>(null)
 
   useEffect(() => {
     setLoading(true)
@@ -39,9 +41,16 @@ export default function LessonStatsClient() {
     fetch(`/api/teacher/analytics/lessons?${qs.toString()}`, { credentials: 'include' })
       .then(r => r.ok ? r.json() : Promise.reject(new Error('Failed to load lesson stats')))
       .then(json => {
-        setRows(json?.lessons || [])
+        const nextRows = json?.lessons || []
+        setRows(nextRows)
         setTotal(json?.total || 0)
-        setSchoolName(json?.school_name || '')
+        setVisibilityDraft(prev => {
+          const copy = { ...prev }
+          for (const l of nextRows) {
+            if (typeof copy[l.lesson_id] !== 'boolean') copy[l.lesson_id] = !!l.is_visible
+          }
+          return copy
+        })
       })
       .catch(err => setError(err.message || 'Lỗi tải dữ liệu bài học'))
       .finally(() => setLoading(false))
@@ -52,7 +61,7 @@ export default function LessonStatsClient() {
 
   return (
     <div className="space-y-4">
-      <div className="text-sm" style={{color:'var(--text-muted)'}}>Trong phạm vi trường: <span className="font-medium">{schoolName || '—'}</span></div>
+      <div className="text-sm" style={{color:'var(--text-muted)'}}>Phạm vi: <span className="font-medium">Toàn hệ thống</span></div>
       <div className="flex flex-wrap items-center gap-2">
         <div className="flex items-center gap-2">
           <label className="text-sm">Khối</label>
@@ -103,13 +112,15 @@ export default function LessonStatsClient() {
               <th className="text-left p-2">Số lần làm</th>
               <th className="text-left p-2">Điểm trung bình</th>
               <th className="text-left p-2">Thời gian tạo</th>
+              <th className="text-left p-2">Hiển thị</th>
+              <th className="text-left p-2">Lưu</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td className="p-3 text-sm" colSpan={5}>Đang tải...</td></tr>
+              <tr><td className="p-3 text-sm" colSpan={7}>Đang tải...</td></tr>
             ) : rows.length === 0 ? (
-              <tr><td className="p-3 text-sm" style={{color:'var(--text-muted)'}} colSpan={5}>Chưa có dữ liệu bài học</td></tr>
+              <tr><td className="p-3 text-sm" style={{color:'var(--text-muted)'}} colSpan={7}>Chưa có dữ liệu bài học</td></tr>
             ) : rows.map(l => (
               <tr key={l.lesson_id}>
                 <td className="p-2">{l.lesson_title}</td>
@@ -117,6 +128,44 @@ export default function LessonStatsClient() {
                 <td className="p-2">{l.total_attempts}</td>
                 <td className="p-2">{l.avg_score_percent}%</td>
                 <td className="p-2">{l.lesson_created_at ? new Date(l.lesson_created_at).toLocaleString() : '—'}</td>
+                <td className="p-2">
+                  <select
+                    className="border rounded p-2 bg-transparent select-clean"
+                    value={(visibilityDraft[l.lesson_id] ?? l.is_visible) ? 'true' : 'false'}
+                    onChange={e => {
+                      const next = e.target.value === 'true'
+                      setVisibilityDraft(prev => ({ ...prev, [l.lesson_id]: next }))
+                    }}
+                  >
+                    <option value="true">Hiển thị</option>
+                    <option value="false">Không hiển thị</option>
+                  </select>
+                </td>
+                <td className="p-2">
+                  <button
+                    className="border rounded px-3 py-2"
+                    disabled={savingLessonId === l.lesson_id}
+                    onClick={() => {
+                      const nextVisible = visibilityDraft[l.lesson_id] ?? l.is_visible
+                      setSavingLessonId(l.lesson_id)
+                      setError('')
+                      fetch('/api/teacher/lessons/visibility', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({ lesson_id: l.lesson_id, is_visible: nextVisible })
+                      })
+                        .then(r => r.ok ? r.json() : Promise.reject(new Error('Failed to save lesson visibility')))
+                        .then(() => {
+                          setRows(prev => prev.map(x => x.lesson_id === l.lesson_id ? { ...x, is_visible: nextVisible } : x))
+                        })
+                        .catch(err => setError(err.message || 'Lỗi lưu trạng thái hiển thị'))
+                        .finally(() => setSavingLessonId(null))
+                    }}
+                  >
+                    {savingLessonId === l.lesson_id ? 'Đang lưu...' : 'Lưu'}
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>

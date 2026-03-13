@@ -16,7 +16,7 @@ export async function GET(req: Request) {
     const svc = serviceRoleClient()
 
     const sinceISO = days ? new Date(Date.now() - days * 24 * 3600 * 1000).toISOString() : undefined
-    let qaQuery = svc.from('quiz_attempts').select('id,user_id,lesson_id,score_percent,created_at')
+    let qaQuery = svc.from('quiz_attempts').select('lesson_id,score_percent,created_at')
     if (sinceISO) qaQuery = qaQuery.gte('created_at', sinceISO)
     const { data: attempts } = await qaQuery
 
@@ -29,11 +29,7 @@ export async function GET(req: Request) {
       s.sum += (a.score_percent || 0)
       byLesson[lid] = s
     }
-    const lessonIds = Object.keys(byLesson)
-    if (lessonIds.length === 0) return NextResponse.json({ lessons: [] })
-
-    let lQuery = svc.from('lessons').select('id,title,grade_id,created_at').in('id', lessonIds)
-    const { data: lessonRows } = await lQuery
+    const { data: lessonRows } = await svc.from('lessons').select('id,title,grade_id,created_at,is_visible')
     const gradeIds = Array.from(new Set((lessonRows || []).map((l: any) => l.grade_id).filter(Boolean)))
     const { data: grades } = gradeIds.length ? await svc.from('grades').select('id,name').in('id', gradeIds) : { data: [] }
     const gradeNameById: Record<string, string> = Object.fromEntries((grades || []).map((g: any) => [g.id, g.name || '']))
@@ -46,6 +42,7 @@ export async function GET(req: Request) {
         lesson_title: l.title || '',
         grade_name: gradeNameById[l.grade_id] || '',
         lesson_created_at: l.created_at || null,
+        is_visible: typeof l.is_visible === 'boolean' ? l.is_visible : true,
         total_attempts: stat.count,
         avg_score_percent: avg
       }

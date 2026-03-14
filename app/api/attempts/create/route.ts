@@ -9,11 +9,20 @@ export async function POST(request: Request) {
     const { lessonId } = await request.json()
     if (!lessonId) return NextResponse.json({ error: 'lessonId required' }, { status: 400 })
     const svc = serviceRoleClient()
+    const { data: lesson } = await svc.from('lessons').select('lesson_type').eq('id', lessonId).maybeSingle()
+    const mode = (lesson?.lesson_type === 'exam' || lesson?.lesson_type === 'practice') ? lesson.lesson_type : 'practice'
     const { data, error } = await svc
       .from('quiz_attempts')
       .insert({
         user_id: user.id,
         lesson_id: lessonId,
+        mode,
+        status: 'in_progress',
+        raw_score: 0,
+        total_score: 0,
+        accuracy_correct_units: 0,
+        accuracy_total_units: 0,
+        accuracy_percent: 0,
         total_questions: 0,
         correct_answers: 0,
         score_percent: 0

@@ -11,13 +11,19 @@ export async function GET(req: Request, { params }: { params: { lessonId: string
     const parsedN = Number(rawN)
     const desiredCount = (rawN && Number.isFinite(parsedN) && parsedN > 0) ? Math.min(50, parsedN) : null
     const svc = serviceRoleClient()
+    const { data: lesson } = await svc
+      .from('lessons')
+      .select('id,lesson_type')
+      .eq('id', params.lessonId)
+      .maybeSingle()
+    const lessonType = (lesson?.lesson_type === 'exam' || lesson?.lesson_type === 'practice') ? lesson.lesson_type : 'practice'
     const { data: qs } = await svc
       .from('questions')
-      .select('id, content, question_type, order_index, topic, lesson_id')
+      .select('id, content, question_type, order_index, topic, lesson_id, image_url, image_alt, image_caption')
       .eq('lesson_id', params.lessonId)
       .order('order_index', { ascending: true })
-      .limit(50)
-    const questions = (qs || []) as Array<{ id: string, content: string, question_type: string, order_index: number, topic?: string, lesson_id?: string }>
+      .limit(200)
+    const questions = (qs || []) as Array<{ id: string, content: string, question_type: string, order_index: number, topic?: string, lesson_id?: string, image_url?: string, image_alt?: string, image_caption?: string }>
     const ids = questions
       .filter(q => q.question_type === 'single_choice' || q.question_type === 'true_false')
       .map(q => q.id)
@@ -45,22 +51,22 @@ export async function GET(req: Request, { params }: { params: { lessonId: string
       }
       return a
     }
-    const shortIds = questions.filter(q => q.question_type === 'short_answer').map(q => q.id)
-    let acceptedByQ: Record<string, string[]> = {}
-    if (shortIds.length) {
-      const { data: sa } = await svc
-        .from('question_short_answers')
-        .select('question_id, answer_text')
-        .in('question_id', shortIds)
-      for (const r of (sa || []) as Array<any>) {
-        const arr = acceptedByQ[r.question_id] || []
-        if (r.answer_text) arr.push(r.answer_text)
-        acceptedByQ[r.question_id] = arr
+    const tfGroupIds = questions.filter(q => q.question_type === 'true_false_group').map(q => q.id)
+    let statementsByQ: Record<string, Array<{ id: string, text: string, sort_order: number }>> = {}
+    if (tfGroupIds.length) {
+      const { data: st } = await svc
+        .from('question_statements')
+        .select('id, question_id, statement_text, sort_order')
+        .in('question_id', tfGroupIds)
+        .order('sort_order', { ascending: true })
+      for (const r of (st || []) as Array<any>) {
+        const arr = statementsByQ[r.question_id] || []
+        arr.push({ id: r.id, text: r.statement_text || '', sort_order: r.sort_order ?? 0 })
+        statementsByQ[r.question_id] = arr
       }
     }
     const payload = questions.map(q => {
       const opts = optionsByQ[q.id] || []
-      const accepted_answers = acceptedByQ[q.id] || []
       return {
         id: q.id,
         question_id: q.id,
@@ -70,19 +76,20 @@ export async function GET(req: Request, { params }: { params: { lessonId: string
         topic: q.topic || '',
         lesson_id: q.lesson_id || params.lessonId,
         options: opts,
-        accepted_answers
+        statements: statementsByQ[q.id] || [],
+        image_url: q.image_url || '',
+        image_alt: q.image_alt || '',
+        image_caption: q.image_caption || ''
       }
     })
-    const shuffled = shuffle(payload)
-    const selectedBase = desiredCount ? shuffled.slice(0, Math.min(desiredCount, shuffled.length)) : payload
-    const typeOrder = (t: string) => (t === 'single_choice' ? 1 : (t === 'true_false' ? 2 : 3))
-    const selected = [...selectedBase].sort((a, b) => {
-      const ta = typeOrder(a.question_type || '')
-      const tb = typeOrder(b.question_type || '')
-      if (ta !== tb) return ta - tb
-      return (a.order_index || 0) - (b.order_index || 0)
-    })
-    return NextResponse.json(selected)
+    if (lessonType === 'exam') {
+      return NextResponse.json({ lesson: { id: params.lessonId, lesson_type: lessonType }, questions: payload })
+    }
+    if (!desiredCount) {
+      return NextResponse.json({ lesson: { id: params.lessonId, lesson_type: lessonType }, questions: payload })
+    }
+    const picked = shuffle(payload).slice(0, Math.min(desiredCount, payload.length)).sort((a, b) => (a.order_index || 0) - (b.order_index || 0))
+    return NextResponse.json({ lesson: { id: params.lessonId, lesson_type: lessonType }, questions: picked })
   } catch (e: any) {
     return NextResponse.json({ error: e.message || 'Server error' }, { status: 500 })
   }

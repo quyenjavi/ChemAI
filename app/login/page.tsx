@@ -5,9 +5,6 @@ import { useRouter } from 'next/navigation'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Poppins } from 'next/font/google'
-
-const poppins = Poppins({ subsets: ['latin'], weight: ['500','600','700'] })
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -62,7 +59,7 @@ export default function LoginPage() {
     <div className="min-h-[70vh] relative overflow-hidden">
       <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 items-center px-4">
         <div className="py-10">
-          <h1 className={`${poppins.className} text-[36px] md:text-[42px] font-semibold leading-tight`}>
+          <h1 className="text-[36px] md:text-[42px] font-semibold leading-tight">
             ChemAI LAB
           </h1>
           <p className="mt-2 text-[15px]" style={{color:'var(--text-secondary)'}}>
@@ -72,7 +69,7 @@ export default function LoginPage() {
         <Card className="max-w-md w-full mx-auto md:ml-auto">
           <CardContent>
             <div className="text-center mb-4">
-            <div className={`${poppins.className} text-[22px] font-semibold`} style={{color:'var(--text)'}}>Vào lớp thôi!</div>
+            <div className="text-[22px] font-semibold" style={{color:'var(--text)'}}>Vào lớp thôi!</div>
             <div className="text-[14px]" style={{color:'var(--text-muted)'}}>Học mọi lúc, mọi nơi!</div>
             </div>
             <form className="space-y-4" onSubmit={onSubmit}>

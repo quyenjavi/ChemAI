@@ -29,7 +29,7 @@ export async function GET(req: Request) {
       s.sum += (a.score_percent || 0)
       byLesson[lid] = s
     }
-    const { data: lessonRows } = await svc.from('lessons').select('id,title,grade_id,created_at,is_visible')
+    const { data: lessonRows } = await svc.from('lessons').select('id,title,grade_id,created_at,is_visible,lesson_type')
     const gradeIds = Array.from(new Set((lessonRows || []).map((l: any) => l.grade_id).filter(Boolean)))
     const { data: grades } = gradeIds.length ? await svc.from('grades').select('id,name').in('id', gradeIds) : { data: [] }
     const gradeNameById: Record<string, string> = Object.fromEntries((grades || []).map((g: any) => [g.id, g.name || '']))
@@ -43,6 +43,7 @@ export async function GET(req: Request) {
         grade_name: gradeNameById[l.grade_id] || '',
         lesson_created_at: l.created_at || null,
         is_visible: typeof l.is_visible === 'boolean' ? l.is_visible : true,
+        lesson_type: (l.lesson_type === 'exam' || l.lesson_type === 'practice') ? l.lesson_type : 'practice',
         total_attempts: stat.count,
         avg_score_percent: avg
       }

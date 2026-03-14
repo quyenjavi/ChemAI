@@ -10,7 +10,9 @@ export async function POST(req: Request) {
     const body = await req.json().catch(() => ({}))
     const lessonId = String(body?.lesson_id || '')
     const isVisible = body?.is_visible
-    if (!lessonId || typeof isVisible !== 'boolean') {
+    const rawLessonType = body?.lesson_type
+    const lessonType = rawLessonType === 'exam' ? 'exam' : rawLessonType === 'practice' ? 'practice' : null
+    if (!lessonId || (typeof isVisible !== 'boolean' && !lessonType)) {
       return NextResponse.json({ error: 'Invalid payload' }, { status: 400 })
     }
 
@@ -24,7 +26,10 @@ export async function POST(req: Request) {
 
     const { error } = await svc
       .from('lessons')
-      .update({ is_visible: isVisible })
+      .update({
+        ...(typeof isVisible === 'boolean' ? { is_visible: isVisible } : {}),
+        ...(lessonType ? { lesson_type: lessonType } : {})
+      })
       .eq('id', lessonId)
     if (error) return NextResponse.json({ error: error.message || 'Update failed' }, { status: 500 })
 
@@ -33,4 +38,3 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: e.message || 'Server error' }, { status: 500 })
   }
 }
-

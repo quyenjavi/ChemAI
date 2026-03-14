@@ -2,15 +2,25 @@ import { NextResponse } from 'next/server'
 import { createSupabaseServer, serviceRoleClient } from '@/lib/supabase/server'
 import { env } from '@/lib/env'
 
+export const maxDuration = 300
+
 async function callDifyChat(body: any) {
-  const res = await fetch(`${env.difyBaseUrl}/chat-messages`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${env.difyChatKey}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(body)
-  })
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 300000)
+  let res: Response
+  try {
+    res = await fetch(`${env.difyBaseUrl}/chat-messages`, {
+      method: 'POST',
+      signal: controller.signal,
+      headers: {
+        'Authorization': `Bearer ${env.difyChatKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(body)
+    })
+  } finally {
+    clearTimeout(timeout)
+  }
   if (!res.ok) {
     const text = await res.text()
     throw new Error(`Dify chat error: ${res.status} ${text}`)

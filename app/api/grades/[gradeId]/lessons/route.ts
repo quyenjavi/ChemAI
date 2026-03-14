@@ -9,10 +9,10 @@ export async function GET(req: Request, { params }: { params: { gradeId: string 
     const svc = serviceRoleClient()
     const { data } = await svc
       .from('lessons')
-      .select('id, grade_id, title, description, is_visible')
+      .select('id, grade_id, title, description, is_visible, lesson_type')
       .eq('grade_id', params.gradeId)
       .eq('is_visible', true)
-      .order('created_at', { ascending: true })
+      .order('created_at', { ascending: false })
     return NextResponse.json(data || [])
   } catch (e: any) {
     return NextResponse.json({ error: e.message || 'Server error' }, { status: 500 })

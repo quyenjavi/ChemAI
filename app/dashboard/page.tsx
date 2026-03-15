@@ -6,12 +6,22 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useRouter } from 'next/navigation'
 type Grade = { id: string, name: string }
-type Lesson = { id: string, grade_id: string, title: string, description: string | null, lesson_type?: 'practice' | 'exam' | string | null, question_count?: number | null }
+type Lesson = {
+  id: string,
+  grade_id: string,
+  title: string,
+  description: string | null,
+  lesson_type?: 'practice' | 'exam' | string | null,
+  question_count?: number | null,
+  is_teacher_recommended?: boolean | null,
+  display_order?: number | null
+}
 
 export default function Dashboard() {
   const router = useRouter()
   const [grades, setGrades] = useState<Grade[]>([])
   const [activeGradeId, setActiveGradeId] = useState<string | null>(null)
+  const [preferredGradeId, setPreferredGradeId] = useState<string | null>(null)
   const [lessons, setLessons] = useState<Lesson[]>([])
   const [search, setSearch] = useState('')
   const [counts, setCounts] = useState<Record<string, number>>({})
@@ -25,13 +35,33 @@ export default function Dashboard() {
   }, [search, lessons])
 
   useEffect(() => {
+    ;(async () => {
+      const { data: { user } } = await supabaseBrowser.auth.getUser()
+      if (!user?.id) return
+      const { data: profile } = await supabaseBrowser
+        .from('student_profiles')
+        .select('grade_id')
+        .eq('user_id', user.id)
+        .maybeSingle()
+      const gid = profile?.grade_id ? String(profile.grade_id) : null
+      if (gid) setPreferredGradeId(gid)
+    })()
+  }, [])
+
+  useEffect(() => {
     supabaseBrowser.from('grades').select('*').order('created_at', { ascending: true }).then(({ data }) => {
       if (data && data.length) {
         setGrades(data as any)
-        setActiveGradeId(data[0].id)
       }
     })
   }, [])
+
+  useEffect(() => {
+    if (activeGradeId) return
+    if (!grades.length) return
+    const match = preferredGradeId && grades.some(g => g.id === preferredGradeId) ? preferredGradeId : null
+    setActiveGradeId(match || grades[0].id)
+  }, [activeGradeId, grades, preferredGradeId])
 
   useEffect(() => {
     if (!activeGradeId) return
@@ -173,6 +203,11 @@ export default function Dashboard() {
                     >
                       {ls.lesson_type === 'exam' ? 'Thi thử' : 'Luyện tập'}
                     </div>
+                    {ls.is_teacher_recommended ? (
+                      <div className="text-xs px-2 py-1 rounded-md border text-yellow-300 bg-yellow-900/20 border-yellow-400">
+                        Đề cử
+                      </div>
+                    ) : null}
                     <CardTitle className="text-lg font-semibold truncate">{ls.title}</CardTitle>
                   </div>
                   {ls.description ? (

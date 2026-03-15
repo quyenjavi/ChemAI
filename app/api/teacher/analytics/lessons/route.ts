@@ -29,7 +29,7 @@ export async function GET(req: Request) {
       s.sum += (a.score_percent || 0)
       byLesson[lid] = s
     }
-    const { data: lessonRows } = await svc.from('lessons').select('id,title,grade_id,created_at,is_visible,lesson_type')
+    const { data: lessonRows } = await svc.from('lessons').select('id,title,grade_id,created_at,is_visible,lesson_type,is_teacher_recommended,display_order')
     const gradeIds = Array.from(new Set((lessonRows || []).map((l: any) => l.grade_id).filter(Boolean)))
     const { data: grades } = gradeIds.length ? await svc.from('grades').select('id,name').in('id', gradeIds) : { data: [] }
     const gradeNameById: Record<string, string> = Object.fromEntries((grades || []).map((g: any) => [g.id, g.name || '']))
@@ -44,6 +44,8 @@ export async function GET(req: Request) {
         lesson_created_at: l.created_at || null,
         is_visible: typeof l.is_visible === 'boolean' ? l.is_visible : true,
         lesson_type: (l.lesson_type === 'exam' || l.lesson_type === 'practice') ? l.lesson_type : 'practice',
+        is_teacher_recommended: typeof l.is_teacher_recommended === 'boolean' ? l.is_teacher_recommended : false,
+        display_order: (typeof l.display_order === 'number' ? l.display_order : null),
         total_attempts: stat.count,
         avg_score_percent: avg
       }
@@ -58,9 +60,32 @@ export async function GET(req: Request) {
       payload = payload.filter(p => (p.lesson_title || '').toLowerCase().includes(sLower))
     }
 
+    const baseCmp = (a: any, b: any) => {
+      const aVisible = a.is_visible === true ? 1 : 0
+      const bVisible = b.is_visible === true ? 1 : 0
+      if (aVisible !== bVisible) return bVisible - aVisible
+
+      const aRec = a.is_teacher_recommended === true ? 1 : 0
+      const bRec = b.is_teacher_recommended === true ? 1 : 0
+      if (aRec !== bRec) return bRec - aRec
+
+      const aOrder = (typeof a.display_order === 'number' && Number.isFinite(a.display_order)) ? a.display_order : null
+      const bOrder = (typeof b.display_order === 'number' && Number.isFinite(b.display_order)) ? b.display_order : null
+      if (aOrder == null && bOrder != null) return 1
+      if (aOrder != null && bOrder == null) return -1
+      if (aOrder != null && bOrder != null && aOrder !== bOrder) return aOrder - bOrder
+
+      const aTime = a.lesson_created_at ? Date.parse(a.lesson_created_at) : 0
+      const bTime = b.lesson_created_at ? Date.parse(b.lesson_created_at) : 0
+      if (aTime !== bTime) return bTime - aTime
+      return 0
+    }
+
     const sortKey = (url.searchParams.get('sort_key') || 'total_attempts') as 'lesson_title' | 'total_attempts' | 'avg_score_percent' | 'lesson_created_at' | 'grade_name'
     const sortDir = (url.searchParams.get('sort_dir') || 'desc') as 'asc' | 'desc'
     payload.sort((a: any, b: any) => {
+      const base = baseCmp(a, b)
+      if (base !== 0) return base
       let diff = 0
       switch (sortKey) {
         case 'lesson_title':

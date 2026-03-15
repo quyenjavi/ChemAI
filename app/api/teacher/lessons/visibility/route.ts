@@ -12,7 +12,15 @@ export async function POST(req: Request) {
     const isVisible = body?.is_visible
     const rawLessonType = body?.lesson_type
     const lessonType = rawLessonType === 'exam' ? 'exam' : rawLessonType === 'practice' ? 'practice' : null
-    if (!lessonId || (typeof isVisible !== 'boolean' && !lessonType)) {
+    const isTeacherRecommended = body?.is_teacher_recommended
+    const rawDisplayOrder = body?.display_order
+    const displayOrder = (rawDisplayOrder == null || rawDisplayOrder === '')
+      ? null
+      : Number.isFinite(Number(rawDisplayOrder)) ? parseInt(String(rawDisplayOrder), 10) : NaN
+    if (displayOrder !== null && (!Number.isFinite(displayOrder) || displayOrder <= 0)) {
+      return NextResponse.json({ error: 'display_order must be a positive integer or null' }, { status: 400 })
+    }
+    if (!lessonId || (typeof isVisible !== 'boolean' && !lessonType && typeof isTeacherRecommended !== 'boolean' && rawDisplayOrder === undefined)) {
       return NextResponse.json({ error: 'Invalid payload' }, { status: 400 })
     }
 
@@ -28,7 +36,9 @@ export async function POST(req: Request) {
       .from('lessons')
       .update({
         ...(typeof isVisible === 'boolean' ? { is_visible: isVisible } : {}),
-        ...(lessonType ? { lesson_type: lessonType } : {})
+        ...(lessonType ? { lesson_type: lessonType } : {}),
+        ...(typeof isTeacherRecommended === 'boolean' ? { is_teacher_recommended: isTeacherRecommended } : {}),
+        ...(rawDisplayOrder !== undefined ? { display_order: displayOrder } : {})
       })
       .eq('id', lessonId)
     if (error) return NextResponse.json({ error: error.message || 'Update failed' }, { status: 500 })

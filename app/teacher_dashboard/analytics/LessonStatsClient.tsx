@@ -8,6 +8,8 @@ type LessonStat = {
   lesson_created_at: string | null
   is_visible: boolean
   lesson_type: 'practice' | 'exam'
+  is_teacher_recommended: boolean
+  display_order: number | null
   total_attempts: number
   avg_score_percent: number
 }
@@ -28,6 +30,8 @@ export default function LessonStatsClient() {
   const [total, setTotal] = useState(0)
   const [visibilityDraft, setVisibilityDraft] = useState<Record<string, boolean>>({})
   const [lessonTypeDraft, setLessonTypeDraft] = useState<Record<string, 'practice' | 'exam'>>({})
+  const [recommendedDraft, setRecommendedDraft] = useState<Record<string, boolean>>({})
+  const [displayOrderDraft, setDisplayOrderDraft] = useState<Record<string, string>>({})
   const [savingLessonId, setSavingLessonId] = useState<string | null>(null)
 
   useEffect(() => {
@@ -58,6 +62,20 @@ export default function LessonStatsClient() {
           for (const l of nextRows) {
             const v = l.lesson_type === 'exam' ? 'exam' : 'practice'
             if (copy[l.lesson_id] !== 'exam' && copy[l.lesson_id] !== 'practice') copy[l.lesson_id] = v
+          }
+          return copy
+        })
+        setRecommendedDraft(prev => {
+          const copy = { ...prev }
+          for (const l of nextRows) {
+            if (typeof copy[l.lesson_id] !== 'boolean') copy[l.lesson_id] = !!l.is_teacher_recommended
+          }
+          return copy
+        })
+        setDisplayOrderDraft(prev => {
+          const copy = { ...prev }
+          for (const l of nextRows) {
+            if (typeof copy[l.lesson_id] !== 'string') copy[l.lesson_id] = (l.display_order == null ? '' : String(l.display_order))
           }
           return copy
         })
@@ -120,6 +138,8 @@ export default function LessonStatsClient() {
               <th className="text-left p-2">Bài học</th>
               <th className="text-left p-2">Khối</th>
               <th className="text-left p-2">Loại bài</th>
+              <th className="text-left p-2">Đề cử</th>
+              <th className="text-left p-2">Thứ tự hiển thị</th>
               <th className="text-left p-2">Số lần làm</th>
               <th className="text-left p-2">Điểm trung bình</th>
               <th className="text-left p-2">Thời gian tạo</th>
@@ -129,9 +149,9 @@ export default function LessonStatsClient() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td className="p-3 text-sm" colSpan={8}>Đang tải...</td></tr>
+              <tr><td className="p-3 text-sm" colSpan={10}>Đang tải...</td></tr>
             ) : rows.length === 0 ? (
-              <tr><td className="p-3 text-sm" style={{color:'var(--text-muted)'}} colSpan={8}>Chưa có dữ liệu bài học</td></tr>
+              <tr><td className="p-3 text-sm" style={{color:'var(--text-muted)'}} colSpan={10}>Chưa có dữ liệu bài học</td></tr>
             ) : rows.map(l => (
               <tr key={l.lesson_id}>
                 <td className="p-2">{l.lesson_title}</td>
@@ -156,6 +176,27 @@ export default function LessonStatsClient() {
                     ) : null}
                   </div>
                 </td>
+                <td className="p-2">
+                  <label className="inline-flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={recommendedDraft[l.lesson_id] ?? l.is_teacher_recommended}
+                      onChange={e => setRecommendedDraft(prev => ({ ...prev, [l.lesson_id]: e.target.checked }))}
+                    />
+                    <span className="text-sm">Đề cử</span>
+                  </label>
+                </td>
+                <td className="p-2">
+                  <input
+                    className="border rounded p-2 bg-transparent w-28"
+                    type="number"
+                    min={1}
+                    step={1}
+                    placeholder="(null)"
+                    value={displayOrderDraft[l.lesson_id] ?? (l.display_order == null ? '' : String(l.display_order))}
+                    onChange={e => setDisplayOrderDraft(prev => ({ ...prev, [l.lesson_id]: e.target.value }))}
+                  />
+                </td>
                 <td className="p-2">{l.total_attempts}</td>
                 <td className="p-2">{l.avg_score_percent}%</td>
                 <td className="p-2">{l.lesson_created_at ? new Date(l.lesson_created_at).toLocaleString() : '—'}</td>
@@ -179,17 +220,32 @@ export default function LessonStatsClient() {
                     onClick={() => {
                       const nextVisible = visibilityDraft[l.lesson_id] ?? l.is_visible
                       const nextType = lessonTypeDraft[l.lesson_id] ?? l.lesson_type
+                      const nextRecommended = recommendedDraft[l.lesson_id] ?? l.is_teacher_recommended
+                      const rawOrder = displayOrderDraft[l.lesson_id] ?? (l.display_order == null ? '' : String(l.display_order))
+                      const nextOrder = rawOrder.trim() ? parseInt(rawOrder.trim(), 10) : null
                       setSavingLessonId(l.lesson_id)
                       setError('')
                       fetch('/api/teacher/lessons/visibility', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         credentials: 'include',
-                        body: JSON.stringify({ lesson_id: l.lesson_id, is_visible: nextVisible, lesson_type: nextType })
+                        body: JSON.stringify({
+                          lesson_id: l.lesson_id,
+                          is_visible: nextVisible,
+                          lesson_type: nextType,
+                          is_teacher_recommended: nextRecommended,
+                          display_order: nextOrder
+                        })
                       })
                         .then(r => r.ok ? r.json() : Promise.reject(new Error('Failed to save lesson visibility')))
                         .then(() => {
-                          setRows(prev => prev.map(x => x.lesson_id === l.lesson_id ? { ...x, is_visible: nextVisible, lesson_type: nextType } : x))
+                          setRows(prev => prev.map(x => x.lesson_id === l.lesson_id ? {
+                            ...x,
+                            is_visible: nextVisible,
+                            lesson_type: nextType,
+                            is_teacher_recommended: nextRecommended,
+                            display_order: nextOrder
+                          } : x))
                         })
                         .catch(err => setError(err.message || 'Lỗi lưu trạng thái hiển thị'))
                         .finally(() => setSavingLessonId(null))

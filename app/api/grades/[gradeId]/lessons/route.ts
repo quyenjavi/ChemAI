@@ -9,7 +9,7 @@ export async function GET(req: Request, { params }: { params: { gradeId: string 
     const svc = serviceRoleClient()
     const { data } = await svc
       .from('lessons')
-      .select('id, grade_id, title, description, is_visible, lesson_type')
+      .select('id, grade_id, title, description, is_visible, lesson_type, question_count')
       .eq('grade_id', params.gradeId)
       .eq('is_visible', true)
       .order('created_at', { ascending: false })

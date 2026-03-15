@@ -4,10 +4,12 @@ import { supabaseBrowser } from '@/lib/supabase/client'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { useRouter } from 'next/navigation'
 type Grade = { id: string, name: string }
-type Lesson = { id: string, grade_id: string, title: string, description: string | null, lesson_type?: 'practice' | 'exam' | string | null }
+type Lesson = { id: string, grade_id: string, title: string, description: string | null, lesson_type?: 'practice' | 'exam' | string | null, question_count?: number | null }
 
 export default function Dashboard() {
+  const router = useRouter()
   const [grades, setGrades] = useState<Grade[]>([])
   const [activeGradeId, setActiveGradeId] = useState<string | null>(null)
   const [lessons, setLessons] = useState<Lesson[]>([])
@@ -15,6 +17,7 @@ export default function Dashboard() {
   const [counts, setCounts] = useState<Record<string, number>>({})
   const [questionCounts, setQuestionCounts] = useState<Record<string, number>>({})
   const [slogan, setSlogan] = useState('')
+  const [startLoading, setStartLoading] = useState<{ lesson_id: string, lesson_type: 'exam' | 'practice' } | null>(null)
   const filtered = useMemo(() => {
     const s = search.trim().toLowerCase()
     if (!s) return lessons
@@ -43,13 +46,7 @@ export default function Dashboard() {
       .then(async (data: Lesson[]) => {
         const list = (data || []) as Lesson[]
         setLessons(list)
-        const entries = await Promise.all(list.map(async (ls) => {
-          const res = await fetch(`/api/lessons/${ls.id}/questions`, { credentials: 'include' })
-          const json = res.ok ? await res.json() : []
-          const arr = Array.isArray(json) ? json : (Array.isArray(json?.questions) ? json.questions : [])
-          return [ls.id, arr.length] as const
-        }))
-        setCounts(Object.fromEntries(entries))
+        setCounts(Object.fromEntries(list.map(ls => [ls.id, Math.max(0, Number(ls.question_count) || 0)])))
       })
       .catch(err => {
         console.error('Load lessons failed:', err)
@@ -93,8 +90,51 @@ export default function Dashboard() {
     setSlogan(msg)
   }, [])
 
+  const startMessages = useMemo(() => {
+    const practice = [
+      'Cố gắng từng câu một, sai đâu sửa đó là tiến bộ rồi.',
+      'Hít thở sâu, làm chậm mà chắc. Em làm được.',
+      'Đừng sợ sai. Mỗi lỗi là một bước gần hơn tới đúng.',
+      'Chọn câu dễ trước để lấy đà, rồi quay lại câu khó.',
+      'Tập trung vào câu trước mắt, đừng vội nghĩ tới kết quả.'
+    ]
+    const exam = [
+      'Bình tĩnh đọc kỹ đề, chú ý từ khóa và đơn vị.',
+      'Canh thời gian: làm câu dễ trước, câu khó để sau.',
+      'Nếu kẹt quá 60–90 giây, đánh dấu rồi chuyển câu khác.',
+      'Trước khi nộp, rà lại các câu bỏ trống và câu phân vân.',
+      'Giữ nhịp thở đều, tránh hoảng khi gặp câu lạ.'
+    ]
+    return { practice, exam }
+  }, [])
+
+  const loadingText = useMemo(() => {
+    if (!startLoading) return ''
+    const arr = startLoading.lesson_type === 'exam' ? startMessages.exam : startMessages.practice
+    return arr[Math.floor(Math.random() * arr.length)] || ''
+  }, [startLoading, startMessages])
+
   return (
     <div className="space-y-8">
+      {startLoading ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm">
+          <div className="w-[92%] max-w-md rounded-xl border border-slate-700/60 bg-slate-900/60 p-6">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full border-2 border-blue-400/40 border-t-blue-400 animate-spin" />
+              <div>
+                <div className="text-lg font-semibold text-gray-100">Đang chuẩn bị bài...</div>
+                <div className="text-sm text-gray-200/70">{startLoading.lesson_type === 'exam' ? 'Thi thử' : 'Luyện tập'}</div>
+              </div>
+            </div>
+            {loadingText ? (
+              <div className="mt-4 text-sm text-gray-200 whitespace-pre-line">{loadingText}</div>
+            ) : null}
+            <div className="mt-5 h-2 w-full rounded bg-slate-700/40 overflow-hidden">
+              <div className="h-full w-1/2 bg-blue-500/70 animate-pulse" />
+            </div>
+          </div>
+        </div>
+      ) : null}
       <h1 className="text-[28px] sm:text-[32px] font-semibold">Chọn bài học</h1>
       {slogan ? (
         <div className="text-[14px] mt-1 italic font-medium" style={{color:'var(--gold)'}} aria-live="polite">
@@ -171,20 +211,20 @@ export default function Dashboard() {
                       })()}
                     </div>
                   )}
-                  <a
-                    className="w-full sm:w-auto shrink-0"
-                    href={ls.lesson_type === 'exam'
-                      ? `/lesson/${ls.id}/quiz`
-                      : `/lesson/${ls.id}/quiz?n=${questionCounts[ls.id] ?? (Math.min(50, counts[ls.id] ?? 0) || 1)}`
-                    }
+                  <Button
+                    className="w-full sm:w-auto min-w-24 whitespace-nowrap bg-blue-600 hover:bg-blue-700 rounded-lg disabled:opacity-50 shrink-0"
+                    disabled={(counts[ls.id] ?? 0) === 0}
+                    onClick={() => {
+                      const lessonType = ls.lesson_type === 'exam' ? 'exam' : 'practice'
+                      setStartLoading({ lesson_id: ls.id, lesson_type: lessonType })
+                      const href = lessonType === 'exam'
+                        ? `/lesson/${ls.id}/quiz`
+                        : `/lesson/${ls.id}/quiz?n=${questionCounts[ls.id] ?? (Math.min(50, counts[ls.id] ?? 0) || 1)}`
+                      setTimeout(() => router.push(href), 50)
+                    }}
                   >
-                    <Button
-                      className="w-full sm:w-auto min-w-24 whitespace-nowrap bg-blue-600 hover:bg-blue-700 rounded-lg disabled:opacity-50"
-                      disabled={(counts[ls.id] ?? 0) === 0}
-                    >
-                      {ls.lesson_type === 'exam' ? 'Bắt đầu' : 'Làm bài'}
-                    </Button>
-                  </a>
+                    {ls.lesson_type === 'exam' ? 'Bắt đầu' : 'Làm bài'}
+                  </Button>
                 </div>
               </div>
             </CardContent>

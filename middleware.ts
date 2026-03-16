@@ -5,20 +5,32 @@ import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs'
 export async function middleware(req: NextRequest) {
   const res = NextResponse.next()
   const maintenanceEnabled = String(process.env.NEXT_PUBLIC_MAINTENANCE_MODE || '').toLowerCase() === 'true'
+  const { pathname } = req.nextUrl
+  const isPublic =
+    pathname.startsWith('/login') ||
+    pathname.startsWith('/signup') ||
+    pathname.startsWith('/verify') ||
+    pathname.startsWith('/maintenance') ||
+    pathname.startsWith('/api') ||
+    pathname.startsWith('/_next') ||
+    pathname.startsWith('/favicon') ||
+    pathname === '/'
+
+  if (!maintenanceEnabled) {
+    if (pathname.startsWith('/api') || pathname.startsWith('/_next') || pathname.startsWith('/favicon')) return res
+  }
+
   const supabase = createMiddlewareClient({
     req,
     res,
     cookieOptions: {
-      maxAge: 60 * 60 * 24 * 15, // 15 days
+      maxAge: 60 * 60 * 24 * 15,
       path: '/',
       sameSite: 'lax',
     },
   } as any)
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
+  const { data: { session } } = await supabase.auth.getSession()
 
-  const { pathname } = req.nextUrl
   if (maintenanceEnabled) {
     const maintenancePublic =
       pathname.startsWith('/maintenance') ||
@@ -60,15 +72,6 @@ export async function middleware(req: NextRequest) {
 
     return res
   }
-  const isPublic =
-    pathname.startsWith('/login') ||
-    pathname.startsWith('/signup') ||
-    pathname.startsWith('/verify') ||
-    pathname.startsWith('/maintenance') ||
-    pathname.startsWith('/api') ||
-    pathname.startsWith('/_next') ||
-    pathname.startsWith('/favicon') ||
-    pathname === '/'
 
   if (!session && !isPublic) {
     const url = req.nextUrl.clone()

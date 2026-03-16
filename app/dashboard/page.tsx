@@ -78,9 +78,7 @@ export default function Dashboard() {
         setLessons(list)
         setCounts(Object.fromEntries(list.map(ls => [ls.id, Math.max(0, Number(ls.question_count) || 0)])))
       })
-      .catch(err => {
-        console.error('Load lessons failed:', err)
-      })
+      .catch(() => {})
   }, [activeGradeId])
 
   useEffect(() => {

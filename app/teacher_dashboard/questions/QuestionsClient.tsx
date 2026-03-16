@@ -65,9 +65,6 @@ export default function QuestionsClient() {
     fetch(`/api/teacher/questions?${qs.toString()}`, { credentials: 'include', cache: 'no-store', headers: { 'Cache-Control': 'no-cache' } })
       .then(r => r.ok ? r.json() : Promise.reject(new Error('Failed to load questions')))
       .then(json => {
-        console.log('API response', json)
-        console.log('Questions list', json?.questions)
-        if (json?.debug) console.log('debug info', json.debug)
         setRows(json?.questions || [])
         setTotal(json?.total || 0)
         setSchoolName(json?.school_name || '')
@@ -187,9 +184,6 @@ export default function QuestionsClient() {
             ) : rows.length === 0 ? (
               <tr><td className="p-3 text-sm" style={{color:'var(--text-muted)'}} colSpan={9}>Chưa có câu hỏi nào được làm</td></tr>
             ) : rows.map((q, idx) => {
-              console.log('ROW DATA', q)
-              console.log('total_attempts type', typeof (q as any).total_attempts)
-              console.log('correct_rate type', typeof (q as any).correct_rate)
               const rank = (page - 1) * pageSize + idx + 1
               const rate = Number(q.correct_rate || 0)
               let rateColor = '#16a34a'

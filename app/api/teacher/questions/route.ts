@@ -19,18 +19,13 @@ export async function GET(req: Request) {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     const svc = serviceRoleClient()
     const { data: tp } = await svc.from('teacher_profiles').select('id,school_id').eq('user_id', user.id).maybeSingle()
-
-    console.log('teacher user id', user.id)
-    console.log('teacher school id', tp?.school_id)
     // Build base query from questions
     let qQuery = svc.from('questions').select('id,content,question_type,explanation,difficulty,topic,lesson_id,created_at')
     if (typeFilter) qQuery = qQuery.eq('question_type', typeFilter)
     if (difficultyFilter) qQuery = qQuery.eq('difficulty', difficultyFilter)
     if (lessonIdFilter) qQuery = qQuery.eq('lesson_id', lessonIdFilter)
     const { data: qRows } = await qQuery
-    console.log('questions count', (qRows || []).length)
     const questionIds = Array.from(new Set((qRows || []).map((q: any) => q.id)))
-    console.log('sample question ids', (qRows || []).slice(0, 5).map((q: any) => q.id))
     // Resolve lessons/grades metadata
     const lessonIds = Array.from(new Set((qRows || []).map((q: any) => q.lesson_id).filter(Boolean)))
     const { data: lessons } = lessonIds.length ? await svc.from('lessons').select('id,title,grade_id').in('id', lessonIds) : { data: [] }
@@ -40,24 +35,14 @@ export async function GET(req: Request) {
     const gradeByLesson: Record<string, string> = Object.fromEntries((lessons || []).map((l: any) => [l.id, (grades || []).find((g: any) => g.id === l.grade_id)?.name || '']))
     // Fetch answers for these questions (left-join semantics handled in code)
     const { data: answersAll } = questionIds.length ? await svc.from('quiz_attempt_answers').select('id,question_id,is_correct,attempt_id').in('question_id', questionIds) : { data: [] }
-    console.log('answersAll count', (answersAll || []).length)
     // Fetch attempts to map answer -> user, then filter by teacher school
     const attemptIdsForAnswers = Array.from(new Set((answersAll || []).map((a: any) => a.attempt_id).filter(Boolean)))
-    console.log('attemptIdsForAnswers count', attemptIdsForAnswers.length)
     const { data: attemptsMapRows } = attemptIdsForAnswers.length ? await svc.from('quiz_attempts').select('id,user_id').in('id', attemptIdsForAnswers) : { data: [] }
-    console.log('attemptsMapRows count', (attemptsMapRows || []).length)
     const attemptUserById: Record<string, string> = Object.fromEntries((attemptsMapRows || []).map((a: any) => [a.id, a.user_id]))
     const userIdsFromAnswers = Array.from(new Set((attemptsMapRows || []).map((a: any) => a.user_id).filter(Boolean)))
-    console.log('userIdsFromAnswers count', userIdsFromAnswers.length)
     const { data: studentsFromAnswers } = userIdsFromAnswers.length ? await svc.from('student_profiles').select('user_id,school_id').in('user_id', userIdsFromAnswers) : { data: [] }
-    console.log('studentsFromAnswers count', (studentsFromAnswers || []).length)
     const allowedUsersSet = new Set<string>((studentsFromAnswers || []).filter((s: any) => !tp?.school_id || s.school_id === tp.school_id).map((s: any) => s.user_id))
-    console.log('allowedUsersSet size', allowedUsersSet.size)
     const answersFiltered = (answersAll || [])
-    console.log('answersFiltered count', (answersFiltered || []).length)
-    console.log('sample answersAll', (answersAll || []).slice(0, 3))
-    console.log('sample attemptsMapRows', (attemptsMapRows || []).slice(0, 3))
-    console.log('sample studentsFromAnswers', (studentsFromAnswers || []).slice(0, 3))
     // Aggregate counts
     const byQuestion: Record<string, { total: number, correct: number }> = {}
     for (const r of (answersFiltered || []) as any[]) {
@@ -143,20 +128,8 @@ export async function GET(req: Request) {
     const total = payload.length
     const start = (page - 1) * pageSize
     const paged = payload.slice(start, start + pageSize)
-
-    const students_count = (studentsFromAnswers || []).length
-    const attempts_count = (attemptsMapRows || []).length
-    const answers_count = (answersAll || []).length
-    const answers_filtered_count = (answersFiltered || []).length
-    const question_ids_count = questionIds.length
-    console.log('students count', students_count)
-    console.log('attempts count', attempts_count)
-    console.log('answers count', answers_count)
-    console.log('answers filtered count', answers_filtered_count)
-    console.log('question ids count', question_ids_count)
-    console.log('first analytics row', paged?.[0])
     return NextResponse.json(
-      { questions: paged, total, page, page_size: pageSize, scope: 'all', debug: { students_count, attempts_count, answers_count, answers_filtered_count, question_ids_count } },
+      { questions: paged, total, page, page_size: pageSize, scope: 'all' },
       { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } }
     )
   } catch (e: any) {

@@ -428,10 +428,6 @@ export async function POST(request: Request) {
       return res.json()
     }
     const attemptText = formatAttemptTextLite()
-    try {
-      console.log("ATTEMPT_ID", attemptId)
-      console.log("ATTEMPT_TEXT_PREVIEW", attemptText.slice(0, 1000))
-    } catch {}
     let report_json: any = null
     if (!env.difyWorkflowKey || !env.difyBaseUrl) {
       report_json = { error: 'missing_dify_env', attempt_text: attemptText }

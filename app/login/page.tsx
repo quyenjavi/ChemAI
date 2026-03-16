@@ -50,7 +50,7 @@ export default function LoginPage() {
         return
       }
     }
-    await fetch('/api/profile/migrate', { method: 'POST' }).catch(()=>{})
+    fetch('/api/profile/migrate', { method: 'POST' }).catch(()=>{})
     router.replace('/dashboard')
     router.refresh()
   }

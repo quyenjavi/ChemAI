@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cẩm nang Hóa 11 - Giữa Kì II</title>
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-main: #081a2b;
+            --bg-header: #1f2a3a;
+            --bg-card: #0f2236;
+            --bg-card-2: #1d2d42;
+            --border: #2a3a4d;
+            --text-primary: #e6edf3;
+            --text-secondary: #9fb3c8;
+
+            --accent-green: #22c55e;
+            --correct-bg: #248a37;
+            --correct-border: #3ddc6c;
+
+            --accent-yellow: #e8ad2f;
+            --accent-yellow-light: #f5c451;
+
+            --accent-blue: #38bdf8;
+            --accent-red: #ef4444;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Quicksand', sans-serif;
+            background: var(--bg-main);
+            color: var(--text-primary);
+            line-height: 1.7;
+            min-height: 100vh;
+            padding-bottom: 60px;
+        }
+
+        header {
+            text-align: center;
+            padding: 40px 20px;
+            background: var(--bg-header);
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 32px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+        }
+
+        header h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 6px;
+        }
+
+        header p {
+            font-size: 1.08rem;
+            color: var(--text-secondary);
+        }
+
+        .container {
+            max-width: 980px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        section {
+            margin-bottom: 42px;
+        }
+
+        .section-title {
+            font-size: 1.55rem;
+            margin-bottom: 24px;
+            color: var(--accent-yellow);
+            border-left: 6px solid var(--accent-yellow);
+            padding-left: 16px;
+            font-weight: 700;
+        }
+
+        .summary-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            padding: 22px 24px;
+            border-radius: 18px;
+            margin-bottom: 24px;
+            box-shadow: 0 10px 24px rgba(0,0,0,0.18);
+        }
+
+        .summary-card h3 {
+            margin-bottom: 14px;
+            font-size: 1.28rem;
+            color: var(--text-primary);
+        }
+
+        .summary-list {
+            list-style: none;
+        }
+
+        .summary-list li {
+            margin-bottom: 12px;
+            padding-left: 30px;
+            position: relative;
+            color: var(--text-secondary);
+            font-size: 1.02rem;
+        }
+
+        .summary-list li::before {
+            content: "•";
+            color: var(--accent-green);
+            position: absolute;
+            left: 8px;
+            top: 0;
+            font-weight: 700;
+            font-size: 1.4rem;
+            line-height: 1.2rem;
+        }
+
+        .question-block {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            padding: 24px;
+            margin-bottom: 18px;
+            cursor: pointer;
+            transition: all 0.25s ease;
+        }
+
+        .question-block:hover {
+            border-color: #39516b;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 22px rgba(0,0,0,0.22);
+        }
+
+        .q-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 14px;
+        }
+
+        .question-text {
+            font-weight: 700;
+            font-size: 1.12rem;
+            color: var(--text-primary);
+            flex: 1;
+        }
+
+        .click-hint {
+            font-size: 0.92rem;
+            color: var(--text-secondary);
+            font-style: italic;
+            white-space: nowrap;
+            background: rgba(255,255,255,0.06);
+            padding: 8px 16px;
+            border-radius: 999px;
+            border: 1px solid var(--border);
+        }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+            margin-bottom: 0;
+        }
+
+        .option {
+            background: rgba(8, 26, 43, 0.75);
+            border: 1px solid #18334c;
+            padding: 18px 16px;
+            border-radius: 14px;
+            text-align: center;
+            transition: all 0.25s ease;
+            font-size: 1rem;
+            color: var(--text-secondary);
+            min-height: 76px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .question-block.active .options-grid {
+            margin-bottom: 16px;
+            pointer-events: none;
+        }
+
+        .question-block.active .option[data-correct="true"] {
+            background: var(--correct-bg);
+            border-color: var(--correct-border);
+            color: #fff;
+            font-weight: 700;
+            box-shadow: 0 0 14px rgba(34,197,94,0.28);
+        }
+
+        .question-block.active .option:not([data-correct="true"]) {
+            opacity: 0.28;
+            color: var(--text-primary);
+        }
+
+        .explanation-area {
+            display: none;
+            background: rgba(255,255,255,0.04);
+            padding: 18px 18px 18px 20px;
+            border-radius: 14px;
+            border-left: 5px solid var(--accent-yellow);
+            margin-top: 8px;
+            color: var(--text-secondary);
+            animation: fadeIn 0.35s ease;
+            font-size: 0.98rem;
+        }
+
+        .question-block.active .explanation-area {
+            display: block;
+        }
+
+        .exp-title {
+            display: block;
+            font-weight: 700;
+            color: var(--accent-yellow);
+            margin-bottom: 6px;
+            font-size: 1.02rem;
+        }
+
+        footer {
+            text-align: center;
+            color: var(--text-secondary);
+            margin-top: 48px;
+            font-size: 0.95rem;
+        }
+
+        @media (max-width: 720px) {
+            .options-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .q-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            header h1 {
+                font-size: 1.55rem;
+            }
+
+            .section-title {
+                font-size: 1.3rem;
+            }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>📘 CẨM NANG + MINI TEST</h1>
+        <p>HÓA 11 - GIỮA KÌ II</p>
+    </header>
+
+    <main class="container">
+
+        <section>
+            <div class="section-title">🧪 1. Nitrogen</div>
+
+            <div class="summary-card">
+                <h3>📚 Tóm tắt nhanh</h3>
+                <ul class="summary-list">
+                    <li>Nitrogen tồn tại chủ yếu dưới dạng <strong>N₂</strong>, là chất khí không màu, không mùi, ít tan trong nước.</li>
+                    <li>Trong phân tử N₂ có <strong>liên kết ba rất bền</strong>, vì vậy nitrogen khá trơ ở điều kiện thường.</li>
+                    <li>Ở nhiệt độ cao, nitrogen có thể phản ứng với hydrogen tạo ammonia.</li>
+                </ul>
+            </div>
+
+            <div class="question-block" onclick="toggleQuestion(this)">
+                <div class="q-header">
+                    <div class="question-text">Câu 1: Ở điều kiện thường, N₂ kém hoạt động hóa học chủ yếu vì</div>
+                    <span class="click-hint">👆 Click xem đáp án</span>
+                </div>
+                <div class="options-grid">
+                    <div class="option">A. phân tử có khối lượng nhỏ</div>
+                    <div class="option">B. nitrogen tan ít trong nước</div>
+                    <div class="option" data-correct="true">C. trong phân tử có liên kết ba bền vững</div>
+                    <div class="option">D. nitrogen là khí không màu</div>
+                </div>
+                <div class="explanation-area">
+                    <span class="exp-title">Giải thích:</span>
+                    Liên kết ba trong phân tử N₂ có năng lượng liên kết rất lớn, rất khó bị phá vỡ nên nitrogen khá trơ ở điều kiện thường.
+                </div>
+            </div>
+
+            <div class="question-block" onclick="toggleQuestion(this)">
+                <div class="q-header">
+                    <div class="question-text">Câu 2: Phản ứng tổng hợp ammonia từ nitrogen và hydrogen là</div>
+                    <span class="click-hint">👆 Click xem đáp án</span>
+                </div>
+                <div class="options-grid">
+                    <div class="option">A. N₂ + O₂ → 2NO</div>
+                    <div class="option" data-correct="true">B. N₂ + 3H₂ ⇌ 2NH₃</div>
+                    <div class="option">C. NH₃ + HCl → NH₄Cl</div>
+                    <div class="option">D. 2NH₃ + H₂SO₄ → (NH₄)₂SO₄</div>
+                </div>
+                <div class="explanation-area">
+                    <span class="exp-title">Giải thích:</span>
+                    Đây là phản ứng điều chế ammonia trong công nghiệp theo quá trình Haber. Tỉ lệ mol là 1 : 3 : 2.
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-title">💨 2. Ammonia (NH₃)</div>
+
+            <div class="summary-card">
+                <h3>📚 Tóm tắt nhanh</h3>
+                <ul class="summary-list">
+                    <li>Ammonia là khí không màu, mùi khai, nhẹ hơn không khí và tan rất nhiều trong nước.</li>
+                    <li>NH₃ có tính <strong>base yếu</strong> vì có thể nhận proton từ nước.</li>
+                    <li>Ammonia phản ứng với acid tạo thành muối ammonium.</li>
+                </ul>
+            </div>
+
+            <div class="question-block" onclick="toggleQuestion(this)">
+                <div class="q-header">
+                    <div class="question-text">Câu 1: Trong dung dịch nước, ammonia thể hiện tính chất nào?</div>
+                    <span class="click-hint">👆 Click xem đáp án</span>
+                </div>
+                <div class="options-grid">
+                    <div class="option">A. axit mạnh</div>
+                    <div class="option" data-correct="true">B. base yếu</div>
+                    <div class="option">C. muối trung hòa</div>
+                    <div class="option">D. chất oxi hóa mạnh</div>
+                </div>
+                <div class="explanation-area">
+                    <span class="exp-title">Giải thích:</span>
+                    NH₃ kết hợp với H⁺ của nước tạo NH₄⁺ và OH⁻ nên dung dịch ammonia có tính base yếu.
+                </div>
+            </div>
+
+            <div class="question-block" onclick="toggleQuestion(this)">
+                <div class="q-header">
+                    <div class="question-text">Câu 2: Chất nào sau đây tác dụng với NH₃ tạo muối ammonium?</div>
+                    <span class="click-hint">👆 Click xem đáp án</span>
+                </div>
+                <div class="options-grid">
+                    <div class="option">A. NaOH</div>
+                    <div class="option">B. KOH</div>
+                    <div class="option" data-correct="true">C. HCl</div>
+                    <div class="option">D. NaCl</div>
+                </div>
+                <div class="explanation-area">
+                    <span class="exp-title">Giải thích:</span>
+                    NH₃ là base nên phản ứng với acid như HCl để tạo muối ammonium:
+                    <br>NH₃ + HCl → NH₄Cl
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-title">🧂 3. Muối ammonium</div>
+
+            <div class="summary-card">
+                <h3>📚 Tóm tắt nhanh</h3>
+                <ul class="summary-list">
+                    <li>Muối ammonium chứa ion <strong>NH₄⁺</strong>.</li>
+                    <li>Nhiều muối ammonium dễ bị phân hủy khi đun nóng.</li>
+                    <li>Muối ammonium tác dụng với base mạnh thường giải phóng khí NH₃.</li>
+                </ul>
+            </div>
+
+            <div class="question-block" onclick="toggleQuestion(this)">
+                <div class="q-header">
+                    <div class="question-text">Câu 1: Khi cho NH₄Cl tác dụng với NaOH, có khí nào thoát ra?</div>
+                    <span class="click-hint">👆 Click xem đáp án</span>
+                </div>
+                <div class="options-grid">
+                    <div class="option">A. H₂</div>
+                    <div class="option">B. O₂</div>
+                    <div class="option" data-correct="true">C. NH₃</div>
+                    <div class="option">D. Cl₂</div>
+                </div>
+                <div class="explanation-area">
+                    <span class="exp-title">Giải thích:</span>
+                    Ion NH₄⁺ phản ứng với OH⁻ của base mạnh tạo NH₃:
+                    <br>NH₄Cl + NaOH → NH₃ + NaCl + H₂O
+                </div>
+            </div>
+
+            <div class="question-block" onclick="toggleQuestion(this)">
+                <div class="q-header">
+                    <div class="question-text">Câu 2: Dấu hiệu nhận biết khí NH₃ là</div>
+                    <span class="click-hint">👆 Click xem đáp án</span>
+                </div>
+                <div class="options-grid">
+                    <div class="option">A. làm mất màu nước brom</div>
+                    <div class="option">B. làm đục nước vôi trong</div>
+                    <div class="option" data-correct="true">C. mùi khai, làm xanh quỳ tím ẩm</div>
+                    <div class="option">D. làm đỏ quỳ tím</div>
+                </div>
+                <div class="explanation-area">
+                    <span class="exp-title">Giải thích:</span>
+                    NH₃ có mùi khai đặc trưng, tan trong hơi ẩm tạo môi trường base nên làm quỳ tím ẩm chuyển xanh.
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-title">🔥 4. Nitric acid (HNO₃)</div>
+
+            <div class="summary-card">
+                <h3>📚 Tóm tắt nhanh</h3>
+                <ul class="summary-list">
+                    <li>HNO₃ là acid mạnh và có tính oxi hóa mạnh.</li>
+                    <li>HNO₃ phản ứng với nhiều kim loại, phi kim và hợp chất.</li>
+                    <li>Với kim loại như Cu, sản phẩm khử thường là NO hoặc NO₂ tùy nồng độ acid.</li>
+                </ul>
+            </div>
+
+            <div class="question-block" onclick="toggleQuestion(this)">
+                <div class="q-header">
+                    <div class="question-text">Câu 1: Khi Cu tác dụng với HNO₃ đặc, khí tạo thành chủ yếu là</div>
+                    <span class="click-hint">👆 Click xem đáp án</span>
+                </div>
+                <div class="options-grid">
+                    <div class="option">A. N₂</div>
+                    <div class="option">B. NH₃</div>
+                    <div class="option" data-correct="true">C. NO₂</div>
+                    <div class="option">D. H₂</div>
+                </div>
+                <div class="explanation-area">
+                    <span class="exp-title">Giải thích:</span>
+                    Với HNO₃ đặc, Cu bị oxi hóa còn N(+5) bị khử xuống NO₂:
+                    <br>Cu + 4HNO₃ → Cu(NO₃)₂ + 2NO₂ + 2H₂O
+                </div>
+            </div>
+
+            <div class="question-block" onclick="toggleQuestion(this)">
+                <div class="q-header">
+                    <div class="question-text">Câu 2: Vì sao HNO₃ không giải phóng H₂ khi tác dụng với kim loại như acid thông thường?</div>
+                    <span class="click-hint">👆 Click xem đáp án</span>
+                </div>
+                <div class="options-grid">
+                    <div class="option">A. vì HNO₃ là acid yếu</div>
+                    <div class="option">B. vì HNO₃ không tan trong nước</div>
+                    <div class="option" data-correct="true">C. vì HNO₃ có tính oxi hóa mạnh, ion NO₃⁻ bị khử thay cho H⁺</div>
+                    <div class="option">D. vì kim loại không phản ứng với HNO₃</div>
+                </div>
+                <div class="explanation-area">
+                    <span class="exp-title">Giải thích:</span>
+                    Trong phản ứng với kim loại, ion NO₃⁻ thường bị khử tạo NO, NO₂... nên không tạo H₂ như HCl hay H₂SO₄ loãng.
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-title">🧠 5. Lỗi sai thường gặp</div>
+
+            <div class="question-block" onclick="toggleQuestion(this)">
+                <div class="q-header">
+                    <div class="question-text">Câu 1: Phát biểu nào sau đây sai?</div>
+                    <span class="click-hint">👆 Click xem đáp án</span>
+                </div>
+                <div class="options-grid">
+                    <div class="option">A. NH₃ là base yếu</div>
+                    <div class="option">B. N₂ khá trơ ở điều kiện thường</div>
+                    <div class="option">C. HNO₃ là acid mạnh</div>
+                    <div class="option" data-correct="true">D. NH₃ làm đỏ quỳ tím ẩm</div>
+                </div>
+                <div class="explanation-area">
+                    <span class="exp-title">Giải thích:</span>
+                    NH₃ tạo môi trường base nên làm <strong>xanh</strong> quỳ tím ẩm, không làm đỏ quỳ tím.
+                </div>
+            </div>
+
+            <div class="question-block" onclick="toggleQuestion(this)">
+                <div class="q-header">
+                    <div class="question-text">Câu 2: Phát biểu nào sau đây đúng?</div>
+                    <span class="click-hint">👆 Click xem đáp án</span>
+                </div>
+                <div class="options-grid">
+                    <div class="option">A. Mọi muối ammonium đều bền nhiệt</div>
+                    <div class="option" data-correct="true">B. Muối ammonium tác dụng với base mạnh có thể giải phóng NH₃</div>
+                    <div class="option">C. N₂ phản ứng mạnh với O₂ ở điều kiện thường</div>
+                    <div class="option">D. HNO₃ là acid yếu</div>
+                </div>
+                <div class="explanation-area">
+                    <span class="exp-title">Giải thích:</span>
+                    Đây là tính chất đặc trưng quan trọng của ion NH₄⁺ khi tác dụng với dung dịch base mạnh.
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-title">🚀 6. Mini Test tổng hợp</div>
+
+            <div class="question-block" onclick="toggleQuestion(this)">
+                <div class="q-header">
+                    <div class="question-text">Câu 1: Chất nào sau đây vừa có tính acid mạnh, vừa có tính oxi hóa mạnh?</div>
+                    <span class="click-hint">👆 Click xem đáp án</span>
+                </div>
+                <div class="options-grid">
+                    <div class="option">A. HCl</div>
+                    <div class="option">B. NH₃</div>
+                    <div class="option" data-correct="true">C. HNO₃</div>
+                    <div class="option">D. NaOH</div>
+                </div>
+                <div class="explanation-area">
+                    <span class="exp-title">Giải thích:</span>
+                    HNO₃ vừa là acid mạnh, vừa thể hiện tính oxi hóa mạnh trong nhiều phản ứng hóa học.
+                </div>
+            </div>
+
+            <div class="question-block" onclick="toggleQuestion(this)">
+                <div class="q-header">
+                    <div class="question-text">Câu 2: Khi cho NH₄Cl tác dụng với Ca(OH)₂, khí tạo thành là</div>
+                    <span class="click-hint">👆 Click xem đáp án</span>
+                </div>
+                <div class="options-grid">
+                    <div class="option">A. H₂</div>
+                    <div class="option">B. O₂</div>
+                    <div class="option">C. NO₂</div>
+                    <div class="option" data-correct="true">D. NH₃</div>
+                </div>
+                <div class="explanation-area">
+                    <span class="exp-title">Giải thích:</span>
+                    Muối ammonium gặp base mạnh sẽ giải phóng NH₃. Đây cũng là cách điều chế ammonia trong phòng thí nghiệm.
+                </div>
+            </div>
+
+            <div class="question-block" onclick="toggleQuestion(this)">
+                <div class="q-header">
+                    <div class="question-text">Câu 3: Chất nào sau đây là nguyên nhân chính làm N₂ kém hoạt động ở điều kiện thường?</div>
+                    <span class="click-hint">👆 Click xem đáp án</span>
+                </div>
+                <div class="options-grid">
+                    <div class="option">A. N₂ tan nhiều trong nước</div>
+                    <div class="option">B. N₂ có tính base</div>
+                    <div class="option" data-correct="true">C. N₂ có liên kết ba rất bền</div>
+                    <div class="option">D. N₂ có mùi khai</div>
+                </div>
+                <div class="explanation-area">
+                    <span class="exp-title">Giải thích:</span>
+                    Liên kết ba rất bền là nguyên nhân cốt lõi quyết định tính trơ tương đối của nitrogen.
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer>
+        <p>© 2026 Hóa 11 - Cẩm nang giữa kì II</p>
+    </footer>
+
+    <script>
+        function toggleQuestion(element) {
+            const isActive = element.classList.contains('active');
+            if (!isActive) {
+                element.classList.add('active');
+                element.querySelector('.click-hint').innerText = "👇 Đã mở đáp án";
+            } else {
+                element.classList.remove('active');
+                element.querySelector('.click-hint').innerText = "👆 Click xem đáp án";
+            }
+        }
+    </script>
+</body>
+</html>

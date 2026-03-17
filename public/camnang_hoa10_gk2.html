@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cẩm nang Hóa 10 - Giữa Kì II</title>
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-main: #081a2b;
+            --bg-header: #1f2a3a;
+            --bg-card: #0f2236;
+            --bg-card-2: #1d2d42;
+            --border: #2a3a4d;
+            --text-primary: #e6edf3;
+            --text-secondary: #9fb3c8;
+
+            --accent-green: #22c55e;
+            --correct-bg: #248a37;
+            --correct-border: #3ddc6c;
+
+            --accent-yellow: #e8ad2f;
+            --accent-yellow-light: #f5c451;
+
+            --accent-blue: #38bdf8;
+            --accent-red: #ef4444;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Quicksand', sans-serif;
+            background: var(--bg-main);
+            color: var(--text-primary);
+            line-height: 1.7;
+            min-height: 100vh;
+            padding-bottom: 60px;
+        }
+
+        header {
+            text-align: center;
+            padding: 40px 20px;
+            background: var(--bg-header);
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 32px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+        }
+
+        header h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 6px;
+        }
+
+        header p {
+            font-size: 1.08rem;
+            color: var(--text-secondary);
+        }
+
+        .container {
+            max-width: 980px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        section {
+            margin-bottom: 42px;
+        }
+
+        .section-title {
+            font-size: 1.55rem;
+            margin-bottom: 24px;
+            color: var(--accent-yellow);
+            border-left: 6px solid var(--accent-yellow);
+            padding-left: 16px;
+            font-weight: 700;
+        }
+
+        .summary-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            padding: 22px 24px;
+            border-radius: 18px;
+            margin-bottom: 24px;
+            box-shadow: 0 10px 24px rgba(0,0,0,0.18);
+        }
+
+        .summary-card h3 {
+            margin-bottom: 14px;
+            font-size: 1.28rem;
+            color: var(--text-primary);
+        }
+
+        .summary-list {
+            list-style: none;
+        }
+
+        .summary-list li {
+            margin-bottom: 12px;
+            padding-left: 30px;
+            position: relative;
+            color: var(--text-secondary);
+            font-size: 1.02rem;
+        }
+
+        .summary-list li::before {
+            content: "•";
+            color: var(--accent-green);
+            position: absolute;
+            left: 8px;
+            top: 0;
+            font-weight: 700;
+            font-size: 1.4rem;
+            line-height: 1.2rem;
+        }
+
+        .question-block {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            padding: 24px;
+            margin-bottom: 18px;
+            cursor: pointer;
+            transition: all 0.25s ease;
+        }
+
+        .question-block:hover {
+            border-color: #39516b;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 22px rgba(0,0,0,0.22);
+        }
+
+        .q-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 14px;
+        }
+
+        .question-text {
+            font-weight: 700;
+            font-size: 1.12rem;
+            color: var(--text-primary);
+            flex: 1;
+        }
+
+        .click-hint {
+            font-size: 0.92rem;
+            color: var(--text-secondary);
+            font-style: italic;
+            white-space: nowrap;
+            background: rgba(255,255,255,0.06);
+            padding: 8px 16px;
+            border-radius: 999px;
+            border: 1px solid var(--border);
+        }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+            margin-bottom: 0;
+        }
+
+        .option {
+            background: rgba(8, 26, 43, 0.75);
+            border: 1px solid #18334c;
+            padding: 18px 16px;
+            border-radius: 14px;
+            text-align: center;
+            transition: all 0.25s ease;
+            font-size: 1rem;
+            color: var(--text-secondary);
+            min-height: 76px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .question-block.active .options-grid {
+            margin-bottom: 16px;
+            pointer-events: none;
+        }
+
+        .question-block.active .option[data-correct="true"] {
+            background: var(--correct-bg);
+            border-color: var(--correct-border);
+            color: #fff;
+            font-weight: 700;
+            box-shadow: 0 0 14px rgba(34,197,94,0.28);
+        }
+
+        .question-block.active .option:not([data-correct="true"]) {
+            opacity: 0.28;
+            color: var(--text-primary);
+        }
+
+        .explanation-area {
+            display: none;
+            background: rgba(255,255,255,0.04);
+            padding: 18px 18px 18px 20px;
+            border-radius: 14px;
+            border-left: 5px solid var(--accent-yellow);
+            margin-top: 8px;
+            color: var(--text-secondary);
+            animation: fadeIn 0.35s ease;
+            font-size: 0.98rem;
+        }
+
+        .question-block.active .explanation-area {
+            display: block;
+        }
+
+        .exp-title {
+            display: block;
+            font-weight: 700;
+            color: var(--accent-yellow);
+            margin-bottom: 6px;
+            font-size: 1.02rem;
+        }
+
+        footer {
+            text-align: center;
+            color: var(--text-secondary);
+            margin-top: 48px;
+            font-size: 0.95rem;
+        }
+
+        @media (max-width: 720px) {
+            .options-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .q-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            header h1 {
+                font-size: 1.55rem;
+            }
+
+            .section-title {
+                font-size: 1.3rem;
+            }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>📘 CẨM NANG + MINI TEST</h1>
+        <p>HÓA 10 - GIỮA KÌ II</p>
+    </header>
+
+    <main class="container">
+
+        <section>
+            <div class="section-title">🎯 1. Liên kết hóa học</div>
+
+            <div class="summary-card">
+                <h3>📚 Tóm tắt nhanh</h3>
+                <ul class="summary-list">
+                    <li><strong>Liên kết ion</strong> thường hình thành giữa kim loại và phi kim do có sự nhường - nhận electron.</li>
+                    <li><strong>Liên kết cộng hóa trị</strong> thường hình thành giữa các nguyên tử phi kim do dùng chung electron.</li>
+                    <li><strong>Độ âm điện</strong> giúp xác định mức độ phân cực của liên kết và phân tử.</li>
+                </ul>
+            </div>
+
+            <div class="question-block" onclick="toggleQuestion(this)">
+                <div class="q-header">
+                    <div class="question-text">Câu 1: Liên kết trong hợp chất NaCl là loại liên kết nào?</div>
+                    <span class="click-hint">👆 Click xem đáp án</span>
+                </div>
+                <div class="options-grid">
+                    <div class="option">A. Liên kết cộng hóa trị không cực</div>
+                    <div class="option" data-correct="true">B. Liên kết ion</div>
+                    <div class="option">C. Liên kết kim loại</div>
+                    <div class="option">D. Liên kết hiđro</div>
+                </div>
+                <div class="explanation-area">
+                    <span class="exp-title">Giải thích:</span>
+                    Na là kim loại, Cl là phi kim. Na nhường 1 electron cho Cl tạo ion Na⁺ và Cl⁻, nên trong NaCl là liên kết ion.
+                </div>
+            </div>
+
+            <div class="question-block" onclick="toggleQuestion(this)">
+                <div class="q-header">
+                    <div class="question-text">Câu 2: Liên kết trong phân tử H₂O là</div>
+                    <span class="click-hint">👆 Click xem đáp án</span>
+                </div>
+                <div class="options-grid">
+                    <div class="option">A. liên kết ion</div>
+                    <div class="option">B. liên kết cộng hóa trị không cực</div>
+                    <div class="option" data-correct="true">C. liên kết cộng hóa trị phân cực</div>
+                    <div class="option">D. liên kết kim loại</div>
+                </div>
+                <div class="explanation-area">
+                    <span class="exp-title">Giải thích:</span>
+                    H và O đều là phi kim nên tạo liên kết cộng hóa trị. Do O có độ âm điện lớn hơn H nên liên kết O–H là liên kết cộng hóa trị phân cực.
+                </div>
+            </div>
+
+            <div class="question-block" onclick="toggleQuestion(this)">
+                <div class="q-header">
+                    <div class="question-text">Câu 3: Phân tử nào sau đây không phân cực?</div>
+                    <span class="click-hint">👆 Click xem đáp án</span>
+                </div>
+                <div class="options-grid">
+                    <div class="option">A. HCl</div>
+                    <div class="option" data-correct="true">B. CO₂</div>
+                    <div class="option">C. NH₃</div>
+                    <div class="option">D. H₂O</div>
+                </div>
+                <div class="explanation-area">
+                    <span class="exp-title">Giải thích:</span>
+                    CO₂ có cấu trúc thẳng, hai liên kết C=O phân cực nhưng đối xứng nên các moment lưỡng cực triệt tiêu nhau, phân tử không phân cực.
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-title">🔥 2. Oxi hóa - khử</div>
+
+            <div class="summary-card">
+                <h3>📚 Tóm tắt nhanh</h3>
+                <ul class="summary-list">
+                    <li><strong>Oxi hóa</strong> là quá trình nhường electron.</li>
+                    <li><strong>Khử</strong> là quá trình nhận electron.</li>
+                    <li>Phản ứng oxi hóa - khử là phản ứng có sự thay đổi số oxi hóa của một số nguyên tố.</li>
+                </ul>
+            </div>
+
+            <div class="question-block" onclick="toggleQuestion(this)">
+                <div class="q-header">
+                    <div class="question-text">Câu 1: Số oxi hóa của oxygen trong H₂O là</div>
+                    <span class="click-hint">👆 Click xem đáp án</span>
+                </div>
+                <div class="options-grid">
+                    <div class="option">A. -1</div>
+                    <div class="option" data-correct="true">B. -2</div>
+                    <div class="option">C. +1</div>
+                    <div class="option">D. 0</div>
+                </div>
+                <div class="explanation-area">
+                    <span class="exp-title">Giải thích:</span>
+                    Trong hầu hết các hợp chất, oxygen có số oxi hóa là -2. H₂O không phải ngoại lệ.
+                </div>
+            </div>
+
+            <div class="question-block" onclick="toggleQuestion(this)">
+                <div class="q-header">
+                    <div class="question-text">Câu 2: Trong phản ứng oxi hóa - khử, chất khử là chất</div>
+                    <span class="click-hint">👆 Click xem đáp án</span>
+                </div>
+                <div class="options-grid">
+                    <div class="option">A. nhận electron</div>
+                    <div class="option" data-correct="true">B. nhường electron</div>
+                    <div class="option">C. không làm thay đổi số oxi hóa</div>
+                    <div class="option">D. luôn là phi kim</div>
+                </div>
+                <div class="explanation-area">
+                    <span class="exp-title">Giải thích:</span>
+                    Chất khử là chất nhường electron cho chất khác, nên bản thân nó bị oxi hóa.
+                </div>
+            </div>
+
+            <div class="question-block" onclick="toggleQuestion(this)">
+                <div class="q-header">
+                    <div class="question-text">Câu 3: Trong quá trình Fe → Fe²⁺ + 2e, nguyên tử Fe đã</div>
+                    <span class="click-hint">👆 Click xem đáp án</span>
+                </div>
+                <div class="options-grid">
+                    <div class="option">A. bị khử</div>
+                    <div class="option" data-correct="true">B. bị oxi hóa</div>
+                    <div class="option">C. không đổi số oxi hóa</div>
+                    <div class="option">D. nhận electron</div>
+                </div>
+                <div class="explanation-area">
+                    <span class="exp-title">Giải thích:</span>
+                    Fe từ số oxi hóa 0 tăng lên +2, đồng thời nhường 2e, nên bị oxi hóa.
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-title">⚡ 3. Cấu hình electron</div>
+
+            <div class="summary-card">
+                <h3>📚 Tóm tắt nhanh</h3>
+                <ul class="summary-list">
+                    <li>Electron được điền vào các obitan theo thứ tự mức năng lượng tăng dần: <strong>1s → 2s → 2p → 3s → 3p → 4s → 3d...</strong></li>
+                    <li>Phân lớp s có 1 obitan, phân lớp p có 3 obitan, phân lớp d có 5 obitan.</li>
+                    <li>Lớp electron ngoài cùng của nhiều nguyên tử bền thường có tối đa 8 electron.</li>
+                </ul>
+            </div>
+
+            <div class="question-block" onclick="toggleQuestion(this)">
+                <div class="q-header">
+                    <div class="question-text">Câu 1: Nguyên tử oxygen có Z = 8, cấu hình electron đúng là</div>
+                    <span class="click-hint">👆 Click xem đáp án</span>
+                </div>
+                <div class="options-grid">
+                    <div class="option" data-correct="true">A. 1s² 2s² 2p⁴</div>
+                    <div class="option">B. 1s² 2s² 2p⁶</div>
+                    <div class="option">C. 1s² 2p⁶</div>
+                    <div class="option">D. 1s² 2s²</div>
+                </div>
+                <div class="explanation-area">
+                    <span class="exp-title">Giải thích:</span>
+                    Oxygen có 8 electron, điền lần lượt vào 1s, 2s rồi 2p nên cấu hình là 1s² 2s² 2p⁴.
+                </div>
+            </div>
+
+            <div class="question-block" onclick="toggleQuestion(this)">
+                <div class="q-header">
+                    <div class="question-text">Câu 2: Phân lớp p có bao nhiêu obitan?</div>
+                    <span class="click-hint">👆 Click xem đáp án</span>
+                </div>
+                <div class="options-grid">
+                    <div class="option">A. 1</div>
+                    <div class="option">B. 2</div>
+                    <div class="option" data-correct="true">C. 3</div>
+                    <div class="option">D. 5</div>
+                </div>
+                <div class="explanation-area">
+                    <span class="exp-title">Giải thích:</span>
+                    Phân lớp p gồm 3 obitan px, py, pz, mỗi obitan chứa tối đa 2 electron.
+                </div>
+            </div>
+
+            <div class="question-block" onclick="toggleQuestion(this)">
+                <div class="q-header">
+                    <div class="question-text">Câu 3: Lớp electron ngoài cùng của nguyên tử thường bền khi có tối đa</div>
+                    <span class="click-hint">👆 Click xem đáp án</span>
+                </div>
+                <div class="options-grid">
+                    <div class="option">A. 2 electron</div>
+                    <div class="option" data-correct="true">B. 8 electron</div>
+                    <div class="option">C. 18 electron</div>
+                    <div class="option">D. 32 electron</div>
+                </div>
+                <div class="explanation-area">
+                    <span class="exp-title">Giải thích:</span>
+                    Quy tắc bát tử cho thấy nhiều nguyên tử bền khi lớp ngoài cùng có 8 electron, riêng lớp K tối đa 2 electron.
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-title" style="color: var(--accent-red); border-color: var(--accent-red);">🧠 4. Lỗi sai thường gặp</div>
+
+            <div class="question-block" onclick="toggleQuestion(this)">
+                <div class="q-header">
+                    <div class="question-text">Câu 1: Số oxi hóa của oxygen trong H₂O₂ là</div>
+                    <span class="click-hint">👆 Click xem đáp án</span>
+                </div>
+                <div class="options-grid">
+                    <div class="option">A. -2</div>
+                    <div class="option" data-correct="true">B. -1</div>
+                    <div class="option">C. 0</div>
+                    <div class="option">D. +1</div>
+                </div>
+                <div class="explanation-area">
+                    <span class="exp-title">Giải thích:</span>
+                    H₂O₂ là hợp chất peoxit nên oxygen có số oxi hóa -1, đây là ngoại lệ rất hay bị nhầm với -2.
+                </div>
+            </div>
+
+            <div class="question-block" onclick="toggleQuestion(this)">
+                <div class="q-header">
+                    <div class="question-text">Câu 2: Liên kết trong phân tử Cl₂ là</div>
+                    <span class="click-hint">👆 Click xem đáp án</span>
+                </div>
+                <div class="options-grid">
+                    <div class="option">A. liên kết cộng hóa trị phân cực</div>
+                    <div class="option" data-correct="true">B. liên kết cộng hóa trị không phân cực</div>
+                    <div class="option">C. liên kết ion</div>
+                    <div class="option">D. liên kết kim loại</div>
+                </div>
+                <div class="explanation-area">
+                    <span class="exp-title">Giải thích:</span>
+                    Cl₂ được tạo bởi hai nguyên tử giống nhau nên cặp electron chung không bị lệch về phía nguyên tử nào, vì vậy liên kết không phân cực.
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-title">🚀 5. Mini Test tổng hợp</div>
+
+            <div class="question-block" onclick="toggleQuestion(this)">
+                <div class="q-header">
+                    <div class="question-text">Câu 1: Nguyên tử có số hiệu nguyên tử Z = 11 là nguyên tố nào?</div>
+                    <span class="click-hint">👆 Click xem đáp án</span>
+                </div>
+                <div class="options-grid">
+                    <div class="option" data-correct="true">A. Na</div>
+                    <div class="option">B. Mg</div>
+                    <div class="option">C. Al</div>
+                    <div class="option">D. K</div>
+                </div>
+                <div class="explanation-area">
+                    <span class="exp-title">Giải thích:</span>
+                    Z = 11 là sodium (natri), kí hiệu hóa học là Na.
+                </div>
+            </div>
+
+            <div class="question-block" onclick="toggleQuestion(this)">
+                <div class="q-header">
+                    <div class="question-text">Câu 2: Phản ứng nào sau đây là phản ứng oxi hóa - khử?</div>
+                    <span class="click-hint">👆 Click xem đáp án</span>
+                </div>
+                <div class="options-grid">
+                    <div class="option">A. HCl + NaOH → NaCl + H₂O</div>
+                    <div class="option">B. CaCO₃ → CaO + CO₂</div>
+                    <div class="option" data-correct="true">C. Fe + Cu²⁺ → Fe²⁺ + Cu</div>
+                    <div class="option">D. NaCl → Na⁺ + Cl⁻</div>
+                </div>
+                <div class="explanation-area">
+                    <span class="exp-title">Giải thích:</span>
+                    Trong phản ứng này, Fe từ 0 lên +2 còn Cu từ +2 về 0, có sự thay đổi số oxi hóa nên đây là phản ứng oxi hóa - khử.
+                </div>
+            </div>
+
+            <div class="question-block" onclick="toggleQuestion(this)">
+                <div class="q-header">
+                    <div class="question-text">Câu 3: Chất nào sau đây chứa liên kết ion?</div>
+                    <span class="click-hint">👆 Click xem đáp án</span>
+                </div>
+                <div class="options-grid">
+                    <div class="option">A. H₂O</div>
+                    <div class="option">B. CO₂</div>
+                    <div class="option" data-correct="true">C. NaCl</div>
+                    <div class="option">D. NH₃</div>
+                </div>
+                <div class="explanation-area">
+                    <span class="exp-title">Giải thích:</span>
+                    NaCl được tạo thành từ ion Na⁺ và Cl⁻ nên có liên kết ion, còn H₂O, CO₂, NH₃ đều chủ yếu là liên kết cộng hóa trị.
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer>
+        <p>© 2026 Hóa 10 - Cẩm nang giữa kì II</p>
+    </footer>
+
+    <script>
+        function toggleQuestion(element) {
+            const isActive = element.classList.contains('active');
+            if (!isActive) {
+                element.classList.add('active');
+                element.querySelector('.click-hint').innerText = "👇 Đã mở đáp án";
+            } else {
+                element.classList.remove('active');
+                element.querySelector('.click-hint').innerText = "👆 Click xem đáp án";
+            }
+        }
+    </script>
+</body>
+</html>

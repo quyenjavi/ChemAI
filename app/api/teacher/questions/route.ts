@@ -18,7 +18,6 @@ export async function GET(req: Request) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     const svc = serviceRoleClient()
-    const { data: tp } = await svc.from('teacher_profiles').select('id,school_id').eq('user_id', user.id).maybeSingle()
     // Build base query from questions
     let qQuery = svc.from('questions').select('id,content,question_type,explanation,difficulty,topic,lesson_id,created_at')
     if (typeFilter) qQuery = qQuery.eq('question_type', typeFilter)
@@ -51,16 +50,12 @@ export async function GET(req: Request) {
     const { data: answersAll } = questionIds.length ? await svc.from('quiz_attempt_answers').select('question_id,statement_id,is_correct,attempt_id').in('question_id', questionIds) : { data: [] }
     // Fetch attempts to map answer -> user, then filter by teacher school
     const attemptIdsForAnswers = Array.from(new Set((answersAll || []).map((a: any) => a.attempt_id).filter(Boolean)))
-    const { data: attemptsMapRows } = attemptIdsForAnswers.length ? await svc.from('quiz_attempts').select('id,user_id').in('id', attemptIdsForAnswers) : { data: [] }
-    const attemptUserById: Record<string, string> = Object.fromEntries((attemptsMapRows || []).map((a: any) => [a.id, a.user_id]))
-    const userIdsFromAnswers = Array.from(new Set((attemptsMapRows || []).map((a: any) => a.user_id).filter(Boolean)))
-    const { data: studentsFromAnswers } = userIdsFromAnswers.length ? await svc.from('student_profiles').select('user_id,school_id').in('user_id', userIdsFromAnswers) : { data: [] }
-    const allowedUsersSet = new Set<string>((studentsFromAnswers || []).filter((s: any) => !tp?.school_id || s.school_id === tp.school_id).map((s: any) => s.user_id))
+    const { data: attemptsMapRows } = attemptIdsForAnswers.length ? await svc.from('quiz_attempts').select('id,user_id,status').in('id', attemptIdsForAnswers) : { data: [] }
+    const attemptUserById: Record<string, string> = Object.fromEntries((attemptsMapRows || []).filter((a: any) => a.status === 'submitted').map((a: any) => [a.id, a.user_id]))
     const answersFiltered = (answersAll || []).filter((a: any) => {
       const uid = attemptUserById[a.attempt_id]
       if (!uid) return false
-      if (!tp?.school_id) return true
-      return allowedUsersSet.has(uid)
+      return true
     })
 
     type AttemptQuestionAgg = {

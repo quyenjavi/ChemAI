@@ -195,6 +195,12 @@ export default function Dashboard() {
         >
           TOP
         </Button>
+        <Button
+          onClick={() => router.push('/documents')}
+          variant="outline"
+        >
+          TÀI LIỆU
+        </Button>
       </div>
       {activeGradeId !== 'top' ? (
         <div className="flex items-center">

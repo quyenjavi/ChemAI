@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cẩm Nang Hóa 12 - Giữa Kì II</title>
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-main: #0B1A2B;
+            --bg-header: #1F2A3A;
+            --bg-card: #0F2236;
+            --border: #2A3A4D;
+            --text-primary: #E6EDF3;
+            --text-secondary: #9FB3C8;
+
+            --accent-green: #2ea043;
+            --correct-bg: #238636;
+            --correct-border: #3fb950;
+
+            --accent-yellow: #d29922;
+            --accent-yellow-light: #e3b341;
+
+            --accent-orange: #f59e0b;
+            --accent-red: #ef4444;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Quicksand', sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+            padding-bottom: 50px;
+        }
+
+        header {
+            text-align: center;
+            padding: 40px 20px;
+            background-color: var(--bg-header);
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 30px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+        }
+
+        header h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 5px;
+            color: var(--text-primary);
+        }
+
+        header p {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+        }
+
+        .container {
+            max-width: 880px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        section {
+            margin-bottom: 40px;
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            color: var(--accent-yellow);
+            border-left: 5px solid var(--accent-yellow);
+            padding-left: 15px;
+            font-weight: 700;
+        }
+
+        .summary-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+        }
+
+        .summary-card h3 {
+            margin-bottom: 10px;
+            font-size: 1.2rem;
+            color: var(--text-primary);
+        }
+
+        .summary-list {
+            list-style: none;
+        }
+
+        .summary-list li {
+            margin-bottom: 8px;
+            padding-left: 20px;
+            position: relative;
+            color: var(--text-secondary);
+        }
+
+        .summary-list li::before {
+            content: "•";
+            color: var(--accent-green);
+            position: absolute;
+            left: 0;
+            font-weight: bold;
+            font-size: 1.2rem;
+            line-height: 1.4rem;
+        }
+
+        .question-block {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .question-block:hover {
+            border-color: var(--text-secondary);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .q-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .question-text {
+            font-weight: 700;
+            font-size: 1.08rem;
+            margin-bottom: 15px;
+            color: var(--text-primary);
+        }
+
+        .click-hint {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            font-style: italic;
+            white-space: nowrap;
+            background-color: var(--bg-header);
+            padding: 4px 10px;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+        }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 0;
+        }
+
+        .option {
+            background-color: var(--bg-main);
+            border: 1px solid var(--border);
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+            transition: all 0.3s;
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+        }
+
+        .question-block.active .options-grid {
+            margin-bottom: 15px;
+            pointer-events: none;
+        }
+
+        .question-block.active .option[data-correct="true"] {
+            background-color: var(--correct-bg);
+            color: #fff;
+            border-color: var(--correct-border);
+            font-weight: bold;
+            box-shadow: 0 0 10px rgba(46, 160, 67, 0.4);
+        }
+
+        .question-block.active .option:not([data-correct="true"]) {
+            opacity: 0.3;
+            color: var(--text-primary);
+        }
+
+        .explanation-area {
+            display: none;
+            background-color: rgba(31, 42, 58, 0.8);
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid var(--accent-yellow);
+            margin-top: 10px;
+            font-size: 0.95rem;
+            animation: fadeIn 0.4s ease;
+            color: var(--text-secondary);
+        }
+
+        .question-block.active .explanation-area {
+            display: block;
+        }
+
+        .exp-title {
+            font-weight: bold;
+            color: var(--accent-yellow);
+            margin-bottom: 5px;
+            display: block;
+        }
+
+        .formula {
+            color: var(--accent-yellow-light);
+            font-weight: 700;
+        }
+
+        @media (max-width: 600px) {
+            .options-grid {
+                grid-template-columns: 1fr;
+            }
+            header h1 {
+                font-size: 1.5rem;
+            }
+            .q-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>📘 CẨM NANG + MINI TEST</h1>
+    <p>HÓA 12 - GIỮA KÌ II</p>
+</header>
+
+<main class="container">
+
+    <section>
+        <div class="section-title">🧲 1. Đại cương về kim loại</div>
+
+        <div class="summary-card">
+            <h3>📚 Tóm tắt nhanh</h3>
+            <ul class="summary-list">
+                <li>Kim loại có tính khử vì dễ nhường electron.</li>
+                <li>Tính chất vật lí chung: dẫn điện, dẫn nhiệt, ánh kim, dẻo.</li>
+                <li>Dãy điện hóa giúp so sánh mức độ hoạt động của kim loại.</li>
+            </ul>
+        </div>
+
+        <div class="question-block" onclick="toggleQuestion(this)">
+            <div class="q-header">
+                <div class="question-text">Câu 1: Nguyên nhân chủ yếu làm kim loại có tính dẫn điện là gì?</div>
+                <span class="click-hint">👆 Click xem đáp án</span>
+            </div>
+            <div class="options-grid">
+                <div class="option">A. Có khối lượng riêng lớn</div>
+                <div class="option">B. Có mạng tinh thể bền</div>
+                <div class="option" data-correct="true">C. Có electron tự do chuyển động trong mạng tinh thể</div>
+                <div class="option">D. Có độ âm điện nhỏ</div>
+            </div>
+            <div class="explanation-area">
+                <span class="exp-title">Giải thích:</span> Dòng điện trong kim loại là dòng chuyển dời có hướng của các electron tự do.
+            </div>
+        </div>
+
+        <div class="question-block" onclick="toggleQuestion(this)">
+            <div class="q-header">
+                <div class="question-text">Câu 2: Trong phản ứng hóa học, nguyên tử kim loại thường có xu hướng</div>
+                <span class="click-hint">👆 Click xem đáp án</span>
+            </div>
+            <div class="options-grid">
+                <div class="option">A. nhận electron</div>
+                <div class="option" data-correct="true">B. nhường electron</div>
+                <div class="option">C. nhận proton</div>
+                <div class="option">D. tạo liên kết hiđro</div>
+            </div>
+            <div class="explanation-area">
+                <span class="exp-title">Nhớ nhanh:</span> Kim loại là chất khử, nên dễ nhường electron.
+            </div>
+        </div>
+    </section>
+
+    <section>
+        <div class="section-title">⚡ 2. Dãy điện hóa của kim loại</div>
+
+        <div class="summary-card">
+            <h3>📚 Tóm tắt nhanh</h3>
+            <ul class="summary-list">
+                <li>Kim loại đứng trước có tính khử mạnh hơn kim loại đứng sau.</li>
+                <li>Kim loại mạnh có thể đẩy ion kim loại yếu ra khỏi dung dịch muối.</li>
+                <li>Kim loại đứng trước H phản ứng với axit giải phóng H₂ trong điều kiện thích hợp.</li>
+            </ul>
+        </div>
+
+        <div class="question-block" onclick="toggleQuestion(this)">
+            <div class="q-header">
+                <div class="question-text">Câu 1: Kim loại nào sau đây đẩy được Cu ra khỏi dung dịch CuSO₄?</div>
+                <span class="click-hint">👆 Click xem đáp án</span>
+            </div>
+            <div class="options-grid">
+                <div class="option">A. Ag</div>
+                <div class="option" data-correct="true">B. Fe</div>
+                <div class="option">C. Au</div>
+                <div class="option">D. Pt</div>
+            </div>
+            <div class="explanation-area">
+                <span class="exp-title">Giải thích:</span> Fe hoạt động hóa học mạnh hơn Cu nên đẩy được Cu²⁺ ra khỏi dung dịch.
+            </div>
+        </div>
+
+        <div class="question-block" onclick="toggleQuestion(this)">
+            <div class="q-header">
+                <div class="question-text">Câu 2: Cặp nào sau đây phản ứng được với nhau?</div>
+                <span class="click-hint">👆 Click xem đáp án</span>
+            </div>
+            <div class="options-grid">
+                <div class="option">A. Cu + HCl loãng</div>
+                <div class="option">B. Ag + H₂SO₄ loãng</div>
+                <div class="option" data-correct="true">C. Zn + HCl loãng</div>
+                <div class="option">D. Au + HCl loãng</div>
+            </div>
+            <div class="explanation-area">
+                <span class="exp-title">Giải thích:</span> Zn đứng trước H nên phản ứng với HCl loãng, giải phóng khí H₂.
+            </div>
+        </div>
+    </section>
+
+    <section>
+        <div class="section-title">🧪 3. Ăn mòn kim loại</div>
+
+        <div class="summary-card">
+            <h3>📚 Tóm tắt nhanh</h3>
+            <ul class="summary-list">
+                <li>Có hai dạng chính: ăn mòn hóa học và ăn mòn điện hóa.</li>
+                <li>Ăn mòn điện hóa cần có: hai điện cực khác nhau, chất điện li và có sự tiếp xúc điện.</li>
+                <li>Bảo vệ kim loại bằng sơn phủ, mạ, dùng chất chống gỉ hoặc bảo vệ điện hóa.</li>
+            </ul>
+        </div>
+
+        <div class="question-block" onclick="toggleQuestion(this)">
+            <div class="q-header">
+                <div class="question-text">Câu 1: Điều kiện nào sau đây cần có để xảy ra ăn mòn điện hóa?</div>
+                <span class="click-hint">👆 Click xem đáp án</span>
+            </div>
+            <div class="options-grid">
+                <div class="option">A. Chỉ cần có nước</div>
+                <div class="option">B. Chỉ cần có oxi</div>
+                <div class="option" data-correct="true">C. Có hai điện cực khác nhau tiếp xúc nhau trong dung dịch chất điện li</div>
+                <div class="option">D. Chỉ cần nhiệt độ cao</div>
+            </div>
+            <div class="explanation-area">
+                <span class="exp-title">Điểm mấu chốt:</span> Ăn mòn điện hóa phải hình thành pin điện hóa.
+            </div>
+        </div>
+
+        <div class="question-block" onclick="toggleQuestion(this)">
+            <div class="q-header">
+                <div class="question-text">Câu 2: Biện pháp nào sau đây giúp hạn chế ăn mòn kim loại?</div>
+                <span class="click-hint">👆 Click xem đáp án</span>
+            </div>
+            <div class="options-grid">
+                <div class="option">A. Để kim loại tiếp xúc trực tiếp với không khí ẩm</div>
+                <div class="option">B. Ngâm kim loại trong dung dịch muối</div>
+                <div class="option" data-correct="true">C. Sơn phủ bề mặt kim loại</div>
+                <div class="option">D. Ghép với kim loại hoạt động yếu hơn trong môi trường điện li</div>
+            </div>
+            <div class="explanation-area">
+                <span class="exp-title">Giải thích:</span> Sơn phủ tạo lớp ngăn cách kim loại với không khí và hơi ẩm.
+            </div>
+        </div>
+    </section>
+
+    <section>
+        <div class="section-title">🏭 4. Điều chế kim loại</div>
+
+        <div class="summary-card">
+            <h3>📚 Tóm tắt nhanh</h3>
+            <ul class="summary-list">
+                <li>Kim loại mạnh như Na, K, Ca, Mg, Al thường điều chế bằng điện phân nóng chảy.</li>
+                <li>Kim loại trung bình, yếu có thể điều chế bằng nhiệt luyện hoặc thủy luyện.</li>
+                <li>Không điện phân dung dịch để điều chế Na, K, Ca vì nước bị điện phân trước.</li>
+            </ul>
+        </div>
+
+        <div class="question-block" onclick="toggleQuestion(this)">
+            <div class="q-header">
+                <div class="question-text">Câu 1: Kim loại Al được điều chế chủ yếu bằng phương pháp nào?</div>
+                <span class="click-hint">👆 Click xem đáp án</span>
+            </div>
+            <div class="options-grid">
+                <div class="option">A. Thủy luyện</div>
+                <div class="option">B. Nhiệt luyện bằng CO</div>
+                <div class="option" data-correct="true">C. Điện phân nóng chảy Al₂O₃</div>
+                <div class="option">D. Điện phân dung dịch AlCl₃</div>
+            </div>
+            <div class="explanation-area">
+                <span class="exp-title">Giải thích:</span> Nhôm là kim loại hoạt động mạnh nên được điều chế bằng điện phân nóng chảy.
+            </div>
+        </div>
+
+        <div class="question-block" onclick="toggleQuestion(this)">
+            <div class="q-header">
+                <div class="question-text">Câu 2: Phương pháp dùng kim loại mạnh để đẩy kim loại yếu hơn ra khỏi dung dịch muối gọi là</div>
+                <span class="click-hint">👆 Click xem đáp án</span>
+            </div>
+            <div class="options-grid">
+                <div class="option">A. điện phân</div>
+                <div class="option">B. nhiệt phân</div>
+                <div class="option" data-correct="true">C. thủy luyện</div>
+                <div class="option">D. chưng cất</div>
+            </div>
+            <div class="explanation-area">
+                <span class="exp-title">Nhớ nhanh:</span> Thủy luyện xảy ra trong dung dịch.
+            </div>
+        </div>
+    </section>
+
+    <section>
+        <div class="section-title">🧠 5. Bẫy thường gặp</div>
+
+        <div class="question-block" onclick="toggleQuestion(this)">
+            <div class="q-header">
+                <div class="question-text">Câu 1: Có thể điều chế Na bằng điện phân dung dịch NaCl hay không?</div>
+                <span class="click-hint">👆 Click xem đáp án</span>
+            </div>
+            <div class="options-grid">
+                <div class="option">A. Có, vì Na rất hoạt động</div>
+                <div class="option" data-correct="true">B. Không, vì trong dung dịch nước bị điện phân trước</div>
+                <div class="option">C. Có, nếu tăng nhiệt độ</div>
+                <div class="option">D. Có, nếu thêm HCl</div>
+            </div>
+            <div class="explanation-area">
+                <span class="exp-title">Cẩn thận:</span> Na phải điều chế bằng điện phân nóng chảy, không phải điện phân dung dịch.
+            </div>
+        </div>
+
+        <div class="question-block" onclick="toggleQuestion(this)">
+            <div class="q-header">
+                <div class="question-text">Câu 2: Fe để trong không khí khô có bị gỉ nhanh như trong không khí ẩm không?</div>
+                <span class="click-hint">👆 Click xem đáp án</span>
+            </div>
+            <div class="options-grid">
+                <div class="option">A. Có, nhanh như nhau</div>
+                <div class="option">B. Gỉ nhanh hơn</div>
+                <div class="option" data-correct="true">C. Không, gỉ chậm hơn nhiều</div>
+                <div class="option">D. Không bao giờ gỉ</div>
+            </div>
+            <div class="explanation-area">
+                <span class="exp-title">Giải thích:</span> Độ ẩm làm tăng khả năng tạo môi trường điện li, thúc đẩy ăn mòn điện hóa.
+            </div>
+        </div>
+    </section>
+
+    <section>
+        <div class="section-title" style="color: var(--accent-orange); border-color: var(--accent-orange);">🚀 6. Mini Test tổng hợp</div>
+
+        <div class="question-block" onclick="toggleQuestion(this)">
+            <div class="q-header">
+                <div class="question-text">Câu 1: Kim loại nào sau đây có thể phản ứng với dung dịch CuSO₄ tạo Cu?</div>
+                <span class="click-hint">👆 Click xem đáp án</span>
+            </div>
+            <div class="options-grid">
+                <div class="option">A. Ag</div>
+                <div class="option">B. Cu</div>
+                <div class="option" data-correct="true">C. Zn</div>
+                <div class="option">D. Au</div>
+            </div>
+            <div class="explanation-area">
+                <span class="exp-title">Giải thích:</span> Zn đứng trước Cu trong dãy điện hóa nên đẩy được Cu²⁺.
+            </div>
+        </div>
+
+        <div class="question-block" onclick="toggleQuestion(this)">
+            <div class="q-header">
+                <div class="question-text">Câu 2: Phương pháp thích hợp để điều chế Na là</div>
+                <span class="click-hint">👆 Click xem đáp án</span>
+            </div>
+            <div class="options-grid">
+                <div class="option">A. điện phân dung dịch NaCl</div>
+                <div class="option">B. thủy luyện</div>
+                <div class="option">C. nhiệt luyện Na₂O bằng CO</div>
+                <div class="option" data-correct="true">D. điện phân nóng chảy NaCl</div>
+            </div>
+            <div class="explanation-area">
+                <span class="exp-title">Ghi nhớ:</span> Kim loại kiềm được điều chế bằng điện phân nóng chảy muối halogenua.
+            </div>
+        </div>
+
+        <div class="question-block" onclick="toggleQuestion(this)">
+            <div class="q-header">
+                <div class="question-text">Câu 3: Trường hợp nào sau đây dễ xảy ra ăn mòn điện hóa nhất?</div>
+                <span class="click-hint">👆 Click xem đáp án</span>
+            </div>
+            <div class="options-grid">
+                <div class="option">A. Thanh Fe đặt trong bình khí khô</div>
+                <div class="option">B. Lá Al để trong dầu hỏa</div>
+                <div class="option" data-correct="true">C. Tấm Fe ghép với Cu đặt trong nước muối</div>
+                <div class="option">D. Dây Ag để trong không khí khô</div>
+            </div>
+            <div class="explanation-area">
+                <span class="exp-title">Nhận diện:</span> Có hai kim loại khác nhau, tiếp xúc điện và có chất điện li.
+            </div>
+        </div>
+    </section>
+
+</main>
+
+<footer style="text-align: center; color: var(--text-secondary); margin-top: 40px; font-size: 0.9rem;">
+    <p>© 2026 Hóa 12 - Cẩm nang giữa kì II</p>
+</footer>
+
+<script>
+    function toggleQuestion(element) {
+        const isActive = element.classList.contains('active');
+        if (!isActive) {
+            element.classList.add('active');
+            element.querySelector('.click-hint').innerText = "👇 Đã mở đáp án";
+        } else {
+            element.classList.remove('active');
+            element.querySelector('.click-hint').innerText = "👆 Click xem đáp án";
+        }
+    }
+</script>
+
+</body>
+</html>

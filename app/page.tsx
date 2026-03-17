@@ -18,7 +18,7 @@ export default async function Home() {
     <Card>
       <CardContent className="py-6">
         <div className="text-center space-y-2">
-          <div className="text-2xl font-semibold" style={{color:'var(--gold)'}}>ChemAI LAB</div>
+          <div className="text-2xl font-semibold" style={{color:'var(--gold)'}}>ChemAI LUYỆN HÓA THPT</div>
           <div style={{color:'var(--text-muted)'}}>Nền tảng luyện Hóa thông minh cho học sinh THPT</div>
           <div className="flex items-center justify-center gap-2 pt-2">
             <Link href="/login"><Button>Bắt đầu học</Button></Link>

@@ -60,7 +60,7 @@ export default function LoginPage() {
       <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 items-center px-4">
         <div className="py-10">
           <h1 className="text-[36px] md:text-[42px] font-semibold leading-tight">
-            ChemAI LAB
+            ChemAI LUYỆN HÓA THPT
           </h1>
           <p className="mt-2 text-[15px]" style={{color:'var(--text-secondary)'}}>
             Không ai trượt vì sai một câu khó – họ trượt vì sai nhiều câu nhỏ ...

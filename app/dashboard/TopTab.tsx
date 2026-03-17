@@ -73,49 +73,6 @@ export default function TopTab() {
         ) : null}
       </div>
 
-      <Card className="border border-orange-400/50 bg-orange-500/10">
-        <CardHeader>
-          <div className="flex flex-col gap-1">
-            <CardTitle className="text-orange-100">Top học bá</CardTitle>
-            <div className="text-sm" style={{color:'rgba(255,237,213,0.85)'}}>
-              Độ chính xác học tập (xét hạng khi đã làm trên 100 câu)
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {loadingTop ? <div className="text-sm" style={{color:'var(--text-muted)'}}>Đang tải...</div> : (
-            <div className="overflow-x-auto">
-              <table className="w-full border rounded text-sm" style={{borderColor:'var(--divider)'}}>
-                <thead>
-                  <tr>
-                    <th className="text-left p-2">Hạng</th>
-                    <th className="text-left p-2">Học sinh</th>
-                    <th className="text-left p-2">Lớp</th>
-                    <th className="text-left p-2">Trường</th>
-                    <th className="text-left p-2">% đúng</th>
-                    <th className="text-left p-2">Số câu đã làm</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {topStudents.length === 0 ? (
-                    <tr><td className="p-3" colSpan={6} style={{color:'var(--text-muted)'}}>Chưa có dữ liệu.</td></tr>
-                  ) : topStudents.map((r) => (
-                    <tr key={`${r.rank}-${r.student_name}-${r.class_name}-${r.school_name}`}>
-                      <td className="p-2">{r.rank ?? '—'}</td>
-                      <td className="p-2">{r.student_name || '—'}</td>
-                      <td className="p-2">{r.class_name || '—'}</td>
-                      <td className="p-2">{r.school_name || '—'}</td>
-                      <td className="p-2">{Number(r.avg_percent || 0).toFixed(2)}%</td>
-                      <td className="p-2">{r.total_questions_done ?? 0}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
       <Card className="border border-purple-400/50 bg-purple-500/10">
         <CardHeader>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">

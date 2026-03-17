@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useRouter } from 'next/navigation'
+import dynamic from 'next/dynamic'
 type Grade = { id: string, name: string }
 type Lesson = {
   id: string,
@@ -16,6 +17,11 @@ type Lesson = {
   is_teacher_recommended?: boolean | null,
   display_order?: number | null
 }
+
+const TopTab = dynamic(() => import('./TopTab'), {
+  ssr: false,
+  loading: () => <div className="text-sm" style={{color:'var(--text-muted)'}}>Đang tải...</div>
+})
 
 export default function Dashboard() {
   const router = useRouter()
@@ -64,7 +70,7 @@ export default function Dashboard() {
   }, [activeGradeId, grades, preferredGradeId])
 
   useEffect(() => {
-    if (!activeGradeId) return
+    if (!activeGradeId || activeGradeId === 'top') return
     fetch(`/api/grades/${activeGradeId}/lessons`, { credentials: 'include' })
       .then(async r => {
         if (!r.ok) {
@@ -181,10 +187,23 @@ export default function Dashboard() {
             {g.name}
           </Button>
         ))}
+        <Button
+          onClick={() => setActiveGradeId('top')}
+          role="tab"
+          aria-selected={activeGradeId==='top'}
+          variant={activeGradeId==='top' ? 'default' : 'outline'}
+        >
+          TOP
+        </Button>
       </div>
-      <div className="flex items-center">
-        <Input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Tìm bài theo tiêu đề..." />
-      </div>
+      {activeGradeId !== 'top' ? (
+        <div className="flex items-center">
+          <Input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Tìm bài theo tiêu đề..." />
+        </div>
+      ) : null}
+      {activeGradeId === 'top' ? (
+        <TopTab />
+      ) : (
       <div className="space-y-3">
         {filtered.map(ls => (
           <Card key={ls.id} className="border" style={{borderColor:'var(--divider)'}}>
@@ -264,6 +283,7 @@ export default function Dashboard() {
           </Card>
         ))}
       </div>
+      )}
     </div>
   )
 }

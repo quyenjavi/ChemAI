@@ -79,6 +79,9 @@ export default function LoginPage() {
               <Button disabled={loading} className="w-full gradient-btn">
                 {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
               </Button>
+              <a href="/forgot-password" className="block text-sm underline text-center" style={{color:'var(--gold)'}}>
+                Quên mật khẩu?
+              </a>
             </form>
             <div className="text-sm mt-4" style={{color:'var(--text-muted)'}}>Chưa có tài khoản? <a href="/signup" className="underline">Đăng ký</a></div>
           </CardContent>

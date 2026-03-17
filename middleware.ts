@@ -8,6 +8,8 @@ export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
   const isPublic =
     pathname.startsWith('/login') ||
+    pathname.startsWith('/forgot-password') ||
+    pathname.startsWith('/reset-password') ||
     pathname.startsWith('/signup') ||
     pathname.startsWith('/verify') ||
     pathname.startsWith('/maintenance') ||
@@ -35,6 +37,8 @@ export async function middleware(req: NextRequest) {
     const maintenancePublic =
       pathname.startsWith('/maintenance') ||
       pathname.startsWith('/login') ||
+      pathname.startsWith('/forgot-password') ||
+      pathname.startsWith('/reset-password') ||
       pathname.startsWith('/signup') ||
       pathname.startsWith('/verify') ||
       pathname.startsWith('/api') ||

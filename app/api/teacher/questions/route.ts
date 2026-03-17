@@ -26,6 +26,20 @@ export async function GET(req: Request) {
     if (lessonIdFilter) qQuery = qQuery.eq('lesson_id', lessonIdFilter)
     const { data: qRows } = await qQuery
     const questionIds = Array.from(new Set((qRows || []).map((q: any) => q.id)))
+    const qTypeById: Record<string, string> = Object.fromEntries((qRows || []).map((q: any) => [q.id, String(q.question_type || '')]))
+    const groupQuestionIds = (qRows || []).filter((q: any) => String(q.question_type || '') === 'true_false_group').map((q: any) => q.id)
+    const statementCountByQuestion: Record<string, number> = {}
+    if (groupQuestionIds.length) {
+      const { data: stRows } = await svc
+        .from('question_statements')
+        .select('question_id')
+        .in('question_id', groupQuestionIds)
+      for (const r of (stRows || []) as any[]) {
+        const qid = String(r.question_id || '')
+        if (!qid) continue
+        statementCountByQuestion[qid] = (statementCountByQuestion[qid] || 0) + 1
+      }
+    }
     // Resolve lessons/grades metadata
     const lessonIds = Array.from(new Set((qRows || []).map((q: any) => q.lesson_id).filter(Boolean)))
     const { data: lessons } = lessonIds.length ? await svc.from('lessons').select('id,title,grade_id').in('id', lessonIds) : { data: [] }
@@ -34,7 +48,7 @@ export async function GET(req: Request) {
     const titleByLesson: Record<string, string> = Object.fromEntries((lessons || []).map((l: any) => [l.id, l.title || '']))
     const gradeByLesson: Record<string, string> = Object.fromEntries((lessons || []).map((l: any) => [l.id, (grades || []).find((g: any) => g.id === l.grade_id)?.name || '']))
     // Fetch answers for these questions (left-join semantics handled in code)
-    const { data: answersAll } = questionIds.length ? await svc.from('quiz_attempt_answers').select('id,question_id,is_correct,attempt_id').in('question_id', questionIds) : { data: [] }
+    const { data: answersAll } = questionIds.length ? await svc.from('quiz_attempt_answers').select('question_id,statement_id,is_correct,attempt_id').in('question_id', questionIds) : { data: [] }
     // Fetch attempts to map answer -> user, then filter by teacher school
     const attemptIdsForAnswers = Array.from(new Set((answersAll || []).map((a: any) => a.attempt_id).filter(Boolean)))
     const { data: attemptsMapRows } = attemptIdsForAnswers.length ? await svc.from('quiz_attempts').select('id,user_id').in('id', attemptIdsForAnswers) : { data: [] }
@@ -42,16 +56,68 @@ export async function GET(req: Request) {
     const userIdsFromAnswers = Array.from(new Set((attemptsMapRows || []).map((a: any) => a.user_id).filter(Boolean)))
     const { data: studentsFromAnswers } = userIdsFromAnswers.length ? await svc.from('student_profiles').select('user_id,school_id').in('user_id', userIdsFromAnswers) : { data: [] }
     const allowedUsersSet = new Set<string>((studentsFromAnswers || []).filter((s: any) => !tp?.school_id || s.school_id === tp.school_id).map((s: any) => s.user_id))
-    const answersFiltered = (answersAll || [])
-    // Aggregate counts
+    const answersFiltered = (answersAll || []).filter((a: any) => {
+      const uid = attemptUserById[a.attempt_id]
+      if (!uid) return false
+      if (!tp?.school_id) return true
+      return allowedUsersSet.has(uid)
+    })
+
+    type AttemptQuestionAgg = {
+      attempt_id: string
+      question_id: string
+      question_type: string
+      total_rows: number
+      correct_rows: number
+      has_wrong: boolean
+      has_null_correct: boolean
+    }
+
+    const aggByAttemptQuestion: Record<string, AttemptQuestionAgg> = {}
+    for (const a of answersFiltered as any[]) {
+      const qid = String(a?.question_id || '')
+      const attemptId = String(a?.attempt_id || '')
+      if (!qid || !attemptId) continue
+      const qType = qTypeById[qid] || ''
+      if (qType !== 'true_false_group' && a?.statement_id) continue
+
+      const key = `${attemptId}__${qid}`
+      if (!aggByAttemptQuestion[key]) {
+        aggByAttemptQuestion[key] = {
+          attempt_id: attemptId,
+          question_id: qid,
+          question_type: qType,
+          total_rows: 0,
+          correct_rows: 0,
+          has_wrong: false,
+          has_null_correct: false
+        }
+      }
+
+      const st = aggByAttemptQuestion[key]
+      st.total_rows += 1
+      if (a.is_correct === true) {
+        st.correct_rows += 1
+      } else {
+        st.has_wrong = true
+        if (a.is_correct == null) st.has_null_correct = true
+      }
+    }
+
     const byQuestion: Record<string, { total: number, correct: number }> = {}
-    for (const r of (answersFiltered || []) as any[]) {
-      const qid = r.question_id
-      if (!qid) continue
-      const st = byQuestion[qid] || { total: 0, correct: 0 }
-      st.total += 1
-      if (r.is_correct === true) st.correct += 1
-      byQuestion[qid] = st
+    for (const item of Object.values(aggByAttemptQuestion)) {
+      const qid = item.question_id
+      if (!byQuestion[qid]) byQuestion[qid] = { total: 0, correct: 0 }
+      byQuestion[qid].total += 1
+
+      let attemptCorrect = false
+      if (item.question_type === 'true_false_group') {
+        const expected = statementCountByQuestion[qid] || 0
+        attemptCorrect = item.total_rows > 0 && !item.has_wrong && !item.has_null_correct && (expected ? item.total_rows >= expected : true)
+      } else {
+        attemptCorrect = item.correct_rows > 0
+      }
+      if (attemptCorrect) byQuestion[qid].correct += 1
     }
 
     // Optional grade filter applied on payload after aggregation

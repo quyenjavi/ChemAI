@@ -48,15 +48,11 @@ export async function GET(req: Request) {
     const gradeByLesson: Record<string, string> = Object.fromEntries((lessons || []).map((l: any) => [l.id, (grades || []).find((g: any) => g.id === l.grade_id)?.name || '']))
     // Fetch answers for these questions (left-join semantics handled in code)
     const { data: answersAll } = questionIds.length ? await svc.from('quiz_attempt_answers').select('question_id,statement_id,is_correct,attempt_id').in('question_id', questionIds) : { data: [] }
-    // Fetch attempts to map answer -> user, then filter by teacher school
+    // Only count submitted attempts
     const attemptIdsForAnswers = Array.from(new Set((answersAll || []).map((a: any) => a.attempt_id).filter(Boolean)))
-    const { data: attemptsMapRows } = attemptIdsForAnswers.length ? await svc.from('quiz_attempts').select('id,user_id,status').in('id', attemptIdsForAnswers) : { data: [] }
-    const attemptUserById: Record<string, string> = Object.fromEntries((attemptsMapRows || []).filter((a: any) => a.status === 'submitted').map((a: any) => [a.id, a.user_id]))
-    const answersFiltered = (answersAll || []).filter((a: any) => {
-      const uid = attemptUserById[a.attempt_id]
-      if (!uid) return false
-      return true
-    })
+    const { data: attemptsMapRows } = attemptIdsForAnswers.length ? await svc.from('quiz_attempts').select('id,status').in('id', attemptIdsForAnswers) : { data: [] }
+    const submittedAttemptIds = new Set<string>((attemptsMapRows || []).filter((a: any) => a.status === 'submitted').map((a: any) => String(a.id)))
+    const answersFiltered = (answersAll || []).filter((a: any) => submittedAttemptIds.has(String(a.attempt_id)))
 
     type AttemptQuestionAgg = {
       attempt_id: string

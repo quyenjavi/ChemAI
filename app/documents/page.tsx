@@ -29,19 +29,21 @@ export default async function DocumentsHomePage() {
     .order('sort_order', { ascending: true })
     .order('created_at', { ascending: false })
 
-  const list = (rows || []).map((r: any) => ({
-    grade: Array.isArray(r.grade) ? r.grade[0] : r.grade,
-    id: r.id as string,
-    title: String(r.title || ''),
-    description: r.description != null ? String(r.description) : '',
-    document_type: String(r.document_type || ''),
-    file_url: String(r.file_url || ''),
-    thumbnail_url: r.thumbnail_url != null ? String(r.thumbnail_url) : '',
-    sort_order: typeof r.sort_order === 'number' ? r.sort_order : Number(r.sort_order || 0),
-    created_at: r.created_at ? String(r.created_at) : '',
-    grade_id: (Array.isArray(r.grade) ? r.grade[0]?.id : r.grade?.id) ? String((Array.isArray(r.grade) ? r.grade[0].id : r.grade.id)) : '',
-    grade_name: (Array.isArray(r.grade) ? r.grade[0]?.name : r.grade?.name) ? String((Array.isArray(r.grade) ? r.grade[0].name : r.grade.name)) : ''
-  }))
+  const list = (rows || []).map((r: any) => {
+    const grade = Array.isArray(r.grade) ? r.grade[0] : r.grade
+    return {
+      id: r.id as string,
+      title: String(r.title || ''),
+      description: r.description != null ? String(r.description) : '',
+      document_type: String(r.document_type || ''),
+      file_url: String(r.file_url || ''),
+      thumbnail_url: r.thumbnail_url != null ? String(r.thumbnail_url) : '',
+      sort_order: typeof r.sort_order === 'number' ? r.sort_order : Number(r.sort_order || 0),
+      created_at: r.created_at ? String(r.created_at) : '',
+      grade_id: grade?.id ? String(grade.id) : '',
+      grade_name: grade?.name ? String(grade.name) : ''
+    }
+  })
 
   return (
     <div className="space-y-6">

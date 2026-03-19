@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>⚔️ Bond Warriors – Liên Kết Hóa Học</title>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600;700&family=Orbitron:wght@700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0d0808;--accent:#ff9944;--accent2:#ffcc66;--text:#fff0e0;--muted:#c8a070;--green:#39d06f;--red:#ff646e;--blue:#59c7ff;--shadow:0 16px 40px rgba(0,0,0,.55)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Quicksand',sans-serif;color:var(--text);background:var(--bg);min-height:100vh;overflow-x:hidden}
+#bgCanvas{position:fixed;inset:0;z-index:0;pointer-events:none}
+.vig{position:fixed;inset:0;z-index:1;pointer-events:none;background:radial-gradient(ellipse at center,transparent 50%,rgba(0,0,0,.72)100%)}
+.app{position:relative;z-index:2;max-width:1100px;margin:0 auto;padding:18px 16px 50px}
+.topbar{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;background:rgba(26,10,4,.88);border:1px solid rgba(255,153,68,.25);border-radius:18px;padding:13px 18px;backdrop-filter:blur(14px);box-shadow:var(--shadow);position:sticky;top:10px;z-index:30}
+.title h1{font-family:'Orbitron',sans-serif;font-size:1.2rem;background:linear-gradient(90deg,var(--accent),var(--accent2),#fff);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.title p{color:var(--muted);font-size:.82rem;margin-top:2px}
+.hud{display:flex;gap:10px;flex-wrap:wrap}
+.pill{min-width:95px;text-align:center;background:rgba(255,153,68,.07);border:1px solid rgba(255,153,68,.22);border-radius:13px;padding:7px 12px}
+.pill .k{font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em}
+.pill .v{font-size:1.05rem;font-weight:700;margin-top:2px}
+.intro,.scene,.ending{margin-top:16px;background:rgba(18,8,4,.9);border:1px solid rgba(255,153,68,.2);border-radius:24px;box-shadow:var(--shadow);overflow:hidden;display:none}
+.intro.show,.scene.show,.ending.show{display:block;animation:up .45s cubic-bezier(.22,1,.36,1)}
+@keyframes up{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:none}}
+.hero{display:grid;grid-template-columns:1.1fr .9fr;min-height:440px}
+.hero-left{padding:34px 30px;background:linear-gradient(135deg,rgba(26,10,4,.96),rgba(14,6,2,.92));border-right:1px solid rgba(255,153,68,.16);display:flex;flex-direction:column;justify-content:center}
+.hero-left h2{font-family:'Orbitron',sans-serif;font-size:1.45rem;background:linear-gradient(90deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:12px;line-height:1.35}
+.hero-left p{color:var(--muted);line-height:1.8;white-space:pre-line}
+.rules{background:rgba(255,153,68,.06);border:1px solid rgba(255,153,68,.2);border-radius:14px;padding:12px 15px;margin-top:14px}
+.rules ul{margin:7px 0 0 16px;color:var(--muted);line-height:1.8}
+.hero-right{position:relative;background:radial-gradient(ellipse at center,rgba(255,120,40,.08),transparent 68%),linear-gradient(180deg,#0d0602,#080402);display:flex;align-items:center;justify-content:center;overflow:hidden}
+.sh{position:relative;height:200px;overflow:hidden;border-bottom:1px solid rgba(255,153,68,.18)}
+.sh canvas{position:absolute;inset:0;width:100%;height:100%}
+.sho{position:absolute;inset:0;background:linear-gradient(0deg,rgba(14,5,2,.95)0%,rgba(14,5,2,.2)55%,transparent 100%)}
+.badge{position:absolute;top:14px;left:18px;display:inline-flex;align-items:center;gap:7px;border-radius:999px;padding:6px 13px;background:rgba(0,0,0,.55);color:var(--accent2);border:1px solid rgba(255,204,102,.28);font-weight:700;font-size:.88rem;backdrop-filter:blur(8px)}
+.sb{padding:22px}
+.stitle{font-family:'Orbitron',sans-serif;font-size:1.3rem;background:linear-gradient(90deg,var(--text),var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:9px}
+.nar{color:var(--muted);white-space:pre-line;line-height:1.75}
+.cr{display:grid;grid-template-columns:190px 1fr;gap:14px;margin-top:18px;align-items:stretch}
+.port{border-radius:18px;border:1px solid rgba(255,153,68,.22);min-height:230px;overflow:hidden;position:relative}
+.port canvas{position:absolute;inset:0;width:100%;height:100%}
+.port .pn{position:absolute;left:10px;top:10px;padding:4px 10px;border-radius:999px;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.12);font-weight:700;font-size:.83rem;z-index:2}
+.dlg{border-radius:18px;border:1px solid rgba(255,153,68,.18);background:rgba(255,255,255,.02);padding:14px}
+.sp{background:rgba(255,255,255,.03);border:1px solid rgba(255,153,68,.16);border-radius:14px;padding:12px 14px;margin-bottom:9px}
+.sp:last-child{margin-bottom:0}
+.sp small{display:block;font-weight:700;margin-bottom:5px}
+.sp p{margin:0;white-space:pre-line;line-height:1.7;color:var(--muted)}
+.qc{margin-top:18px;background:rgba(255,255,255,.02);border:1px solid rgba(255,153,68,.18);border-radius:18px;padding:16px}
+.qt{font-size:1.05rem;font-weight:700;margin-bottom:13px;line-height:1.5}
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+button{font:inherit;cursor:pointer;border:none}
+.opt{text-align:left;padding:12px 14px;border-radius:13px;color:var(--text);background:rgba(255,153,68,.04);border:1px solid rgba(255,153,68,.2);transition:.18s ease;min-height:64px}
+.opt:hover{transform:translateY(-2px);border-color:rgba(255,153,68,.6)}
+.opt.correct{background:rgba(57,208,111,.18);border-color:rgba(57,208,111,.75);animation:pop .35s ease}
+.opt.wrong{background:rgba(255,100,110,.15);border-color:rgba(255,100,110,.75);animation:shk .35s ease}
+.opt.dim{opacity:.28;pointer-events:none}
+@keyframes pop{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}
+@keyframes shk{0%,100%{transform:translateX(0)}30%{transform:translateX(-5px)}70%{transform:translateX(5px)}}
+.fb{display:none;margin-top:13px;padding:13px 15px;border-radius:14px;border-left:4px solid var(--accent);background:rgba(255,255,255,.03);color:var(--muted);white-space:pre-line;line-height:1.75}
+.fb.show{display:block;animation:up .3s ease}
+.fb strong{display:block;margin-bottom:5px}
+.fb.ok{border-color:var(--green)}.fb.ok strong{color:var(--green)}
+.fb.fail{border-color:var(--red)}.fb.fail strong{color:var(--red)}
+.ar{margin-top:13px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.stat{color:var(--muted);font-size:.87rem}
+.btn{padding:10px 18px;border-radius:13px;font-weight:700;transition:.18s ease}
+.btnp{background:linear-gradient(135deg,#ff9944,#e07722);color:#1a0a02;box-shadow:0 4px 16px rgba(255,153,68,.3)}
+.btnp:hover{transform:translateY(-2px)}
+.btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:15px}
+.nx{display:none}.nx.show{display:inline-block;animation:up .3s ease}
+.eb{padding:26px;position:relative;z-index:2}
+.es{font-family:'Orbitron',sans-serif;font-size:1.9rem;margin:10px 0}
+.win{color:var(--green)}.lose{color:var(--red)}
+.meter{width:100%;height:13px;border-radius:999px;border:1px solid rgba(255,153,68,.2);background:rgba(255,255,255,.04);margin:11px 0;overflow:hidden}
+.mf{height:100%;width:0%;border-radius:999px;background:linear-gradient(90deg,var(--red),var(--accent),var(--green));transition:width 1.4s cubic-bezier(.22,1,.36,1)}
+.burst{position:fixed;pointer-events:none;z-index:100}
+.bd{position:absolute;border-radius:50%;width:7px;height:7px;animation:fly var(--t) ease-out forwards}
+@keyframes fly{0%{transform:translate(0,0) scale(1);opacity:1}100%{transform:translate(var(--dx),var(--dy)) scale(0);opacity:0}}
+.sf{position:fixed;inset:0;z-index:200;pointer-events:none;opacity:0}
+.sg{background:rgba(57,208,111,.16);animation:fl .45s ease}.sr{background:rgba(255,100,110,.16);animation:fl .45s ease}
+@keyframes fl{0%{opacity:1}100%{opacity:0}}
+@media(max-width:840px){.hero{grid-template-columns:1fr}.hero-right{height:250px}.cr{grid-template-columns:1fr}}
+@media(max-width:600px){.opts{grid-template-columns:1fr}.topbar{position:static}}
+</style>
+</head>
+<body>
+<canvas id="bgCanvas"></canvas><div class="vig"></div><div class="sf" id="sf"></div>
+<div class="app">
+<div class="topbar">
+  <div class="title"><h1>⚔️ BOND WARRIORS</h1><p>Liên Kết Hóa Học • Hóa 10 THPT • 5 Trận chiến</p></div>
+  <div class="hud">
+    <div class="pill"><div class="k">Điểm</div><div class="v" id="sc">0</div></div>
+    <div class="pill"><div class="k">Trận</div><div class="v"><span id="dn">0</span>/5</div></div>
+    <div class="pill"><div class="k">Sức mạnh</div><div class="v" id="pw">⚔️⚔️⚔️</div></div>
+  </div>
+</div>
+
+<!-- INTRO -->
+<section class="intro show" id="intro">
+  <div class="hero">
+    <div class="hero-left">
+      <h2>⚔️ Cuộc chiến Liên Kết</h2>
+      <p>Trên chiến trường hóa học, hai đội quân đang giao tranh dữ dội: <strong>Ion Warriors</strong> — những kẻ chinh phục bằng lực kéo điện tích — và <strong>Covalent Clan</strong> — những chiến binh chia sẻ electron trong tình huynh đệ.
+
+Tướng quân <strong>Bond Master</strong> đã bị giam cầm bởi một liên kết sai lệch. Chỉ khi bạn trả lời đúng 5 câu hỏi về liên kết hóa học, sức mạnh hóa học mới được khôi phục.</p>
+      <div class="rules">
+        <strong>🎯 Luật chiến trường</strong>
+        <ul>
+          <li>Đúng: <strong style="color:#39d06f">+10 điểm</strong> | Sai: <strong style="color:#ff646e">-5 điểm</strong></li>
+          <li>Đạt <strong>50 điểm</strong> → Bond Master được giải cứu!</li>
+        </ul>
+      </div>
+      <div class="btns"><button class="btn btnp" onclick="startGame()">⚔️ Xung trận!</button></div>
+    </div>
+    <div class="hero-right"><canvas id="heroC" width="380" height="440"></canvas></div>
+  </div>
+</section>
+
+<!-- Q0: Ion vs Covalent -->
+<section class="scene" id="scene-0">
+  <div class="sh"><canvas id="s0"></canvas><div class="sho"></div><div class="badge">⚔️ Trận 1 • Ion Fortress</div></div>
+  <div class="sb">
+    <h2 class="stitle">Pháo đài Ion</h2>
+    <p class="nar">Bức tường pháo đài tỏa sáng cam đỏ — màu của lực hút tĩnh điện. Ion Warrior đứng trên tường thành, chắn lối vào.</p>
+    <div class="cr">
+      <div class="port"><canvas id="c0"></canvas><div class="pn">⚔️ Ion Warrior</div></div>
+      <div class="dlg">
+        <div class="sp"><small style="color:#ff9944">Ion Warrior</small><p>"Liên kết ion — không phải tình yêu, mà là lực hút giữa kẻ mang điện tích trái dấu. Ta hỏi ngươi: loại liên kết này hình thành giữa những nguyên tố nào?"</p></div>
+        <div class="sp"><small style="color:#ffcc66">Bond Master (từ xa)</small><p>"Hãy chiến đấu thông minh — không phải bằng sức mạnh, mà bằng kiến thức!"</p></div>
+      </div>
+    </div>
+    <div class="qc">
+      <div class="qt">⚗️ Câu 1. Liên kết ion thường hình thành giữa</div>
+      <div class="opts" data-q="0">
+        <button class="opt" data-correct="false">A. Hai phi kim</button>
+        <button class="opt" data-correct="true">B. Kim loại điển hình và phi kim điển hình</button>
+        <button class="opt" data-correct="false">C. Hai nguyên tử giống nhau</button>
+        <button class="opt" data-correct="false">D. Phi kim và khí hiếm</button>
+      </div>
+      <div class="fb" id="fb0"></div>
+      <div class="ar">
+        <div class="stat">💡 Ion bond: chênh lệch độ âm điện Δχ ≥ 1.7 → kim loại IA/IIA + phi kim VIIA/VIA</div>
+        <button class="btn btnp nx" id="nx0" onclick="goTo(1)">Tiến đến Covalent Camp →</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Q1: Covalent polar/nonpolar -->
+<section class="scene" id="scene-1">
+  <div class="sh"><canvas id="s1"></canvas><div class="sho"></div><div class="badge">🤝 Trận 2 • Covalent Camp</div></div>
+  <div class="sb">
+    <h2 class="stitle">Trại Cộng Hóa Trị</h2>
+    <p class="nar">Covalent Clan không chiến đấu bằng cách cướp hay nhường electron — họ chia sẻ. Hai nguyên tử cùng nhau giữ đôi electron chung.</p>
+    <div class="cr">
+      <div class="port"><canvas id="c1"></canvas><div class="pn">🤝 Covalent Clan Chief</div></div>
+      <div class="dlg">
+        <div class="sp"><small style="color:#59c7ff">Covalent Clan Chief</small><p>"Liên kết cộng hóa trị có phân cực và không phân cực. Trong Cl₂, hai nguyên tử Cl giống hệt nhau — electron được chia đều. Đó là liên kết loại gì?"</p></div>
+        <div class="sp"><small style="color:#ffcc66">Bond Master</small><p>"Ngươi gần đến ta rồi… hãy tiếp tục!"</p></div>
+      </div>
+    </div>
+    <div class="qc">
+      <div class="qt">⚗️ Câu 2. Phân tử Cl₂ có loại liên kết nào?</div>
+      <div class="opts" data-q="1">
+        <button class="opt" data-correct="false">A. Liên kết ion</button>
+        <button class="opt" data-correct="true">B. Liên kết cộng hóa trị không phân cực</button>
+        <button class="opt" data-correct="false">C. Liên kết cộng hóa trị phân cực</button>
+        <button class="opt" data-correct="false">D. Liên kết hydrogen</button>
+      </div>
+      <div class="fb" id="fb1"></div>
+      <div class="ar">
+        <div class="stat">💡 Cùng loại nguyên tử → Δχ = 0 → electron chia đều → không phân cực</div>
+        <button class="btn btnp nx" id="nx1" onclick="goTo(2)">Tiến đến Shape Arena →</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Q2: H2O shape -->
+<section class="scene" id="scene-2">
+  <div class="sh"><canvas id="s2"></canvas><div class="sho"></div><div class="badge">🔺 Trận 3 • Shape Arena</div></div>
+  <div class="sb">
+    <h2 class="stitle">Đấu trường Hình Học Phân Tử</h2>
+    <p class="nar">Trong đấu trường này, hình dạng không gian của phân tử quyết định kết quả. Nước — H₂O — là vũ khí bí ẩn nhất trong tự nhiên.</p>
+    <div class="cr">
+      <div class="port"><canvas id="c2"></canvas><div class="pn">🔺 Shape Architect</div></div>
+      <div class="dlg">
+        <div class="sp"><small style="color:#b98bff">Shape Architect</small><p>"H₂O không thẳng như CO₂. Hai cặp electron tự do của O đẩy hai liên kết O-H vào một hình dạng đặc biệt. Hình dạng đó là gì?"</p></div>
+        <div class="sp"><small style="color:#ffcc66">Bond Master</small><p>"Hãy nhớ lý thuyết VSEPR — cặp e tự do đẩy mạnh hơn cặp e liên kết!"</p></div>
+      </div>
+    </div>
+    <div class="qc">
+      <div class="qt">⚗️ Câu 3. Phân tử H₂O có dạng hình học không gian nào?</div>
+      <div class="opts" data-q="2">
+        <button class="opt" data-correct="false">A. Thẳng (linear)</button>
+        <button class="opt" data-correct="true">B. Góc/chữ V (bent, ~104.5°)</button>
+        <button class="opt" data-correct="false">C. Tam giác phẳng</button>
+        <button class="opt" data-correct="false">D. Tứ diện đều</button>
+      </div>
+      <div class="fb" id="fb2"></div>
+      <div class="ar">
+        <div class="stat">💡 O: 2 liên kết + 2 cặp e tự do → VSEPR → góc ~104.5°</div>
+        <button class="btn btnp nx" id="nx2" onclick="goTo(3)">Tiến đến Electronegativity Duel →</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Q3: NaCl bond type -->
+<section class="scene" id="scene-3">
+  <div class="sh"><canvas id="s3"></canvas><div class="sho"></div><div class="badge">🧂 Trận 4 • Crystal Palace</div></div>
+  <div class="sb">
+    <h2 class="stitle">Cung điện Tinh Thể Ion</h2>
+    <p class="nar">Một cung điện muối trắng lấp lánh. NaCl — muối ăn quen thuộc — nhưng bên trong là một cuộc chiến điện tích âm thầm không ngừng nghỉ.</p>
+    <div class="cr">
+      <div class="port"><canvas id="c3"></canvas><div class="pn">🧂 Crystal Guardian</div></div>
+      <div class="dlg">
+        <div class="sp"><small style="color:#f4c24f">Crystal Guardian</small><p>"Na cho đi 1 electron. Cl nhận lấy 1 electron. Từ đó, Na⁺ và Cl⁻ hút nhau bằng lực điện mạnh mẽ — tạo nên tinh thể muối vĩnh cửu."</p></div>
+        <div class="sp"><small style="color:#ffcc66">Bond Master</small><p>"Hãy gọi đúng tên liên kết trong NaCl!"</p></div>
+      </div>
+    </div>
+    <div class="qc">
+      <div class="qt">⚗️ Câu 4. Liên kết trong phân tử NaCl là loại liên kết nào?</div>
+      <div class="opts" data-q="3">
+        <button class="opt" data-correct="false">A. Cộng hóa trị không phân cực</button>
+        <button class="opt" data-correct="true">B. Ion</button>
+        <button class="opt" data-correct="false">C. Cộng hóa trị phân cực</button>
+        <button class="opt" data-correct="false">D. Liên kết kim loại</button>
+      </div>
+      <div class="fb" id="fb3"></div>
+      <div class="ar">
+        <div class="stat">💡 Na (kim loại kiềm) + Cl (halogen) → Δχ = 3.0 - 0.93 = 2.07 > 1.7 → ion</div>
+        <button class="btn btnp nx" id="nx3" onclick="goTo(4)">Đến trận cuối →</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Q4: Double bond -->
+<section class="scene" id="scene-4">
+  <div class="sh"><canvas id="s4"></canvas><div class="sho"></div><div class="badge">🔗 Trận 5 • Final Duel</div></div>
+  <div class="sb">
+    <h2 class="stitle">Trận Quyết Đấu Cuối Cùng</h2>
+    <p class="nar">Bond Master đứng giữa chiến trường, được bảo vệ bởi một màn liên kết bội. Ethylene — C₂H₄ — là chìa khóa cuối cùng.</p>
+    <div class="cr">
+      <div class="port"><canvas id="c4"></canvas><div class="pn">🔗 Bond Master</div></div>
+      <div class="dlg">
+        <div class="sp"><small style="color:#ff9944">Bond Master</small><p>"C₂H₄ — ethylene, nguyên liệu quan trọng của công nghiệp hóa học. Hai nguyên tử C trong phân tử này liên kết với nhau bằng bao nhiêu cặp electron chung?"</p></div>
+        <div class="sp"><small style="color:#ffcc66">Tiếng vang chiến trường</small><p>"Liên kết đôi… sigma và pi… hai cặp electron chung…"</p></div>
+      </div>
+    </div>
+    <div class="qc">
+      <div class="qt">⚗️ Câu 5. Trong phân tử ethylene (C₂H₄), liên kết C=C là</div>
+      <div class="opts" data-q="4">
+        <button class="opt" data-correct="false">A. Liên kết đơn (1 cặp e chung)</button>
+        <button class="opt" data-correct="true">B. Liên kết đôi (2 cặp e chung: 1σ + 1π)</button>
+        <button class="opt" data-correct="false">C. Liên kết ba (3 cặp e chung)</button>
+        <button class="opt" data-correct="false">D. Liên kết ion</button>
+      </div>
+      <div class="fb" id="fb4"></div>
+      <div class="ar">
+        <div class="stat">💡 C₂H₄: mỗi C có 4 liên kết → C dùng 2e cho H (×2) + 2e tạo C=C → liên kết đôi</div>
+        <button class="btn btnp nx" id="nx4" onclick="finish()">🏆 Phá vỡ phong ấn →</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ENDING -->
+<section class="ending" id="ending">
+  <canvas id="endC" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none"></canvas>
+  <div class="eb">
+    <div class="badge" style="position:static;display:inline-flex;margin-bottom:14px">🏆 Kết thúc trận chiến</div>
+    <h2 class="stitle">Chiến trường Liên Kết</h2>
+    <p class="nar" id="eT" style="margin-top:10px"></p>
+    <div class="es" id="eS"></div>
+    <div class="meter"><div class="mf" id="eM"></div></div>
+    <div id="eR" style="margin-top:14px"></div>
+    <div class="btns"><button class="btn btnp" onclick="location.reload()">🔄 Chiến lại</button></div>
+  </div>
+</section>
+</div>
+
+<script>
+const ST={score:0,done:0,power:3};
+const RESP=[
+  {ok:`✅ Kim loại điển hình + phi kim điển hình!
+Ion Warrior hạ vũ khí: "Ngươi hiểu bản chất của ta — kẻ chinh phục bằng lực điện."
+Na mất 1e → Na⁺. Cl nhận 1e → Cl⁻. Lực hút tĩnh điện tạo nên liên kết ion.
++10 điểm ⚔️ Ion Fortress khuất phục!`,
+   fail:`❌ Liên kết ion = kim loại điển hình (nhóm IA, IIA) + phi kim điển hình (VIIA, VIA).
+Điều kiện: Δχ ≥ 1.7 giữa hai nguyên tử.
+-5 điểm. Hãy nhớ: nhường e → cation (+), nhận e → anion (-), hút nhau → ion bond.`},
+  {ok:`✅ Cộng hóa trị không phân cực!
+Covalent Clan Chief gật đầu: "Hai Cl giống hệt nhau — electron chia đều, không có cực nào ưu thế."
+Cl₂, H₂, O₂, N₂ đều là liên kết cộng hóa trị không phân cực.
++10 điểm ⚔️ Covalent Camp chinh phục!`,
+   fail:`❌ Cl₂ là liên kết cộng hóa trị KHÔNG phân cực (cùng nguyên tố → Δχ = 0).
+Phân cực xuất hiện khi Δχ > 0 (ví dụ HCl, H₂O).
+-5 điểm. Nhớ: cùng nguyên tố → không phân cực.`},
+  {ok:`✅ Góc/chữ V (~104.5°)!
+Shape Architect: "VSEPR không nói dối — 2 cặp e tự do đẩy mạnh → góc liên kết co lại."
+Lý thuyết VSEPR: O có 4 cặp e (2 liên kết + 2 tự do) → tứ diện → nhưng hình dạng thực = góc.
++10 điểm ⚔️ Shape Arena chinh phục!`,
+   fail:`❌ H₂O có dạng góc (bent), không phải thẳng như CO₂.
+CO₂ thẳng vì C không có cặp e tự do. H₂O có 2 cặp e tự do → đẩy → góc 104.5°.
+-5 điểm. Nhớ: cặp e tự do làm "cong" phân tử.`},
+  {ok:`✅ Liên kết Ion!
+Crystal Guardian cúi đầu: "Na⁺ và Cl⁻ — lực hút tĩnh điện mạnh nhất trong tinh thể muối."
+NaCl tan trong nước → ion hóa hoàn toàn → dẫn điện tốt → đặc trưng ion bond.
++10 điểm ⚔️ Crystal Palace chinh phục!`,
+   fail:`❌ NaCl là liên kết ION, không phải cộng hóa trị.
+Δχ(Cl-Na) = 3.0 - 0.93 = 2.07 > 1.7 → liên kết ion.
+-5 điểm. Quy tắc: Δχ ≥ 1.7 → ion; 0.4–1.7 → CHT phân cực; < 0.4 → CHT không phân cực.`},
+  {ok:`✅ Liên kết đôi C=C (1σ + 1π)!
+Bond Master tự bẻ gãy phong ấn:
+"Ngươi hiểu liên kết bội — sức mạnh hóa học của ethylene và cả thế giới hữu cơ!"
+C₂H₄ là monomer của polyethylene (PE) — nhựa phổ biến nhất thế giới.
++10 điểm 🏆 Bond Master được giải phóng!`,
+   fail:`❌ C=C trong C₂H₄ là liên kết ĐÔI (2 cặp e chung: 1 liên kết σ + 1 liên kết π).
+C≡C (trong C₂H₂) mới là liên kết ba.
+-5 điểm. Bond Master vẫn bị phong ấn — nhưng hành trình chưa kết thúc.`}
+];
+
+function updateHud(){
+  document.getElementById('sc').textContent=ST.score;
+  document.getElementById('dn').textContent=ST.done;
+  document.getElementById('pw').textContent='⚔️'.repeat(ST.power)+'🩹'.repeat(3-ST.power);
+}
+function startGame(){document.getElementById('intro').classList.remove('show');showScene(0);window.scrollTo({top:0,behavior:'smooth'});}
+function goTo(i){document.querySelectorAll('.scene').forEach(s=>s.classList.remove('show'));showScene(i);window.scrollTo({top:0,behavior:'smooth'});}
+function showScene(i){document.getElementById('scene-'+i).classList.add('show');initSB(i);initCC(i);}
+document.querySelectorAll('.opts').forEach((w,idx)=>{w.querySelectorAll('.opt').forEach(b=>b.addEventListener('click',()=>ans(idx,b,w)));});
+function ans(idx,btn,wrap){
+  if(wrap.dataset.done==='1')return;wrap.dataset.done='1';
+  const ok=btn.dataset.correct==='true';
+  wrap.querySelectorAll('.opt').forEach(o=>{
+    if(o.dataset.correct==='true')o.classList.add('correct');
+    else if(o===btn&&!ok)o.classList.add('wrong');
+    if(o.dataset.correct!=='true'&&o!==btn)o.classList.add('dim');
+  });
+  ST.done++;if(ok){ST.score+=10;flash('sg');doBurst(btn);}else{ST.score-=5;ST.power=Math.max(0,ST.power-1);flash('sr');}
+  updateHud();
+  const fb=document.getElementById('fb'+idx);
+  fb.innerHTML='<strong>'+(ok?'✅ Chính xác!':'❌ Chưa đúng!')+'</strong>'+(ok?RESP[idx].ok:RESP[idx].fail);
+  fb.className='fb show '+(ok?'ok':'fail');
+  document.getElementById('nx'+idx).classList.add('show');
+}
+function finish(){
+  document.querySelectorAll('.scene').forEach(s=>s.classList.remove('show'));
+  document.getElementById('ending').classList.add('show');window.scrollTo({top:0,behavior:'smooth'});
+  const win=ST.score>=50;
+  document.getElementById('eS').textContent=`Điểm: ${ST.score}/50`;
+  document.getElementById('eS').className='es '+(win?'win':'lose');
+  setTimeout(()=>{document.getElementById('eM').style.width=Math.max(0,Math.min(100,ST.score/50*100))+'%';},200);
+  if(win){
+    document.getElementById('eT').textContent='Bond Master bật dậy, phá tan phong ấn. Trên chiến trường, Ion Warriors và Covalent Clan hạ vũ khí — trật tự liên kết được khôi phục. Hóa học lại cân bằng.';
+    document.getElementById('eR').innerHTML='<h3 class="win">🏆 Bond Master được giải phóng! Chiến thắng hoàn toàn!</h3><p style="color:var(--muted);margin-top:8px">Bond Master: "Ngươi không chỉ biết liên kết — ngươi hiểu ngôn ngữ kết nối của vật chất."</p>';
+    for(let i=0;i<5;i++)setTimeout(()=>doBurst({getBoundingClientRect:()=>({left:window.innerWidth/2,top:window.innerHeight/2,width:0,height:0})}),i*180);
+  } else {
+    document.getElementById('eT').textContent='Bond Master gần được giải thoát nhưng phong ấn vẫn còn đó. Hãy ôn thêm về liên kết hóa học và quay lại!';
+    document.getElementById('eR').innerHTML='<h3 class="lose">💀 Chưa thắng được — thử lại!</h3><p style="color:var(--muted);margin-top:8px">Bond Master: "Ôn lại liên kết ion và cộng hóa trị, rồi quay trở lại!"</p>';
+  }
+}
+function flash(c){const e=document.getElementById('sf');e.className='sf '+c;setTimeout(()=>e.className='sf',500);}
+function doBurst(btn){
+  const r=btn.getBoundingClientRect();const x=r.left+r.width/2,y=r.top+r.height/2;
+  const w=document.createElement('div');w.className='burst';w.style.cssText=`left:${x}px;top:${y}px`;
+  const cols=['#ff9944','#ffcc66','#39d06f','#fff'];
+  for(let i=0;i<16;i++){const d=document.createElement('div');d.className='bd';const a=Math.random()*Math.PI*2,s=50+Math.random()*100;d.style.cssText=`background:${cols[i%4]};--dx:${Math.cos(a)*s}px;--dy:${Math.sin(a)*s}px;--t:${.4+Math.random()*.5}s;left:-3px;top:-3px`;w.appendChild(d);}
+  document.body.appendChild(w);setTimeout(()=>w.remove(),1200);
+}
+
+// BG CANVAS — bond network
+(function(){
+  const c=document.getElementById('bgCanvas');const ctx=c.getContext('2d');let W,H,t=0;
+  const nodes=[];
+  function resize(){W=c.width=window.innerWidth;H=c.height=window.innerHeight;}
+  window.addEventListener('resize',resize);resize();
+  for(let i=0;i<30;i++)nodes.push({x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.2,vy:(Math.random()-.5)*.2,r:3+Math.random()*5,t:Math.random()<.5?'ion':'cov'});
+  // stars
+  const stars=[];for(let i=0;i<150;i++)stars.push({x:Math.random()*1e4,y:Math.random()*1e4,r:.3+Math.random()*.7,s:.04+Math.random()*.1,a:Math.random()*Math.PI*2});
+  function draw(){
+    ctx.clearRect(0,0,W,H);t+=.016;
+    stars.forEach(p=>{const ox=(p.x+Math.sin(t*p.s+p.a))%W,oy=(p.y+Math.cos(t*p.s+p.a))%H;ctx.fillStyle=`rgba(255,180,100,.25)`;ctx.beginPath();ctx.arc(ox,oy,p.r,0,Math.PI*2);ctx.fill();});
+    nodes.forEach(n=>{n.x+=n.vx;n.y+=n.vy;if(n.x<0)n.x=W;if(n.x>W)n.x=0;if(n.y<0)n.y=H;if(n.y>H)n.y=0;});
+    // Draw bonds between close nodes
+    for(let i=0;i<nodes.length;i++)for(let j=i+1;j<nodes.length;j++){
+      const dx=nodes[j].x-nodes[i].x,dy=nodes[j].y-nodes[i].y,d=Math.sqrt(dx*dx+dy*dy);
+      if(d<120){const alpha=(1-d/120)*.12;const col=nodes[i].t==='ion'?`rgba(255,153,68,${alpha})`:`rgba(89,199,255,${alpha})`;ctx.strokeStyle=col;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(nodes[i].x,nodes[i].y);ctx.lineTo(nodes[j].x,nodes[j].y);ctx.stroke();}
+    }
+    nodes.forEach(n=>{const col=n.t==='ion'?'#ff9944':'#59c7ff';ctx.fillStyle=col+'44';ctx.beginPath();ctx.arc(n.x,n.y,n.r,0,Math.PI*2);ctx.fill();});
+    requestAnimationFrame(draw);
+  }draw();
+})();
+
+// HERO CANVAS — bond battle
+(function(){
+  const c=document.getElementById('heroC');if(!c)return;
+  const ctx=c.getContext('2d');const W=c.width,H=c.height;let t=0;
+  function draw(){
+    ctx.clearRect(0,0,W,H);t+=.016;
+    // Ion side (left, orange)
+    const ionX=W*.28,ionY=H*.45;
+    const ig=ctx.createRadialGradient(ionX,ionY,0,ionX,ionY,W*.18);
+    ig.addColorStop(0,'rgba(255,120,40,.6)');ig.addColorStop(1,'transparent');
+    ctx.fillStyle=ig;ctx.beginPath();ctx.arc(ionX,ionY,W*.18,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='rgba(255,153,68,.8)';ctx.font=`${W*.12}px serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('Na⁺',ionX,ionY);
+    // Covalent side (right, blue)
+    const covX=W*.72,covY=H*.45;
+    const cg=ctx.createRadialGradient(covX,covY,0,covX,covY,W*.18);
+    cg.addColorStop(0,'rgba(89,199,255,.5)');cg.addColorStop(1,'transparent');
+    ctx.fillStyle=cg;ctx.beginPath();ctx.arc(covX,covY,W*.18,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='rgba(89,199,255,.8)';ctx.fillText('Cl⁻',covX,covY);
+    // Bond line between
+    const bpulse=.5+.4*Math.sin(t*2);
+    ctx.strokeStyle=`rgba(255,220,100,${bpulse})`;ctx.lineWidth=3+Math.sin(t)*1.5;
+    ctx.beginPath();ctx.moveTo(ionX+W*.12,ionY);ctx.lineTo(covX-W*.12,covY);ctx.stroke();
+    // Center electrons
+    for(let i=0;i<3;i++){
+      const ang=t*1.5+i*(Math.PI*2/3);
+      const ex=W*.5+Math.cos(ang)*W*.08,ey=H*.45+Math.sin(ang)*H*.06;
+      ctx.fillStyle=`rgba(255,220,100,${.6+.3*Math.sin(t+i)})`;
+      ctx.beginPath();ctx.arc(ex,ey,4,0,Math.PI*2);ctx.fill();
+    }
+    // Title
+    ctx.fillStyle='rgba(255,200,100,.7)';ctx.font='bold 14px Orbitron,monospace';
+    ctx.textAlign='center';ctx.fillText('⚔️ vs 🤝',W/2,H*.15);
+    ctx.font='11px monospace';ctx.fillStyle='rgba(200,160,100,.5)';
+    ctx.fillText('Ion   Covalent',W/2,H*.22);
+    requestAnimationFrame(draw);
+  }draw();
+})();
+
+// SCENE BACKGROUNDS
+const sbCfg=[
+  function(ctx,W,H,t){ // Ion lattice
+    ctx.fillStyle='#120400';ctx.fillRect(0,0,W,H);
+    const cw=W/8,ch=H/3;
+    for(let i=0;i<8;i++)for(let j=0;j<3;j++){
+      const x=i*cw+cw/2,y=j*ch+ch/2;
+      const p=.3+.2*Math.sin(t*1.5+i+j);
+      const col=(i+j)%2===0?`rgba(255,120,60,${p})`:`rgba(89,199,255,${p})`;
+      const sym=(i+j)%2===0?'Na⁺':'Cl⁻';
+      ctx.fillStyle=col;ctx.beginPath();ctx.arc(x,y,16,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='rgba(255,255,255,.8)';ctx.font='bold 10px monospace';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(sym,x,y);
+      if(i<7){ctx.strokeStyle=`rgba(255,180,80,${p*.5})`;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x+16,y);ctx.lineTo(x+cw-16,y);ctx.stroke();}
+    }
+  },
+  function(ctx,W,H,t){ // Shared electron cloud
+    ctx.fillStyle='#020818';ctx.fillRect(0,0,W,H);
+    const ax=W*.3,bx=W*.7,cy=H/2;
+    ['rgba(100,180,255,.25)','rgba(100,180,255,.15)'].forEach((col,i)=>{
+      const g=ctx.createRadialGradient(ax,cy,0,ax,cy,W*.22+i*20);
+      g.addColorStop(0,col);g.addColorStop(1,'transparent');
+      ctx.fillStyle=g;ctx.beginPath();ctx.arc(ax,cy,W*.22+i*20,0,Math.PI*2);ctx.fill();
+      const g2=ctx.createRadialGradient(bx,cy,0,bx,cy,W*.22+i*20);
+      g2.addColorStop(0,col);g2.addColorStop(1,'transparent');
+      ctx.fillStyle=g2;ctx.beginPath();ctx.arc(bx,cy,W*.22+i*20,0,Math.PI*2);ctx.fill();
+    });
+    for(let i=0;i<6;i++){const ang=t*1.8+i*(Math.PI/3);const r=W*.12;const ex=W/2+Math.cos(ang)*r,ey=cy+Math.sin(ang)*r*.5;ctx.fillStyle='rgba(255,230,100,.7)';ctx.beginPath();ctx.arc(ex,ey,4,0,Math.PI*2);ctx.fill();}
+    ctx.fillStyle='rgba(150,200,255,.5)';ctx.font='bold 18px monospace';ctx.textAlign='center';ctx.fillText('Cl : : Cl',W/2,H*.2);
+  },
+  function(ctx,W,H,t){ // Water molecule shape
+    ctx.fillStyle='#060412';ctx.fillRect(0,0,W,H);
+    const ox=W/2,oy=H*.45;
+    // O atom
+    ctx.fillStyle='rgba(255,80,80,.7)';ctx.beginPath();ctx.arc(ox,oy,22,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#fff';ctx.font='bold 14px monospace';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('O',ox,oy);
+    // H atoms
+    const ang=104.5*Math.PI/180/2;
+    const r=70;
+    [[ox-Math.sin(ang)*r,oy+Math.cos(ang)*r],[ox+Math.sin(ang)*r,oy+Math.cos(ang)*r]].forEach(([hx,hy])=>{
+      ctx.strokeStyle='rgba(200,220,255,.5)';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(hx,hy);ctx.stroke();
+      ctx.fillStyle='rgba(150,200,255,.7)';ctx.beginPath();ctx.arc(hx,hy,15,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#fff';ctx.fillText('H',hx,hy);
+    });
+    ctx.fillStyle='rgba(200,180,255,.4)';ctx.font='14px monospace';ctx.fillText('∠104.5°',ox,oy-50);
+  },
+  function(ctx,W,H,t){ // NaCl crystal
+    ctx.fillStyle='#0a0804';ctx.fillRect(0,0,W,H);
+    for(let i=0;i<6;i++)for(let j=0;j<4;j++){
+      const x=W*.12+i*(W*.14),y=H*.15+j*(H*.2);
+      const isNa=(i+j)%2===0;const p=.4+.25*Math.sin(t+i+j);
+      ctx.fillStyle=isNa?`rgba(255,150,50,${p})`:`rgba(100,180,255,${p})`;
+      ctx.beginPath();ctx.arc(x,y,14,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='rgba(255,255,255,.85)';ctx.font='bold 9px monospace';ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText(isNa?'Na⁺':'Cl⁻',x,y);
+    }
+  },
+  function(ctx,W,H,t){ // Double bond C=C
+    ctx.fillStyle='#040808';ctx.fillRect(0,0,W,H);
+    const cx=W/2,cy=H/2;
+    // C atoms
+    [[cx-60,cy],[cx+60,cy]].forEach(([x,y])=>{ctx.fillStyle='rgba(100,200,100,.7)';ctx.beginPath();ctx.arc(x,y,22,0,Math.PI*2);ctx.fill();ctx.fillStyle='#fff';ctx.font='bold 14px monospace';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('C',x,y);});
+    // Double bond lines
+    ctx.strokeStyle=`rgba(255,230,80,${.6+.3*Math.sin(t*2)})`;ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(cx-38,cy-5);ctx.lineTo(cx+38,cy-5);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(cx-38,cy+5);ctx.lineTo(cx+38,cy+5);ctx.stroke();
+    ctx.fillStyle='rgba(255,230,80,.5)';ctx.font='bold 16px monospace';ctx.fillText('C=C',cx,cy-45);
+    // H atoms
+    [[-100,-35],[-100,35],[100,-35],[100,35]].forEach(([dx,dy])=>{ctx.strokeStyle='rgba(180,220,255,.4)';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(cx+(dx>0?38:-38),cy+dy*.5);ctx.lineTo(cx+dx,cy+dy);ctx.stroke();ctx.fillStyle='rgba(150,200,255,.6)';ctx.beginPath();ctx.arc(cx+dx,cy+dy,12,0,Math.PI*2);ctx.fill();ctx.fillStyle='#fff';ctx.font='bold 10px monospace';ctx.fillText('H',cx+dx,cy+dy);});
+  }
+];
+const stT={};
+function initSB(i){if(stT[i])return;const c=document.getElementById('s'+i);if(!c)return;const ctx=c.getContext('2d');let t=0;function loop(){const W=c.offsetWidth||600,H=c.offsetHeight||200;c.width=W;c.height=H;sbCfg[i](ctx,W,H,t);t+=.016;stT[i]=requestAnimationFrame(loop);}loop();}
+
+const ccDrawers=[
+  function(ctx,W,H,t){ // Ion Warrior
+    ctx.fillStyle='rgba(18,4,0,.6)';ctx.fillRect(0,0,W,H);
+    const g=ctx.createRadialGradient(W/2,H*.4,5,W/2,H*.4,W*.5);g.addColorStop(0,'rgba(255,120,40,.2)');g.addColorStop(1,'transparent');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+    ctx.fillStyle='#7a2200';ctx.beginPath();ctx.moveTo(W*.22,H*.44);ctx.lineTo(W*.02,H);ctx.lineTo(W*.98,H);ctx.lineTo(W*.78,H*.44);ctx.closePath();ctx.fill();
+    ctx.fillStyle='#cc4400';ctx.beginPath();ctx.ellipse(W/2,H*.37,W*.14,H*.15,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#f0b090';ctx.beginPath();ctx.arc(W/2,H*.25,W*.12,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#ff6622';ctx.beginPath();ctx.arc(W*.43,H*.24,W*.022,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(W*.57,H*.24,W*.022,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='#ff8833';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(W*.7,H*.38);ctx.lineTo(W*.76,H);ctx.stroke();
+    ctx.fillStyle=`rgba(255,153,68,${.7+.3*Math.sin(t*2)})`;ctx.font='bold 16px monospace';ctx.textAlign='center';ctx.fillText('⚡',W*.68,H*.35+Math.sin(t*2)*5);
+  },
+  function(ctx,W,H,t){ // Covalent Clan Chief
+    ctx.fillStyle='rgba(2,8,20,.6)';ctx.fillRect(0,0,W,H);
+    for(let i=0;i<2;i++){const ang=t+i*Math.PI;const ex=W/2+Math.cos(ang)*W*.22,ey=H*.45+Math.sin(ang)*H*.1;const sg=ctx.createRadialGradient(ex,ey,0,ex,ey,W*.12);sg.addColorStop(0,'rgba(89,199,255,.5)');sg.addColorStop(1,'transparent');ctx.fillStyle=sg;ctx.beginPath();ctx.arc(ex,ey,W*.12,0,Math.PI*2);ctx.fill();}
+    ctx.fillStyle='#b0c8e8';ctx.beginPath();ctx.arc(W/2,H*.28,W*.12,0,Math.PI*2);ctx.fill();
+    ctx.font=`${W*.1}px serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('🤝',W/2,H*.28);
+    ctx.fillStyle='rgba(89,199,255,.6)';ctx.font='bold 14px monospace';ctx.fillText('share e⁻',W/2,H*.58+Math.sin(t)*(H*.02));
+  },
+  function(ctx,W,H,t){ // Shape Architect
+    ctx.fillStyle='rgba(6,4,16,.6)';ctx.fillRect(0,0,W,H);
+    // Water molecule art
+    const ox=W/2,oy=H*.48;ctx.fillStyle='rgba(255,80,80,.7)';ctx.beginPath();ctx.arc(ox,oy,18,0,Math.PI*2);ctx.fill();ctx.fillStyle='#fff';ctx.font='bold 12px monospace';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('O',ox,oy);
+    const ang=52.25*Math.PI/180;const r=55;
+    [[ox-Math.sin(ang)*r,oy+Math.cos(ang)*r],[ox+Math.sin(ang)*r,oy+Math.cos(ang)*r]].forEach(([hx,hy])=>{ctx.strokeStyle='rgba(150,200,255,.5)';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(hx,hy);ctx.stroke();ctx.fillStyle='rgba(150,200,255,.6)';ctx.beginPath();ctx.arc(hx,hy,12,0,Math.PI*2);ctx.fill();ctx.fillStyle='#fff';ctx.fillText('H',hx,hy);});
+    ctx.fillStyle='rgba(185,139,255,.5)';ctx.font='11px monospace';ctx.fillText('104.5°',ox,oy-35);
+  },
+  function(ctx,W,H,t){ // Crystal Guardian
+    ctx.fillStyle='rgba(12,8,2,.6)';ctx.fillRect(0,0,W,H);
+    for(let i=0;i<4;i++)for(let j=0;j<3;j++){const x=W*(.18+i*.21),y=H*(.3+j*.2);const isN=(i+j)%2===0;const p=.35+.2*Math.sin(t+i+j);ctx.fillStyle=isN?`rgba(255,140,50,${p})`:`rgba(80,170,255,${p})`;ctx.beginPath();ctx.arc(x,y,10,0,Math.PI*2);ctx.fill();ctx.fillStyle='rgba(255,255,255,.7)';ctx.font='bold 7px monospace';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(isN?'Na⁺':'Cl⁻',x,y);}
+    ctx.fillStyle='#e0c0a0';ctx.beginPath();ctx.arc(W/2,H*.18,W*.1,0,Math.PI*2);ctx.fill();ctx.font=`${W*.08}px serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('🧂',W/2,H*.18);
+  },
+  function(ctx,W,H,t){ // Bond Master
+    const pulse=.5+.4*Math.sin(t*1.5);ctx.fillStyle='rgba(10,4,2,.6)';ctx.fillRect(0,0,W,H);
+    const g=ctx.createRadialGradient(W/2,H*.45,5,W/2,H*.45,W*.45);g.addColorStop(0,`rgba(255,180,60,${pulse*.25})`);g.addColorStop(1,'transparent');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+    // Body
+    ctx.fillStyle='#3a1a00';ctx.beginPath();ctx.moveTo(W*.2,H*.44);ctx.lineTo(W*.02,H);ctx.lineTo(W*.98,H);ctx.lineTo(W*.8,H*.44);ctx.closePath();ctx.fill();
+    // Bond symbols on robe
+    ['σ','π','→','⚡'].forEach((sym,i)=>{ctx.fillStyle=`rgba(255,200,80,${.35+.2*Math.sin(t+i)})`;ctx.font='bold 14px monospace';ctx.textAlign='center';ctx.fillText(sym,W*(.18+i*.22),H*(.65+.04*Math.sin(t+i)));});
+    // Head glow
+    const hg=ctx.createRadialGradient(W/2,H*.27,0,W/2,H*.27,W*.16);hg.addColorStop(0,`rgba(255,200,80,${pulse*.8})`);hg.addColorStop(1,'transparent');ctx.fillStyle=hg;ctx.beginPath();ctx.arc(W/2,H*.27,W*.16,0,Math.PI*2);ctx.fill();
+    ctx.font=`${W*.12}px serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('⚔️',W/2,H*.27);
+  }
+];
+const ccT={};
+function initCC(i){if(ccT[i])return;const c=document.getElementById('c'+i);if(!c)return;const ctx=c.getContext('2d');let t=0;function loop(){const W=c.offsetWidth||190,H=c.offsetHeight||230;c.width=W;c.height=H;ctx.clearRect(0,0,W,H);ccDrawers[i](ctx,W,H,t);t+=.016;ccT[i]=requestAnimationFrame(loop);}loop();}
+updateHud();
+</script>
+</body>
+</html>

@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>⚗️ Guardian Elements – Bảng Tuần Hoàn</title>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600;700&family=Orbitron:wght@700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#030d08;--panel:rgba(6,24,14,.9);--accent:#39d06f;--accent2:#59ffaa;--text:#e8f8ee;--muted:#7ab898;--yellow:#f4c24f;--red:#ff646e;--blue:#59c7ff;--shadow:0 16px 40px rgba(0,0,0,.5)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Quicksand',sans-serif;color:var(--text);background:var(--bg);min-height:100vh;overflow-x:hidden}
+#bgCanvas{position:fixed;inset:0;z-index:0;pointer-events:none}
+.vignette{position:fixed;inset:0;z-index:1;pointer-events:none;background:radial-gradient(ellipse at center,transparent 50%,rgba(0,0,0,.7) 100%)}
+.app{position:relative;z-index:2;max-width:1100px;margin:0 auto;padding:18px 16px 50px}
+.topbar{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;background:rgba(4,18,10,.88);border:1px solid rgba(57,208,111,.25);border-radius:18px;padding:13px 18px;backdrop-filter:blur(14px);box-shadow:var(--shadow);position:sticky;top:10px;z-index:30}
+.title h1{font-family:'Orbitron',sans-serif;font-size:1.2rem;background:linear-gradient(90deg,var(--accent),var(--accent2),var(--yellow));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.title p{color:var(--muted);font-size:.82rem;margin-top:2px}
+.hud{display:flex;gap:10px;flex-wrap:wrap}
+.pill{min-width:95px;text-align:center;background:rgba(57,208,111,.06);border:1px solid rgba(57,208,111,.22);border-radius:13px;padding:7px 12px}
+.pill .k{font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em}
+.pill .v{font-size:1.05rem;font-weight:700;margin-top:2px}
+.intro,.scene,.ending{margin-top:16px;background:var(--panel);border:1px solid rgba(57,208,111,.2);border-radius:24px;box-shadow:var(--shadow);overflow:hidden;display:none}
+.intro.show,.scene.show,.ending.show{display:block;animation:up .45s cubic-bezier(.22,1,.36,1)}
+@keyframes up{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:none}}
+.hero{display:grid;grid-template-columns:1.1fr .9fr;min-height:460px}
+.hero-left{padding:36px 32px;background:linear-gradient(135deg,rgba(8,28,16,.95),rgba(4,14,10,.9));border-right:1px solid rgba(57,208,111,.18);display:flex;flex-direction:column;justify-content:center}
+.hero-left h2{font-family:'Orbitron',sans-serif;font-size:1.5rem;background:linear-gradient(90deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:12px;line-height:1.4}
+.hero-left p{color:var(--muted);line-height:1.8;white-space:pre-line}
+.rules{background:rgba(57,208,111,.06);border:1px solid rgba(57,208,111,.2);border-radius:14px;padding:13px 16px;margin-top:14px}
+.rules ul{margin:7px 0 0 16px;color:var(--muted);line-height:1.8}
+.hero-right{position:relative;background:radial-gradient(ellipse at center,rgba(57,208,111,.07),transparent 70%),linear-gradient(180deg,#041408,#030d08);display:flex;align-items:center;justify-content:center;overflow:hidden}
+.scene-header{position:relative;height:200px;overflow:hidden;border-bottom:1px solid rgba(57,208,111,.18)}
+.scene-header canvas{position:absolute;inset:0;width:100%;height:100%}
+.scene-header-ov{position:absolute;inset:0;background:linear-gradient(0deg,rgba(4,14,10,.95) 0%,rgba(4,14,10,.2) 60%,transparent 100%)}
+.badge{position:absolute;top:14px;left:18px;display:inline-flex;align-items:center;gap:7px;border-radius:999px;padding:6px 13px;background:rgba(0,0,0,.5);color:var(--yellow);border:1px solid rgba(244,194,79,.3);font-weight:700;font-size:.9rem;backdrop-filter:blur(8px)}
+.scene-body{padding:22px}
+.scene-title{font-family:'Orbitron',sans-serif;font-size:1.35rem;background:linear-gradient(90deg,var(--text),var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:9px}
+.narration{color:var(--muted);white-space:pre-line;line-height:1.75}
+.char-row{display:grid;grid-template-columns:190px 1fr;gap:14px;margin-top:18px;align-items:stretch}
+.portrait{border-radius:18px;border:1px solid rgba(57,208,111,.25);min-height:230px;overflow:hidden;position:relative}
+.portrait canvas{position:absolute;inset:0;width:100%;height:100%}
+.portrait .pname{position:absolute;left:10px;top:10px;padding:4px 10px;border-radius:999px;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.14);font-weight:700;font-size:.85rem;z-index:2}
+.dialogue{border-radius:18px;border:1px solid rgba(57,208,111,.2);background:rgba(255,255,255,.025);padding:14px}
+.speech{background:rgba(255,255,255,.03);border:1px solid rgba(57,208,111,.18);border-radius:14px;padding:13px 15px;margin-bottom:9px}
+.speech:last-child{margin-bottom:0}
+.speech small{display:block;font-weight:700;margin-bottom:5px}
+.speech p{margin:0;white-space:pre-line;line-height:1.7;color:var(--muted)}
+.qcard{margin-top:18px;background:rgba(255,255,255,.025);border:1px solid rgba(57,208,111,.2);border-radius:18px;padding:16px}
+.qtitle{font-size:1.05rem;font-weight:700;margin-bottom:13px;line-height:1.5}
+.options{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+button{font:inherit;cursor:pointer;border:none}
+.option{text-align:left;padding:13px 15px;border-radius:13px;color:var(--text);background:rgba(57,208,111,.04);border:1px solid rgba(57,208,111,.22);transition:.18s ease;min-height:66px}
+.option:hover{transform:translateY(-2px);border-color:rgba(57,208,111,.6);background:rgba(57,208,111,.09)}
+.option.correct{background:rgba(57,208,111,.2);border-color:rgba(57,208,111,.8);animation:pop .35s ease}
+.option.wrong{background:rgba(255,100,110,.15);border-color:rgba(255,100,110,.75);animation:shake .35s ease}
+.option.dim{opacity:.28;pointer-events:none}
+@keyframes pop{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}
+@keyframes shake{0%,100%{transform:translateX(0)}30%{transform:translateX(-5px)}70%{transform:translateX(5px)}}
+.feedback{display:none;margin-top:14px;padding:14px 16px;border-radius:14px;border-left:4px solid var(--accent);background:rgba(255,255,255,.03);color:var(--muted);white-space:pre-line;line-height:1.75}
+.feedback.show{display:block;animation:up .3s ease}
+.feedback strong{display:block;margin-bottom:5px;font-size:1rem}
+.feedback.ok{border-color:var(--accent)}.feedback.ok strong{color:var(--accent)}
+.feedback.fail{border-color:var(--red)}.feedback.fail strong{color:var(--red)}
+.action-row{margin-top:14px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.status{color:var(--muted);font-size:.88rem}
+.btn{padding:10px 18px;border-radius:13px;font-weight:700;transition:.18s ease}
+.btn-p{background:linear-gradient(135deg,#39d06f,#27a854);color:#051808;box-shadow:0 4px 16px rgba(57,208,111,.3)}
+.btn-p:hover{transform:translateY(-2px);box-shadow:0 7px 22px rgba(57,208,111,.45)}
+.btn-s{color:var(--text);background:rgba(255,255,255,.05);border:1px solid rgba(57,208,111,.22)}
+.btns{display:flex;gap:11px;flex-wrap:wrap;margin-top:16px}
+.next-btn{display:none}.next-btn.show{display:inline-block;animation:up .3s ease}
+.ending-body{padding:28px;position:relative;z-index:2}
+.ending-score{font-family:'Orbitron',sans-serif;font-size:2rem;margin:10px 0}
+.win{color:var(--accent)}.lose{color:var(--red)}
+.meter{width:100%;height:14px;border-radius:999px;border:1px solid rgba(57,208,111,.2);background:rgba(255,255,255,.04);margin:12px 0;overflow:hidden}
+.meter-fill{height:100%;width:0%;border-radius:999px;background:linear-gradient(90deg,var(--red),var(--yellow),var(--accent));transition:width 1.4s cubic-bezier(.22,1,.36,1)}
+.burst{position:fixed;pointer-events:none;z-index:100}
+.bdot{position:absolute;border-radius:50%;width:7px;height:7px;animation:fly var(--t) ease-out forwards}
+@keyframes fly{0%{transform:translate(0,0) scale(1);opacity:1}100%{transform:translate(var(--dx),var(--dy)) scale(0);opacity:0}}
+.sflash{position:fixed;inset:0;z-index:200;pointer-events:none;opacity:0}
+.sg{background:rgba(57,208,111,.16);animation:fl .45s ease}.sr{background:rgba(255,100,110,.16);animation:fl .45s ease}
+@keyframes fl{0%{opacity:1}100%{opacity:0}}
+@media(max-width:860px){.hero{grid-template-columns:1fr}.hero-right{height:260px}.char-row{grid-template-columns:1fr}.portrait{min-height:200px}}
+@media(max-width:620px){.options{grid-template-columns:1fr}.topbar{position:static}}
+</style>
+</head>
+<body>
+<canvas id="bgCanvas"></canvas>
+<div class="vignette"></div>
+<div class="sflash" id="sf"></div>
+<div class="app">
+
+<div class="topbar">
+  <div class="title">
+    <h1>🌿 GUARDIAN ELEMENTS</h1>
+    <p>Bảng Tuần Hoàn • Hóa học 10 THPT • 5 Thử thách</p>
+  </div>
+  <div class="hud">
+    <div class="pill"><div class="k">Điểm</div><div class="v" id="score">0</div></div>
+    <div class="pill"><div class="k">Cổng</div><div class="v"><span id="done">0</span>/5</div></div>
+    <div class="pill"><div class="k">Mana</div><div class="v" id="mana">⬡⬡⬡</div></div>
+  </div>
+</div>
+
+<!-- INTRO -->
+<section class="intro show" id="intro">
+  <div class="hero">
+    <div class="hero-left">
+      <h2>🌍 Vương quốc Bảng Tuần Hoàn</h2>
+      <p>118 nguyên tố. 118 vị thần. Và một trật tự vũ trụ đang bị phá vỡ.
+
+Người Giữ Bảng — <strong>Guardian Prime</strong> — đã bị phong ấn bởi một thế lực hỗn loạn muốn xóa bỏ mọi quy luật tuần hoàn. Các nguyên tố đang trôi dạt, tính chất hóa học đang tan rã.
+
+Là người duy nhất hiểu ngôn ngữ của bảng tuần hoàn, bạn phải vượt qua <strong>5 cánh cổng nguyên tố</strong> để khôi phục trật tự vũ trụ hóa học.</p>
+      <div class="rules">
+        <strong>🎯 Luật chơi</strong>
+        <ul>
+          <li>Đúng: <strong style="color:#39d06f">+10 điểm</strong> | Sai: <strong style="color:#ff646e">-5 điểm</strong></li>
+          <li>Đạt <strong>50 điểm</strong> → Khôi phục Guardian Prime!</li>
+        </ul>
+      </div>
+      <div class="btns">
+        <button class="btn btn-p" onclick="startGame()">🌿 Bước vào vương quốc</button>
+      </div>
+    </div>
+    <div class="hero-right"><canvas id="heroCanvas" width="380" height="460"></canvas></div>
+  </div>
+</section>
+
+<!-- SCENE 0 -->
+<section class="scene" id="scene-0">
+  <div class="scene-header"><canvas id="sc0"></canvas><div class="scene-header-ov"></div><div class="badge">🌿 Cổng 1 • Chu Kỳ Gate</div></div>
+  <div class="scene-body">
+    <h2 class="scene-title">Cánh cổng Chu Kỳ</h2>
+    <p class="narration">Trước mặt bạn là một bức tường khổng lồ được khắc thành 7 hàng ngang sáng rực. Đây là Chu Kỳ Gate — nơi các nguyên tố được sắp xếp theo số lớp electron tăng dần.</p>
+    <div class="char-row">
+      <div class="portrait"><canvas id="cc0"></canvas><div class="pname">🧬 Periodic Sage</div></div>
+      <div class="dialogue">
+        <div class="speech"><small style="color:#39d06f">Periodic Sage</small><p>"Mỗi hàng ngang là một chu kỳ — bảy hàng, bảy câu chuyện về electron.
+Ngươi có biết chu kỳ 2 chứa bao nhiêu nguyên tố không?"</p></div>
+        <div class="speech"><small style="color:#59ffaa">Guardian Prime (từ xa)</small><p>"Hãy đếm đúng… và cánh cổng đầu tiên sẽ mở."</p></div>
+      </div>
+    </div>
+    <div class="qcard">
+      <div class="qtitle">⚗️ Câu 1. Chu kỳ 2 trong bảng tuần hoàn có bao nhiêu nguyên tố?</div>
+      <div class="options" data-q="0">
+        <button class="option" data-correct="false">A. 2 nguyên tố</button>
+        <button class="option" data-correct="true">B. 8 nguyên tố</button>
+        <button class="option" data-correct="false">C. 18 nguyên tố</button>
+        <button class="option" data-correct="false">D. 32 nguyên tố</button>
+      </div>
+      <div class="feedback" id="fb0"></div>
+      <div class="action-row">
+        <div class="status">💡 Chu kỳ 2: từ Li (Z=3) đến Ne (Z=10)</div>
+        <button class="btn btn-p next-btn" id="nx0" onclick="goTo(1)">Tiến đến Nhóm Gate →</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SCENE 1 -->
+<section class="scene" id="scene-1">
+  <div class="scene-header"><canvas id="sc1"></canvas><div class="scene-header-ov"></div><div class="badge">⬡ Cổng 2 • Nhóm Gate</div></div>
+  <div class="scene-body">
+    <h2 class="scene-title">Mê trận các Nhóm</h2>
+    <p class="narration">Các cột dọc hiện ra như những tòa tháp nguyên tố. Mỗi nhóm là một gia tộc — cùng số electron lớp ngoài cùng, cùng tính chất hóa học đặc trưng.</p>
+    <div class="char-row">
+      <div class="portrait"><canvas id="cc1"></canvas><div class="pname">⚗️ Group Warden</div></div>
+      <div class="dialogue">
+        <div class="speech"><small style="color:#f4c24f">Group Warden</small><p>"Kim loại kiềm — những kẻ dễ tính nhất trong vương quốc. Chỉ cần 1 electron lớp ngoài, chúng sẵn sàng cho đi tất cả."</p></div>
+        <div class="speech"><small style="color:#59ffaa">Guardian Prime</small><p>"Hãy gọi đúng tên nhóm chứa Li, Na, K, Rb, Cs, Fr!"</p></div>
+      </div>
+    </div>
+    <div class="qcard">
+      <div class="qtitle">⚗️ Câu 2. Li, Na, K, Rb, Cs, Fr thuộc nhóm nào trong bảng tuần hoàn?</div>
+      <div class="options" data-q="1">
+        <button class="option" data-correct="false">A. Nhóm IIA (Kim loại kiềm thổ)</button>
+        <button class="option" data-correct="true">B. Nhóm IA (Kim loại kiềm)</button>
+        <button class="option" data-correct="false">C. Nhóm VIIA (Halogen)</button>
+        <button class="option" data-correct="false">D. Nhóm VIII (Khí hiếm)</button>
+      </div>
+      <div class="feedback" id="fb1"></div>
+      <div class="action-row">
+        <div class="status">💡 Nhóm IA: 1 electron lớp ngoài → dễ nhường e⁻, tính kim loại mạnh</div>
+        <button class="btn btn-p next-btn" id="nx1" onclick="goTo(2)">Tiến đến Độ Âm Điện Gate →</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SCENE 2 -->
+<section class="scene" id="scene-2">
+  <div class="scene-header"><canvas id="sc2"></canvas><div class="scene-header-ov"></div><div class="badge">⚡ Cổng 3 • Electronegativity Shrine</div></div>
+  <div class="scene-body">
+    <h2 class="scene-title">Đền thờ Độ Âm Điện</h2>
+    <p class="narration">Không khí trong đền thờ rung động với một năng lượng bí ẩn — lực hút electron của các nguyên tố. Ai hút electron mạnh nhất? Ai yếu nhất?</p>
+    <div class="char-row">
+      <div class="portrait"><canvas id="cc2"></canvas><div class="pname">⚡ Electra Priestess</div></div>
+      <div class="dialogue">
+        <div class="speech"><small style="color:#59c7ff">Electra Priestess</small><p>"Độ âm điện — thước đo khả năng thu hút electron trong liên kết. Nguyên tố nào khát electron nhất trong cả vũ trụ hóa học?"</p></div>
+        <div class="speech"><small style="color:#59ffaa">Guardian Prime</small><p>"Chỉ có nguyên tố đó mới đủ sức giữ chìa khóa đền thờ này."</p></div>
+      </div>
+    </div>
+    <div class="qcard">
+      <div class="qtitle">⚗️ Câu 3. Nguyên tố nào có độ âm điện lớn nhất trong bảng tuần hoàn?</div>
+      <div class="options" data-q="2">
+        <button class="option" data-correct="false">A. Oxygen (O) — χ = 3.44</button>
+        <button class="option" data-correct="false">B. Chlorine (Cl) — χ = 3.16</button>
+        <button class="option" data-correct="true">C. Fluorine (F) — χ = 3.98</button>
+        <button class="option" data-correct="false">D. Nitrogen (N) — χ = 3.04</button>
+      </div>
+      <div class="feedback" id="fb2"></div>
+      <div class="action-row">
+        <div class="status">💡 F: góc trên phải bảng tuần hoàn → nhỏ nhất + nhiều e nhất → hút e mạnh nhất</div>
+        <button class="btn btn-p next-btn" id="nx2" onclick="goTo(3)">Tiến đến Xu Hướng Gate →</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SCENE 3 -->
+<section class="scene" id="scene-3">
+  <div class="scene-header"><canvas id="sc3"></canvas><div class="scene-header-ov"></div><div class="badge">📈 Cổng 4 • Trend Tower</div></div>
+  <div class="scene-body">
+    <h2 class="scene-title">Tháp Xu Hướng Tuần Hoàn</h2>
+    <p class="narration">Từng tầng của tòa tháp hiển thị xu hướng biến đổi tính chất: bán kính nguyên tử, năng lượng ion hóa, tính kim loại — tất cả đều tuân theo quy luật tuần hoàn.</p>
+    <div class="char-row">
+      <div class="portrait"><canvas id="cc3"></canvas><div class="pname">📈 Trend Oracle</div></div>
+      <div class="dialogue">
+        <div class="speech"><small style="color:#f4c24f">Trend Oracle</small><p>"Tính phi kim không xuất hiện ngẫu nhiên. Nó tăng dần theo một hướng xác định — như ánh sáng luôn di chuyển từ bóng tối ra."</p></div>
+        <div class="speech"><small style="color:#59ffaa">Guardian Prime</small><p>"Bước đúng hướng — tháp sẽ dẫn ngươi lên đỉnh!"</p></div>
+      </div>
+    </div>
+    <div class="qcard">
+      <div class="qtitle">⚗️ Câu 4. Trong một chu kỳ (hàng ngang), tính phi kim biến đổi như thế nào theo chiều tăng dần của Z?</div>
+      <div class="options" data-q="3">
+        <button class="option" data-correct="false">A. Giảm dần</button>
+        <button class="option" data-correct="true">B. Tăng dần</button>
+        <button class="option" data-correct="false">C. Không thay đổi</button>
+        <button class="option" data-correct="false">D. Tăng rồi giảm</button>
+      </div>
+      <div class="feedback" id="fb3"></div>
+      <div class="action-row">
+        <div class="status">💡 Cùng chu kỳ: Z tăng → hút e mạnh hơn → tính phi kim tăng</div>
+        <button class="btn btn-p next-btn" id="nx3" onclick="goTo(4)">Đến cổng cuối →</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SCENE 4 -->
+<section class="scene" id="scene-4">
+  <div class="scene-header"><canvas id="sc4"></canvas><div class="scene-header-ov"></div><div class="badge">🔐 Cổng 5 • Final Seal</div></div>
+  <div class="scene-body">
+    <h2 class="scene-title">Phong Ấn Cuối Cùng</h2>
+    <p class="narration">Guardian Prime đang bị giam trong một hộp tinh thể. Chìa khóa là câu trả lời cuối cùng — xác định vị trí chính xác của một nguyên tố trong bảng tuần hoàn.</p>
+    <div class="char-row">
+      <div class="portrait"><canvas id="cc4"></canvas><div class="pname">🔐 Guardian Prime</div></div>
+      <div class="dialogue">
+        <div class="speech"><small style="color:#39d06f">Guardian Prime</small><p>"Cl — Chlorine. Hãy cho ta biết nó thuộc nhóm nào? Đây là câu hỏi cuối cùng trước khi ta được giải thoát."</p></div>
+        <div class="speech"><small style="color:#59ffaa">Tiếng vọng của bảng tuần hoàn</small><p>"Halogen… gia tộc của bảy electron lớp ngoài…"</p></div>
+      </div>
+    </div>
+    <div class="qcard">
+      <div class="qtitle">⚗️ Câu 5. Nguyên tố Chlorine (Cl, Z=17) thuộc nhóm nào trong bảng tuần hoàn?</div>
+      <div class="options" data-q="4">
+        <button class="option" data-correct="false">A. Nhóm VIA</button>
+        <button class="option" data-correct="true">B. Nhóm VIIA (Halogen)</button>
+        <button class="option" data-correct="false">C. Nhóm IA</button>
+        <button class="option" data-correct="false">D. Nhóm VIII (Khí hiếm)</button>
+      </div>
+      <div class="feedback" id="fb4"></div>
+      <div class="action-row">
+        <div class="status">💡 Cl: cấu hình [Ne]3s²3p⁵ → 7 e lớp ngoài → nhóm VIIA (Halogen)</div>
+        <button class="btn btn-p next-btn" id="nx4" onclick="finish()">🌟 Phá vỡ phong ấn →</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ENDING -->
+<section class="ending" id="ending">
+  <canvas id="endC" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none"></canvas>
+  <div class="ending-body">
+    <div class="badge" style="position:static;display:inline-flex;margin-bottom:14px">👑 Kết thúc hành trình</div>
+    <h2 class="scene-title">Vương Quốc Bảng Tuần Hoàn</h2>
+    <p class="narration" id="eText" style="margin-top:10px"></p>
+    <div class="ending-score" id="eScore"></div>
+    <div class="meter"><div class="meter-fill" id="eMeter"></div></div>
+    <div id="eResult" style="margin-top:14px"></div>
+    <div class="btns"><button class="btn btn-p" onclick="location.reload()">🔄 Chơi lại</button></div>
+  </div>
+</section>
+</div>
+
+<script>
+const ST={score:0,done:0,mana:3};
+const RESP=[
+  {ok:`✅ 8 nguyên tố! Chu kỳ 2 chạy từ Lithium (Li) đến Neon (Ne).
+Periodic Sage gật đầu: "Ngươi hiểu cấu trúc ngang của vương quốc — chìa khóa đầu tiên là của ngươi."
++10 điểm ⚡ Cổng Chu Kỳ mở ra!`,
+   fail:`❌ Chu kỳ 2 có 8 nguyên tố (Li → Ne), không phải 2 hay 18.
+Chu kỳ 1: 2 nguyên tố | Chu kỳ 3: 8 | Chu kỳ 4: 18
+-5 điểm. Cổng rung lên nhưng vẫn mở — hành trình tiếp tục.`},
+  {ok:`✅ Nhóm IA — Kim loại kiềm! Li, Na, K đều có 1 electron lớp ngoài cùng.
+Group Warden bước sang bên: "Ngươi biết gia tộc này — cột dọc đầu tiên của vương quốc."
++10 điểm ⚡ Nhóm Gate khuất phục!`,
+   fail:`❌ Đây là nhóm IA (Kim loại kiềm), không phải IIA hay VIIA.
+Dấu hiệu: 1 electron ngoài cùng → dễ nhường → tính kim loại rất mạnh.
+-5 điểm. Hãy nhớ: IA = 1e ngoài cùng.`},
+  {ok:`✅ Fluorine! χ = 3.98, nguyên tố có độ âm điện cao nhất.
+Electra Priestess rời khỏi bệ thờ: "Fluorine — kẻ tham lam nhất trong bảng tuần hoàn — ngươi biết bí mật của đền thờ này."
++10 điểm ⚡ Đền thờ Độ Âm Điện mở!`,
+   fail:`❌ Fluorine (F) mới là cao nhất (χ = 3.98), không phải Oxygen hay Chlorine.
+Quy tắc: Đi lên và sang phải → độ âm điện tăng → F ở góc trên phải → cao nhất.
+-5 điểm. Hãy nhớ vị trí của F trong bảng tuần hoàn.`},
+  {ok:`✅ Tăng dần! Trong cùng một chu kỳ, từ trái qua phải, tính phi kim tăng dần.
+Trend Oracle chỉ lên đỉnh tháp: "Ngươi hiểu chiều biến đổi — bậc thang tiếp theo là của ngươi."
++10 điểm ⚡ Tháp xu hướng chinh phục!`,
+   fail:`❌ Trong một chu kỳ, tính phi kim TĂNG dần từ trái qua phải (theo Z tăng).
+Lý do: Z tăng → lực hút hạt nhân tăng → hút e mạnh hơn → phi kim mạnh hơn.
+-5 điểm. Hãy nhớ: chu kỳ trái→phải: kim loại→phi kim→khí hiếm.`},
+  {ok:`✅ Nhóm VIIA — Halogen! Cl có 7 electron lớp ngoài cùng.
+Guardian Prime bùng sáng, vỡ khỏi hộp tinh thể:
+"Ngươi đã giải phóng ta — và khôi phục trật tự tuần hoàn của vũ trụ!"
++10 điểm ⚡ Phong ấn tan vỡ!`,
+   fail:`❌ Cl thuộc nhóm VIIA (Halogen), không phải VIA hay IA.
+Cl: 1s²2s²2p⁶3s²3p⁵ → 7e ngoài cùng → nhóm VIIA.
+-5 điểm. Guardian Prime vẫn bị giam — nhưng hành trình chưa kết thúc.`}
+];
+
+function updateHud(){
+  document.getElementById('score').textContent=ST.score;
+  document.getElementById('done').textContent=ST.done;
+  document.getElementById('mana').textContent='⬡'.repeat(ST.mana)+'◇'.repeat(3-ST.mana);
+}
+
+function startGame(){
+  document.getElementById('intro').classList.remove('show');
+  showScene(0);
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function goTo(i){
+  document.querySelectorAll('.scene').forEach(s=>s.classList.remove('show'));
+  showScene(i);
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function showScene(i){
+  document.getElementById('scene-'+i).classList.add('show');
+  initSceneBg(i);
+  initChar(i);
+}
+
+document.querySelectorAll('.options').forEach((w,idx)=>{
+  w.querySelectorAll('.option').forEach(b=>b.addEventListener('click',()=>answer(idx,b,w)));
+});
+
+function answer(idx,btn,wrap){
+  if(wrap.dataset.done==='1')return;
+  wrap.dataset.done='1';
+  const ok=btn.dataset.correct==='true';
+  wrap.querySelectorAll('.option').forEach(o=>{
+    if(o.dataset.correct==='true')o.classList.add('correct');
+    else if(o===btn&&!ok)o.classList.add('wrong');
+    if(o.dataset.correct!=='true'&&o!==btn)o.classList.add('dim');
+  });
+  ST.done++;
+  if(ok){ST.score+=10;flash('sg');burst(btn);}
+  else{ST.score-=5;ST.mana=Math.max(0,ST.mana-1);flash('sr');}
+  updateHud();
+  const fb=document.getElementById('fb'+idx);
+  fb.innerHTML='<strong>'+(ok?'✅ Chính xác!':'❌ Chưa đúng!')+'</strong>'+(ok?RESP[idx].ok:RESP[idx].fail);
+  fb.className='feedback show '+(ok?'ok':'fail');
+  document.getElementById('nx'+idx).classList.add('show');
+}
+
+function finish(){
+  document.querySelectorAll('.scene').forEach(s=>s.classList.remove('show'));
+  document.getElementById('ending').classList.add('show');
+  window.scrollTo({top:0,behavior:'smooth'});
+  const win=ST.score>=50;
+  document.getElementById('eScore').textContent=`Điểm: ${ST.score}/50`;
+  document.getElementById('eScore').className='ending-score '+(win?'win':'lose');
+  setTimeout(()=>{document.getElementById('eMeter').style.width=Math.max(0,Math.min(100,ST.score/50*100))+'%'},200);
+  if(win){
+    document.getElementById('eText').textContent='Guardian Prime bùng sáng và trở lại ngai vàng của bảng tuần hoàn. 118 nguyên tố xếp hàng ngay ngắn. Trật tự tuần hoàn được khôi phục. Vũ trụ hóa học an toàn trở lại.';
+    document.getElementById('eResult').innerHTML='<h3 class="win">🎉 Nhiệm vụ hoàn thành! Guardian Prime được giải thoát!</h3><p class="narration" style="margin-top:8px;color:var(--muted)">Guardian Prime: "Ngươi không chỉ biết bảng tuần hoàn — ngươi hiểu ngôn ngữ của vũ trụ."</p>';
+    for(let i=0;i<5;i++)setTimeout(()=>burstCenter(),i*200);
+  } else {
+    document.getElementById('eText').textContent='Phong ấn gần tan vỡ nhưng kiến thức của bạn chưa đủ mạnh. Guardian Prime vẫn bị giam — nhưng hy vọng chưa tắt.';
+    document.getElementById('eResult').innerHTML='<h3 class="lose">💀 Phong ấn chưa tan — hãy thử lại!</h3><p class="narration" style="margin-top:8px;color:var(--muted)">Guardian Prime: "Hãy ôn lại bảng tuần hoàn và quay trở lại."</p>';
+  }
+}
+
+function flash(cls){
+  const el=document.getElementById('sf');
+  el.className='sflash '+cls;
+  setTimeout(()=>el.className='sflash',500);
+}
+function burst(btn){
+  const r=btn.getBoundingClientRect();
+  const x=r.left+r.width/2,y=r.top+r.height/2;
+  const w=document.createElement('div');w.className='burst';
+  w.style.cssText=`left:${x}px;top:${y}px`;
+  const cols=['#39d06f','#59ffaa','#f4c24f','#fff'];
+  for(let i=0;i<18;i++){
+    const d=document.createElement('div');d.className='bdot';
+    const a=Math.random()*Math.PI*2,s=50+Math.random()*110;
+    d.style.cssText=`background:${cols[i%4]};--dx:${Math.cos(a)*s}px;--dy:${Math.sin(a)*s}px;--t:${.4+Math.random()*.5}s;left:-3px;top:-3px`;
+    w.appendChild(d);
+  }
+  document.body.appendChild(w);setTimeout(()=>w.remove(),1200);
+}
+function burstCenter(){burst({getBoundingClientRect:()=>({left:window.innerWidth/2-5,top:window.innerHeight/2-5,width:10,height:10})})}
+
+// BG CANVAS
+(function(){
+  const c=document.getElementById('bgCanvas');
+  const ctx=c.getContext('2d');
+  let W,H,t=0;
+  const pts=[];
+  function resize(){W=c.width=window.innerWidth;H=c.height=window.innerHeight}
+  window.addEventListener('resize',resize);resize();
+  for(let i=0;i<200;i++)pts.push({x:Math.random()*1e4,y:Math.random()*1e4,r:.3+Math.random()*.8,s:.04+Math.random()*.12,a:Math.random()*Math.PI*2,c:`hsla(${130+Math.random()*40},70%,65%,${.2+Math.random()*.4})`});
+  // Periodic grid nodes
+  const nodes=[];
+  const elSyms=['H','He','Li','Be','B','C','N','O','F','Ne','Na','Mg','Al','Si','P','S','Cl','Ar'];
+  for(let i=0;i<18;i++)nodes.push({sym:elSyms[i],x:Math.random()*1e4,y:Math.random()*1e4,vx:(Math.random()-.5)*.15,vy:(Math.random()-.5)*.15,pulse:Math.random()*Math.PI*2});
+  function draw(){
+    ctx.clearRect(0,0,W,H);t+=.016;
+    const g=ctx.createRadialGradient(W*.5,H*.4,0,W*.5,H*.4,Math.max(W,H)*.7);
+    g.addColorStop(0,'rgba(8,32,16,.45)');g.addColorStop(1,'rgba(1,5,2,0)');
+    ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+    pts.forEach(p=>{
+      const ox=(p.x+Math.sin(t*p.s+p.a)*2)%W;
+      const oy=(p.y+Math.cos(t*p.s+p.a)*2)%H;
+      ctx.fillStyle=p.c;ctx.beginPath();ctx.arc(ox,oy,p.r,0,Math.PI*2);ctx.fill();
+    });
+    nodes.forEach(n=>{
+      n.x+=n.vx;n.y+=n.vy;n.pulse+=.02;
+      if(n.x<0)n.x=W;if(n.x>W)n.x=0;if(n.y<0)n.y=H;if(n.y>H)n.y=0;
+      const alpha=.08+.05*Math.sin(n.pulse);
+      ctx.strokeStyle=`rgba(57,208,111,${alpha})`;ctx.lineWidth=1;
+      ctx.strokeRect(n.x%W-16,n.y%H-11,32,22);
+      ctx.fillStyle=`rgba(100,220,140,${alpha+.04})`;
+      ctx.font='bold 10px monospace';ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText(n.sym,(n.x%W),(n.y%H));
+    });
+    requestAnimationFrame(draw);
+  }draw();
+})();
+
+// HERO CANVAS — rotating periodic table
+(function(){
+  const c=document.getElementById('heroCanvas');if(!c)return;
+  const ctx=c.getContext('2d');const W=c.width,H=c.height;let t=0;
+  const elData=[
+    {sym:'H',grp:0,per:0,col:'#ff6644'},{sym:'He',grp:17,per:0,col:'#aaaaff'},
+    {sym:'Li',grp:0,per:1,col:'#ff9955'},{sym:'Ne',grp:17,per:1,col:'#8888ff'},
+    {sym:'Na',grp:0,per:2,col:'#ffbb44'},{sym:'Cl',grp:16,per:2,col:'#44ddaa'},
+    {sym:'K',grp:0,per:3,col:'#ffdd33'},{sym:'Ca',grp:1,per:3,col:'#ffcc88'},
+    {sym:'Fe',grp:7,per:3,col:'#cc8866'},{sym:'Cu',grp:10,per:3,col:'#dd8833'},
+    {sym:'Ar',grp:17,per:2,col:'#7777ff'},{sym:'F',grp:16,per:1,col:'#66ddcc'},
+  ];
+  function draw(){
+    ctx.clearRect(0,0,W,H);t+=.016;
+    // Grid background
+    const cw=W/19,ch=H/10;
+    elData.forEach(el=>{
+      const x=el.grp*cw+cw*.5,y=el.per*ch+H*.1;
+      const pulse=.5+.3*Math.sin(t*1.5+el.grp+el.per);
+      ctx.strokeStyle=el.col+Math.round(pulse*200).toString(16).padStart(2,'0');
+      ctx.lineWidth=1.5;ctx.strokeRect(x-cw*.45,y-ch*.4,cw*.9,ch*.8);
+      ctx.fillStyle=el.col.replace(')',`,${pulse*.3})`).replace('#','rgba(');
+      // Simple fill
+      ctx.globalAlpha=pulse*.25;
+      ctx.fillStyle=el.col;
+      ctx.fillRect(x-cw*.45,y-ch*.4,cw*.9,ch*.8);
+      ctx.globalAlpha=1;
+      ctx.fillStyle=`rgba(220,255,230,${pulse*.8})`;
+      ctx.font=`bold ${cw*.55}px monospace`;ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText(el.sym,x,y);
+    });
+    // Central glow
+    const g=ctx.createRadialGradient(W*.5,H*.55,0,W*.5,H*.55,W*.35);
+    g.addColorStop(0,'rgba(57,208,111,.12)');g.addColorStop(1,'transparent');
+    ctx.fillStyle=g;ctx.beginPath();ctx.arc(W*.5,H*.55,W*.35,0,Math.PI*2);ctx.fill();
+    // Guardian figure
+    ctx.fillStyle='rgba(100,220,140,.7)';
+    ctx.beginPath();ctx.arc(W/2,H*.55,W*.09,0,Math.PI*2);ctx.fill();
+    ctx.font=`${W*.14}rem serif`;ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText('🧬',W/2,H*.55);
+    requestAnimationFrame(draw);
+  }draw();
+})();
+
+// SCENE BG CONFIGS
+const sbConfigs=[
+  function(ctx,W,H,t){ // Periodic grid
+    ctx.fillStyle='#041008';ctx.fillRect(0,0,W,H);
+    const syms=['H','Li','Na','K','Be','Mg','Ca','B','Al','C','Si','N','P','O','S','F','Cl','Ne','Ar'];
+    const cw=W/syms.length;
+    syms.forEach((s,i)=>{
+      const x=i*cw+cw*.5,pulse=.3+.2*Math.sin(t*1.5+i);
+      ctx.strokeStyle=`rgba(57,208,111,${pulse})`;ctx.lineWidth=1;
+      ctx.strokeRect(x-cw*.44,H*.2,cw*.88,H*.6);
+      ctx.fillStyle=`rgba(57,208,111,${pulse*.6})`;
+      ctx.font=`bold ${cw*.6}px monospace`;ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText(s,x,H*.5);
+    });
+  },
+  function(ctx,W,H,t){ // Group columns
+    const g=ctx.createLinearGradient(0,0,W,0);
+    g.addColorStop(0,'#0a1a04');g.addColorStop(1,'#041408');
+    ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+    const cols=['#ff9955','#ffdd33','#ffbb44','#aaffcc','#44ddaa','#59c7ff','#b98bff'];
+    cols.forEach((c,i)=>{
+      const x=i*(W/cols.length);const pulse=.08+.05*Math.sin(t+i);
+      ctx.fillStyle=c.replace('#',`rgba(`).replace(/([0-9a-f]{2})/gi,h=>parseInt(h,16)+',')+`${pulse})`;
+      ctx.fillStyle=`rgba(57,208,111,${pulse})`;
+      ctx.fillRect(x,0,W/cols.length-4,H);
+    });
+    // Floating group numbers
+    for(let i=1;i<=7;i++){
+      const x=i*(W/8);ctx.fillStyle=`rgba(180,255,200,${.15+.1*Math.sin(t+i)})`;
+      ctx.font='bold 24px Orbitron,monospace';ctx.textAlign='center';
+      ctx.fillText('IA IIA IIIA IVA VA VIA VIIA'.split(' ')[i-1]||'',x,H/2);
+    }
+  },
+  function(ctx,W,H,t){ // Electronegativity gradient
+    const g=ctx.createLinearGradient(0,0,W,H);
+    g.addColorStop(0,'#060318');g.addColorStop(1,'#031408');
+    ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+    for(let i=0;i<20;i++){
+      const x=Math.random()*W,y=Math.random()*H;
+      const r=3+i*4;const a=.04+.03*Math.sin(t+i);
+      const gg=ctx.createRadialGradient(W*.8,H*.15,0,W*.8,H*.15,W*.8);
+      gg.addColorStop(0,'rgba(89,199,255,.15)');gg.addColorStop(1,'transparent');
+      ctx.fillStyle=gg;ctx.fillRect(0,0,W,H);
+    }
+    ctx.font='bold 48px monospace';ctx.fillStyle=`rgba(89,199,255,${.3+.15*Math.sin(t)})`;
+    ctx.textAlign='center';ctx.fillText('χ(F)=3.98',W/2,H/2);
+  },
+  function(ctx,W,H,t){ // Trend arrows
+    ctx.fillStyle='#060d04';ctx.fillRect(0,0,W,H);
+    // Arrow right (increasing non-metal)
+    ctx.strokeStyle=`rgba(57,208,111,${.5+.2*Math.sin(t)})`;ctx.lineWidth=3;
+    ctx.beginPath();ctx.moveTo(W*.1,H*.5);ctx.lineTo(W*.88,H*.5);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(W*.82,H*.38);ctx.lineTo(W*.88,H*.5);ctx.lineTo(W*.82,H*.62);ctx.stroke();
+    ctx.fillStyle=`rgba(57,208,111,${.4+.2*Math.sin(t+1)})`;
+    ctx.font='bold 14px monospace';ctx.textAlign='center';
+    ctx.fillText('Tính phi kim tăng →',W*.5,H*.35);
+    // Gradient bar
+    const bar=ctx.createLinearGradient(W*.1,0,W*.88,0);
+    bar.addColorStop(0,'rgba(255,150,50,.4)');bar.addColorStop(1,'rgba(57,208,111,.4)');
+    ctx.fillStyle=bar;ctx.fillRect(W*.1,H*.6,W*.78,20);
+  },
+  function(ctx,W,H,t){ // Halogen gate
+    ctx.fillStyle='#030d08';ctx.fillRect(0,0,W,H);
+    const halogens=['F','Cl','Br','I','At'];
+    halogens.forEach((h,i)=>{
+      const x=W*(i+1)/6,y=H*.5+Math.sin(t+i)*(H*.12);
+      const pulse=.5+.3*Math.sin(t*1.5+i);
+      ctx.strokeStyle=`rgba(89,199,255,${pulse})`;ctx.lineWidth=2;
+      ctx.strokeRect(x-22,y-15,44,30);
+      ctx.fillStyle=`rgba(89,199,255,${pulse*.6})`;
+      ctx.font='bold 16px monospace';ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText(h,x,y);
+    });
+    ctx.fillStyle=`rgba(57,208,111,${.3+.15*Math.sin(t)})`;
+    ctx.font='bold 18px monospace';ctx.textAlign='center';
+    ctx.fillText('VIIA — Halogen Family',W/2,H*.2);
+  }
+];
+
+const stTimers={};
+function initSceneBg(i){
+  if(stTimers[i])return;
+  const c=document.getElementById('sc'+i);if(!c)return;
+  const ctx=c.getContext('2d');let t=0;
+  function loop(){
+    const W=c.offsetWidth||600,H=c.offsetHeight||200;
+    c.width=W;c.height=H;
+    sbConfigs[i](ctx,W,H,t);t+=.016;
+    stTimers[i]=requestAnimationFrame(loop);
+  }loop();
+}
+
+const charDrawers=[
+  function(ctx,W,H,t){ // Periodic Sage — green robe with element symbols
+    const g=ctx.createRadialGradient(W/2,H*.4,5,W/2,H*.4,W*.6);
+    g.addColorStop(0,'rgba(57,208,111,.15)');g.addColorStop(1,'transparent');
+    ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+    ctx.fillStyle='#1a3a1a';ctx.beginPath();
+    ctx.moveTo(W*.25,H*.45);ctx.lineTo(W*.05,H);ctx.lineTo(W*.95,H);ctx.lineTo(W*.75,H*.45);ctx.closePath();ctx.fill();
+    // Symbols on robe
+    ['C','H','O','N'].forEach((s,i)=>{
+      ctx.fillStyle=`rgba(57,208,111,${.3+.2*Math.sin(t+i)})`;
+      ctx.font='bold 12px monospace';ctx.textAlign='center';
+      ctx.fillText(s,W*(.2+i*.2),H*(.65+.05*Math.sin(t+i)));
+    });
+    ctx.fillStyle='#b0d8b0';ctx.beginPath();ctx.arc(W/2,H*.25,W*.13,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#39d06f';
+    ctx.beginPath();ctx.arc(W*.44,H*.24,W*.02,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.arc(W*.56,H*.24,W*.02,0,Math.PI*2);ctx.fill();
+    // Staff with element symbol
+    ctx.strokeStyle='#4a7a4a';ctx.lineWidth=3;
+    ctx.beginPath();ctx.moveTo(W*.7,H*.4);ctx.lineTo(W*.75,H);ctx.stroke();
+    ctx.fillStyle='rgba(57,208,111,.8)';ctx.font='bold 18px monospace';
+    ctx.fillText('⬡',W*.68,H*.38+Math.sin(t*2)*5);
+  },
+  function(ctx,W,H,t){ // Group Warden — columns armor
+    ctx.fillStyle='rgba(8,20,10,.5)';ctx.fillRect(0,0,W,H);
+    const cols=['#ff9955','#ffdd33','#44ddaa','#59c7ff','#b98bff'];
+    for(let i=0;i<5;i++){
+      const x=W*(.12+i*.16);
+      ctx.fillStyle=cols[i]+'33';
+      ctx.fillRect(x-8,H*.3,16,H*.65);
+      ctx.strokeStyle=cols[i]+'88';ctx.lineWidth=1;
+      ctx.strokeRect(x-8,H*.3,16,H*.65);
+    }
+    ctx.fillStyle='#c8d8c8';ctx.beginPath();ctx.arc(W/2,H*.25,W*.12,0,Math.PI*2);ctx.fill();
+    ctx.font=`${W*.1}px serif`;ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText('⚗️',W/2,H*.25);
+  },
+  function(ctx,W,H,t){ // Electra Priestess — blue electric
+    ctx.fillStyle='rgba(4,10,20,.5)';ctx.fillRect(0,0,W,H);
+    for(let i=0;i<6;i++){
+      const ang=t+i*(Math.PI/3);
+      const r=W*.28;
+      const x=W/2+Math.cos(ang)*r,y=H*.4+Math.sin(ang)*r*.5;
+      const sg=ctx.createRadialGradient(x,y,0,x,y,W*.1);
+      sg.addColorStop(0,'rgba(89,199,255,.5)');sg.addColorStop(1,'transparent');
+      ctx.fillStyle=sg;ctx.beginPath();ctx.arc(x,y,W*.1,0,Math.PI*2);ctx.fill();
+    }
+    ctx.fillStyle='#b0c8d8';ctx.beginPath();ctx.arc(W/2,H*.3,W*.12,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='rgba(89,199,255,.9)';
+    ctx.beginPath();ctx.arc(W*.43,H*.29,W*.025,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.arc(W*.57,H*.29,W*.025,0,Math.PI*2);ctx.fill();
+    ctx.font='bold 20px monospace';ctx.textAlign='center';
+    ctx.fillStyle=`rgba(89,199,255,${.7+.3*Math.sin(t*2)})`;
+    ctx.fillText('χ',W/2,H*.55+Math.sin(t)*(H*.03));
+  },
+  function(ctx,W,H,t){ // Trend Oracle — arrows and gradients
+    ctx.fillStyle='rgba(6,14,4,.5)';ctx.fillRect(0,0,W,H);
+    const g=ctx.createLinearGradient(0,H*.5,W,H*.5);
+    g.addColorStop(0,'rgba(255,150,50,.3)');g.addColorStop(1,'rgba(57,208,111,.3)');
+    ctx.fillStyle=g;ctx.fillRect(W*.05,H*.45,W*.9,H*.1);
+    ctx.fillStyle='#c0d8c0';ctx.beginPath();ctx.arc(W/2,H*.28,W*.12,0,Math.PI*2);ctx.fill();
+    ctx.font=`${W*.1}px serif`;ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText('📈',W/2,H*.28);
+  },
+  function(ctx,W,H,t){ // Guardian Prime — shining element guardian
+    const pulse=.5+.4*Math.sin(t*1.8);
+    const g=ctx.createRadialGradient(W/2,H*.4,5,W/2,H*.4,W*.5);
+    g.addColorStop(0,`rgba(57,208,111,${pulse*.3})`);g.addColorStop(1,'transparent');
+    ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+    // Armor with periodic cells
+    const elems=['Li','Na','K','Ca','Fe'];
+    elems.forEach((el,i)=>{
+      const x=W*(.15+i*.17),y=H*.55+Math.sin(t+i)*(H*.03);
+      ctx.strokeStyle=`rgba(57,208,111,${.4+.3*Math.sin(t+i)})`;
+      ctx.lineWidth=1.5;ctx.strokeRect(x-12,y-9,24,18);
+      ctx.fillStyle=`rgba(57,208,111,${.12+.08*Math.sin(t+i)})`;
+      ctx.fillRect(x-12,y-9,24,18);
+      ctx.fillStyle='rgba(200,255,210,.8)';ctx.font='bold 10px monospace';
+      ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(el,x,y);
+    });
+    // Head glow
+    const hg=ctx.createRadialGradient(W/2,H*.25,0,W/2,H*.25,W*.15);
+    hg.addColorStop(0,`rgba(200,255,210,${pulse*.8})`);hg.addColorStop(1,'transparent');
+    ctx.fillStyle=hg;ctx.beginPath();ctx.arc(W/2,H*.25,W*.15,0,Math.PI*2);ctx.fill();
+    ctx.font=`${W*.12}px serif`;ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText('🧬',W/2,H*.25);
+  }
+];
+
+const ctTimers={};
+function initChar(i){
+  if(ctTimers[i])return;
+  const c=document.getElementById('cc'+i);if(!c)return;
+  const ctx=c.getContext('2d');let t=0;
+  function loop(){
+    const W=c.offsetWidth||190,H=c.offsetHeight||230;
+    c.width=W;c.height=H;ctx.clearRect(0,0,W,H);
+    charDrawers[i](ctx,W,H,t);t+=.016;
+    ctTimers[i]=requestAnimationFrame(loop);
+  }loop();
+}
+
+// Ending celebration
+function endCelebrate(){
+  const c=document.getElementById('endC');if(!c)return;
+  const ctx=c.getContext('2d');
+  const conf=[];
+  for(let i=0;i<100;i++)conf.push({x:Math.random()*800,y:Math.random()*600-100,vx:(Math.random()-.5)*3,vy:1+Math.random()*3,size:4+Math.random()*7,col:`hsl(${120+Math.random()*60},80%,60%)`,a:Math.random()*Math.PI*2,s:(Math.random()-.5)*.15});
+  function loop(){
+    const W=c.offsetWidth||800,H=c.offsetHeight||500;
+    c.width=W;c.height=H;ctx.clearRect(0,0,W,H);
+    conf.forEach(p=>{p.y+=p.vy;p.x+=p.vx;p.a+=p.s;if(p.y>H){p.y=-10;p.x=Math.random()*W}
+      ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.a);
+      ctx.fillStyle=p.col;ctx.fillRect(-p.size/2,-p.size/4,p.size,p.size/2);ctx.restore();
+    });requestAnimationFrame(loop);
+  }loop();
+}
+
+updateHud();
+</script>
+</body>
+</html>

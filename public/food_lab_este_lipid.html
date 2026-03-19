@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>🍳 Food Lab Story – Este & Lipid</title>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600;700&family=Orbitron:wght@700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#120804;--accent:#ff8844;--a2:#ffcc88;--text:#fff4e8;--muted:#c09070;--green:#39d06f;--red:#ff646e;--blue:#59c7ff;--shadow:0 18px 44px rgba(0,0,0,.55)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Quicksand',sans-serif;color:var(--text);background:var(--bg);min-height:100vh;overflow-x:hidden}
+#bgCanvas{position:fixed;inset:0;z-index:0;pointer-events:none}
+.vig{position:fixed;inset:0;z-index:1;pointer-events:none;background:radial-gradient(ellipse at center,transparent 50%,rgba(0,0,0,.72)100%)}
+.app{position:relative;z-index:2;max-width:1100px;margin:0 auto;padding:18px 16px 50px}
+.topbar{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;background:rgba(22,10,4,.88);border:1px solid rgba(255,136,68,.25);border-radius:18px;padding:13px 18px;backdrop-filter:blur(14px);box-shadow:var(--shadow);position:sticky;top:10px;z-index:30}
+.title h1{font-family:'Orbitron',sans-serif;font-size:1.2rem;background:linear-gradient(90deg,var(--accent),var(--a2),#fff);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.title p{color:var(--muted);font-size:.82rem;margin-top:2px}
+.hud{display:flex;gap:10px;flex-wrap:wrap}
+.pill{min-width:95px;text-align:center;background:rgba(255,136,68,.07);border:1px solid rgba(255,136,68,.22);border-radius:13px;padding:7px 12px}
+.pill .k{font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em}
+.pill .v{font-size:1.05rem;font-weight:700;margin-top:2px}
+.intro,.scene,.ending{margin-top:16px;background:rgba(18,8,4,.9);border:1px solid rgba(255,136,68,.2);border-radius:24px;box-shadow:var(--shadow);overflow:hidden;display:none}
+.intro.show,.scene.show,.ending.show{display:block;animation:up .45s cubic-bezier(.22,1,.36,1)}
+@keyframes up{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:none}}
+.hero{display:grid;grid-template-columns:1.1fr .9fr;min-height:440px}
+.hl{padding:34px 30px;background:linear-gradient(135deg,rgba(24,10,4,.96),rgba(14,6,2,.92));border-right:1px solid rgba(255,136,68,.16);display:flex;flex-direction:column;justify-content:center}
+.hl h2{font-family:'Orbitron',sans-serif;font-size:1.4rem;background:linear-gradient(90deg,var(--accent),var(--a2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:12px;line-height:1.35}
+.hl p{color:var(--muted);line-height:1.8;white-space:pre-line}
+.rules{background:rgba(255,136,68,.06);border:1px solid rgba(255,136,68,.2);border-radius:14px;padding:12px 15px;margin-top:14px}
+.rules ul{margin:7px 0 0 16px;color:var(--muted);line-height:1.8}
+.hr2{position:relative;background:radial-gradient(ellipse at center,rgba(180,80,20,.1),transparent 68%),linear-gradient(180deg,#0e0402,#080200);display:flex;align-items:center;justify-content:center;overflow:hidden}
+.sh{position:relative;height:200px;overflow:hidden;border-bottom:1px solid rgba(255,136,68,.18)}
+.sh canvas{position:absolute;inset:0;width:100%;height:100%}
+.sho{position:absolute;inset:0;background:linear-gradient(0deg,rgba(14,6,2,.95)0%,rgba(14,6,2,.2)55%,transparent 100%)}
+.badge{position:absolute;top:14px;left:18px;display:inline-flex;align-items:center;gap:7px;border-radius:999px;padding:6px 13px;background:rgba(0,0,0,.55);color:var(--a2);border:1px solid rgba(255,204,136,.28);font-weight:700;font-size:.88rem;backdrop-filter:blur(8px)}
+.sb{padding:22px}
+.stitle{font-family:'Orbitron',sans-serif;font-size:1.3rem;background:linear-gradient(90deg,var(--text),var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:9px}
+.nar{color:var(--muted);white-space:pre-line;line-height:1.75}
+.cr{display:grid;grid-template-columns:190px 1fr;gap:14px;margin-top:18px;align-items:stretch}
+.port{border-radius:18px;border:1px solid rgba(255,136,68,.22);min-height:230px;overflow:hidden;position:relative}
+.port canvas{position:absolute;inset:0;width:100%;height:100%}
+.port .pn{position:absolute;left:10px;top:10px;padding:4px 10px;border-radius:999px;background:rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.12);font-weight:700;font-size:.83rem;z-index:2}
+.dlg{border-radius:18px;border:1px solid rgba(255,136,68,.18);background:rgba(255,255,255,.02);padding:14px}
+.sp{background:rgba(255,255,255,.03);border:1px solid rgba(255,136,68,.16);border-radius:14px;padding:12px 14px;margin-bottom:9px}
+.sp:last-child{margin-bottom:0}
+.sp small{display:block;font-weight:700;margin-bottom:5px}
+.sp p{margin:0;white-space:pre-line;line-height:1.7;color:var(--muted)}
+.qc{margin-top:18px;background:rgba(255,255,255,.02);border:1px solid rgba(255,136,68,.18);border-radius:18px;padding:16px}
+.qt{font-size:1.05rem;font-weight:700;margin-bottom:13px;line-height:1.5}
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+button{font:inherit;cursor:pointer;border:none}
+.opt{text-align:left;padding:12px 14px;border-radius:13px;color:var(--text);background:rgba(255,136,68,.04);border:1px solid rgba(255,136,68,.2);transition:.18s ease;min-height:64px}
+.opt:hover{transform:translateY(-2px);border-color:rgba(255,136,68,.6)}
+.opt.correct{background:rgba(57,208,111,.18);border-color:rgba(57,208,111,.75);animation:pop .35s ease}
+.opt.wrong{background:rgba(255,100,110,.15);border-color:rgba(255,100,110,.75);animation:shk .35s ease}
+.opt.dim{opacity:.28;pointer-events:none}
+@keyframes pop{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}
+@keyframes shk{0%,100%{transform:translateX(0)}30%{transform:translateX(-5px)}70%{transform:translateX(5px)}}
+.fb{display:none;margin-top:13px;padding:13px 15px;border-radius:14px;border-left:4px solid var(--accent);background:rgba(255,255,255,.03);color:var(--muted);white-space:pre-line;line-height:1.75}
+.fb.show{display:block;animation:up .3s ease}
+.fb strong{display:block;margin-bottom:5px}
+.fb.ok{border-color:var(--green)}.fb.ok strong{color:var(--green)}
+.fb.fail{border-color:var(--red)}.fb.fail strong{color:var(--red)}
+.ar{margin-top:13px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.stat{color:var(--muted);font-size:.87rem}
+.btn{padding:10px 18px;border-radius:13px;font-weight:700;transition:.18s ease}
+.btnp{background:linear-gradient(135deg,#ff8844,#dd5522);color:#1a0402;box-shadow:0 4px 16px rgba(255,136,68,.3)}
+.btnp:hover{transform:translateY(-2px)}
+.btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:15px}
+.nx{display:none}.nx.show{display:inline-block;animation:up .3s ease}
+.eb{padding:26px;position:relative;z-index:2}
+.es{font-family:'Orbitron',sans-serif;font-size:1.9rem;margin:10px 0}
+.win{color:var(--green)}.lose{color:var(--red)}
+.meter{width:100%;height:13px;border-radius:999px;border:1px solid rgba(255,136,68,.2);background:rgba(255,255,255,.04);margin:11px 0;overflow:hidden}
+.mf{height:100%;width:0%;border-radius:999px;background:linear-gradient(90deg,var(--red),var(--accent),var(--green));transition:width 1.4s cubic-bezier(.22,1,.36,1)}
+.burst{position:fixed;pointer-events:none;z-index:100}
+.bd{position:absolute;border-radius:50%;width:7px;height:7px;animation:fly var(--t) ease-out forwards}
+@keyframes fly{0%{transform:translate(0,0) scale(1);opacity:1}100%{transform:translate(var(--dx),var(--dy)) scale(0);opacity:0}}
+.sf{position:fixed;inset:0;z-index:200;pointer-events:none;opacity:0}
+.sg{background:rgba(57,208,111,.16);animation:fl .45s ease}.sr{background:rgba(255,100,110,.16);animation:fl .45s ease}
+@keyframes fl{0%{opacity:1}100%{opacity:0}}
+@media(max-width:840px){.hero{grid-template-columns:1fr}.hr2{height:250px}.cr{grid-template-columns:1fr}}
+@media(max-width:600px){.opts{grid-template-columns:1fr}.topbar{position:static}}
+</style>
+</head>
+<body>
+<canvas id="bgCanvas"></canvas><div class="vig"></div><div class="sf" id="sf"></div>
+<div class="app">
+<div class="topbar">
+  <div class="title"><h1>🍳 FOOD LAB STORY</h1><p>Este & Lipid • Hóa học 12 THPT • 5 Công thức bí mật</p></div>
+  <div class="hud">
+    <div class="pill"><div class="k">Điểm</div><div class="v" id="sc">0</div></div>
+    <div class="pill"><div class="k">Công thức</div><div class="v"><span id="dn">0</span>/5</div></div>
+    <div class="pill"><div class="k">Nguyên liệu</div><div class="v" id="ing">🧪🧪🧪</div></div>
+  </div>
+</div>
+<section class="intro show" id="intro">
+  <div class="hero">
+    <div class="hl">
+      <h2>🍳 Phòng Lab Ẩm Thực Hóa Học</h2>
+      <p>Trong một phòng lab đặc biệt nơi hóa học và ẩm thực giao nhau, đầu bếp hóa học <strong>Chef Ester</strong> đang chuẩn bị bữa tiệc lớn nhất trong lịch sử.
+
+Nhưng công thức bí mật của bà đã bị đánh cắp! 5 công thức quan trọng về este và lipid đang bị mã hóa bởi những câu hỏi hóa học. Chỉ khi giải mã đủ, bữa tiệc mới bắt đầu.</p>
+      <div class="rules"><strong>🎯 Luật phòng lab</strong><ul><li>Đúng: <strong style="color:#39d06f">+10 điểm</strong> | Sai: <strong style="color:#ff646e">-5 điểm</strong></li><li>Đạt <strong>50 điểm</strong> → Chef Ester lấy lại công thức!</li></ul></div>
+      <div class="btns"><button class="btn btnp" onclick="startGame()">🍳 Vào phòng lab!</button></div>
+    </div>
+    <div class="hr2"><canvas id="heroC" width="380" height="440"></canvas></div>
+  </div>
+</section>
+
+<section class="scene" id="scene-0">
+  <div class="sh"><canvas id="s0"></canvas><div class="sho"></div><div class="badge">⚗️ Lab 1 • Ester Formation</div></div>
+  <div class="sb">
+    <h2 class="stitle">Công thức tạo Este</h2>
+    <p class="nar">Este — những phân tử mang mùi hương của trái cây và hoa — được tạo ra bằng phản ứng ester hóa giữa axit và alcol.</p>
+    <div class="cr">
+      <div class="port"><canvas id="c0"></canvas><div class="pn">🧪 Chef Ester</div></div>
+      <div class="dlg">
+        <div class="sp"><small style="color:#ff8844">Chef Ester</small><p>"Este không tự xuất hiện. Phải kết hợp đúng nguyên liệu. Isoamyl acetate — mùi chuối — sinh ra từ phản ứng của axit acetic và isoamyl alcohol. Nguyên liệu chung để tạo este là gì?"</p></div>
+        <div class="sp"><small style="color:#ffcc88">Bí kíp ẩm thực</small><p>"Axit + Ancol → Este + Nước (cần xúc tác H⁺, đun nóng)"</p></div>
+      </div>
+    </div>
+    <div class="qc">
+      <div class="qt">⚗️ Câu 1. Este được tạo thành từ phản ứng ester hóa giữa</div>
+      <div class="opts" data-q="0">
+        <button class="opt" data-correct="false">A. Axit + Bazơ</button>
+        <button class="opt" data-correct="true">B. Axit carboxylic + Ancol (xúc tác H₂SO₄ đặc, đun nóng)</button>
+        <button class="opt" data-correct="false">C. Muối + Nước</button>
+        <button class="opt" data-correct="false">D. Aldehyde + Ancol</button>
+      </div>
+      <div class="fb" id="fb0"></div>
+      <div class="ar">
+        <div class="stat">💡 RCOOH + R'OH ⇌ RCOOR' + H₂O (xúc tác H⁺, ΔT, thuận nghịch)</div>
+        <button class="btn btnp nx" id="nx0" onclick="goTo(1)">Tiến đến Saponification Lab →</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="scene" id="scene-1">
+  <div class="sh"><canvas id="s1"></canvas><div class="sho"></div><div class="badge">🧼 Lab 2 • Saponification</div></div>
+  <div class="sb">
+    <h2 class="stitle">Phòng xà phòng hóa</h2>
+    <p class="nar">Xà phòng hóa — phản ứng ngược của este hóa, nhưng dùng NaOH thay vì axit. Phản ứng này cho ra muối axit béo (xà phòng) và glycerol.</p>
+    <div class="cr">
+      <div class="port"><canvas id="c1"></canvas><div class="pn">🧼 Soap Master</div></div>
+      <div class="dlg">
+        <div class="sp"><small style="color:#59c7ff">Soap Master</small><p>"Xà phòng hóa — bí quyết làm sạch hàng nghìn năm của nhân loại. Khi este phản ứng với NaOH, ta thu được gì? Và tại sao phản ứng này khác phản ứng este hóa?"</p></div>
+        <div class="sp"><small style="color:#ffcc88">Chef Ester</small><p>"Phản ứng xà phòng hóa là một chiều — không thuận nghịch như este hóa!"</p></div>
+      </div>
+    </div>
+    <div class="qc">
+      <div class="qt">⚗️ Câu 2. Phản ứng xà phòng hóa este với NaOH tạo ra</div>
+      <div class="opts" data-q="1">
+        <button class="opt" data-correct="false">A. Axit carboxylic + Ancol</button>
+        <button class="opt" data-correct="true">B. Muối carboxylate (RCOONa) + Ancol</button>
+        <button class="opt" data-correct="false">C. Axit + NaOH mới</button>
+        <button class="opt" data-correct="false">D. Este mới + H₂O</button>
+      </div>
+      <div class="fb" id="fb1"></div>
+      <div class="ar">
+        <div class="stat">💡 RCOOR' + NaOH → RCOONa + R'OH (một chiều, hoàn toàn)</div>
+        <button class="btn btnp nx" id="nx1" onclick="goTo(2)">Tiến đến Fat Lab →</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="scene" id="scene-2">
+  <div class="sh"><canvas id="s2"></canvas><div class="sho"></div><div class="badge">🥩 Lab 3 • Fat Lab</div></div>
+  <div class="sb">
+    <h2 class="stitle">Phòng nghiên cứu Chất béo</h2>
+    <p class="nar">Chất béo — trieste của glycerol và axit béo — là nguồn năng lượng dự trữ quan trọng của cơ thể. Dầu thực vật và mỡ động vật đều là chất béo.</p>
+    <div class="cr">
+      <div class="port"><canvas id="c2"></canvas><div class="pn">🥩 Lipid Scientist</div></div>
+      <div class="dlg">
+        <div class="sp"><small style="color:#f4c24f">Lipid Scientist</small><p>"Chất béo — triglyceryl ester — được cấu tạo từ 1 phân tử glycerol và 3 phân tử axit béo. Đây là nguyên liệu ẩm thực và sinh học quan trọng nhất."</p></div>
+        <div class="sp"><small style="color:#ffcc88">Chef Ester</small><p>"Glycerol có 3 nhóm OH — mỗi nhóm tạo 1 liên kết este với 1 axit béo!"</p></div>
+      </div>
+    </div>
+    <div class="qc">
+      <div class="qt">⚗️ Câu 3. Chất béo (fat/lipid) là este của glycerol với</div>
+      <div class="opts" data-q="2">
+        <button class="opt" data-correct="false">A. Axit vô cơ (HCl, H₂SO₄)</button>
+        <button class="opt" data-correct="true">B. Các axit béo (axit carboxylic mạch dài, C12–C24)</button>
+        <button class="opt" data-correct="false">C. Glucose</button>
+        <button class="opt" data-correct="false">D. Amino acid</button>
+      </div>
+      <div class="fb" id="fb2"></div>
+      <div class="ar">
+        <div class="stat">💡 Chất béo = triglyceryd = glycerol + 3 axit béo (C12-C24, no hoặc không no)</div>
+        <button class="btn btnp nx" id="nx2" onclick="goTo(3)">Tiến đến Oil vs Fat Lab →</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="scene" id="scene-3">
+  <div class="sh"><canvas id="s3"></canvas><div class="sho"></div><div class="badge">🫙 Lab 4 • Oil vs Fat</div></div>
+  <div class="sb">
+    <h2 class="stitle">Dầu thực vật vs Mỡ động vật</h2>
+    <p class="nar">Dầu thực vật lỏng ở nhiệt độ phòng. Mỡ động vật đặc. Tại sao? Câu trả lời nằm trong cấu trúc axit béo.</p>
+    <div class="cr">
+      <div class="port"><canvas id="c3"></canvas><div class="pn">🫙 Oil Analyst</div></div>
+      <div class="dlg">
+        <div class="sp"><small style="color:#39d06f">Oil Analyst</small><p>"Dầu olive, dầu hướng dương, dầu cá — lỏng. Mỡ lợn, bơ — đặc. Sự khác biệt không phải ở glycerol mà ở axit béo. Nguyên nhân là gì?"</p></div>
+        <div class="sp"><small style="color:#ffcc88">Chef Ester</small><p>"Axit béo không no có liên kết C=C → nhiệt độ nóng chảy thấp hơn!"</p></div>
+      </div>
+    </div>
+    <div class="qc">
+      <div class="qt">⚗️ Câu 4. Điểm khác nhau cơ bản giữa dầu thực vật (lỏng) và mỡ động vật (rắn) là</div>
+      <div class="opts" data-q="3">
+        <button class="opt" data-correct="false">A. Dầu chứa glycerol, mỡ không chứa</button>
+        <button class="opt" data-correct="true">B. Dầu chứa nhiều axit béo không no (C=C), mỡ chứa nhiều axit béo no</button>
+        <button class="opt" data-correct="false">C. Dầu là este đơn, mỡ là trieste</button>
+        <button class="opt" data-correct="false">D. Dầu tan trong nước, mỡ không tan</button>
+      </div>
+      <div class="fb" id="fb3"></div>
+      <div class="ar">
+        <div class="stat">💡 Không no (C=C) → nhiệt độ nóng chảy thấp → lỏng ở nhiệt độ phòng → dầu</div>
+        <button class="btn btnp nx" id="nx3" onclick="goTo(4)">Đến công thức cuối →</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="scene" id="scene-4">
+  <div class="sh"><canvas id="s4"></canvas><div class="sho"></div><div class="badge">🏆 Lab 5 • Master Recipe</div></div>
+  <div class="sb">
+    <h2 class="stitle">Công thức Bậc Thầy</h2>
+    <p class="nar">Phản ứng xà phòng hóa chất béo — cơ sở của ngành sản xuất xà phòng — cần 3 phân tử NaOH cho mỗi phân tử chất béo.</p>
+    <div class="cr">
+      <div class="port"><canvas id="c4"></canvas><div class="pn">🏆 Chef Ester (Master)</div></div>
+      <div class="dlg">
+        <div class="sp"><small style="color:#ff8844">Chef Ester (Master)</small><p>"Câu hỏi cuối cùng — xà phòng hóa 1 mol chất béo (triglyceryd) cần bao nhiêu mol NaOH? Đây là bí quyết cuối của tôi!"</p></div>
+        <div class="sp"><small style="color:#ffcc88">Tiếng phòng lab</small><p>"Trieste… 3 liên kết este… mỗi liên kết cần 1 NaOH…"</p></div>
+      </div>
+    </div>
+    <div class="qc">
+      <div class="qt">⚗️ Câu 5. Thủy phân hoàn toàn 1 mol chất béo (triglyceryd) trong NaOH cần bao nhiêu mol NaOH?</div>
+      <div class="opts" data-q="4">
+        <button class="opt" data-correct="false">A. 1 mol NaOH</button>
+        <button class="opt" data-correct="false">B. 2 mol NaOH</button>
+        <button class="opt" data-correct="true">C. 3 mol NaOH</button>
+        <button class="opt" data-correct="false">D. 6 mol NaOH</button>
+      </div>
+      <div class="fb" id="fb4"></div>
+      <div class="ar">
+        <div class="stat">💡 Triglyceryd có 3 liên kết este → xà phòng hóa cần 3 mol NaOH → 3 muối + glycerol</div>
+        <button class="btn btnp nx" id="nx4" onclick="finish()">🍽️ Hoàn thành công thức →</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="ending" id="ending">
+  <canvas id="endC" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none"></canvas>
+  <div class="eb">
+    <div class="badge" style="position:static;display:inline-flex;margin-bottom:14px">🍽️ Bữa tiệc hóa học</div>
+    <h2 class="stitle">Food Lab Story</h2>
+    <p class="nar" id="eT" style="margin-top:10px"></p>
+    <div class="es" id="eS"></div>
+    <div class="meter"><div class="mf" id="eM"></div></div>
+    <div id="eR" style="margin-top:14px"></div>
+    <div class="btns"><button class="btn btnp" onclick="location.reload()">🔄 Nấu lại</button></div>
+  </div>
+</section>
+</div>
+<script>
+const ST={score:0,done:0,ing:3};
+const RESP=[
+  {ok:`✅ Axit carboxylic + Ancol (H₂SO₄ đặc, đun nóng)!
+Chef Ester: "Đúng rồi — RCOOH + HOR' ⇌ RCOOR' + H₂O. Xúc tác H⁺ tăng tốc, đun nóng để cân bằng thuận."
+Ví dụ: CH₃COOH + C₂H₅OH ⇌ CH₃COOC₂H₅ + H₂O (mùi trái cây!)
++10 điểm 🍳 Công thức este giải mã!`,
+   fail:`❌ Este tạo từ AXIT CARBOXYLIC + ANCOL (không phải axit + bazơ).
+RCOOH + HOR' ⇌ RCOOR' + H₂O (cần H₂SO₄ đặc xúc tác, đun nóng, phản ứng thuận nghịch).
+-5 điểm. Nhớ: este hóa = axit + ancol, không phải trung hòa.`},
+  {ok:`✅ Muối RCOONa + Ancol!
+Soap Master: "Đây chính là phản ứng xà phòng hóa — RCOOR' + NaOH → RCOONa + R'OH. Một chiều, hoàn toàn."
+Trong công nghiệp: chất béo + NaOH → xà phòng (muối natri stearate, palmitate) + glycerol.
++10 điểm 🧼 Bí quyết xà phòng hóa giải mã!`,
+   fail:`❌ Xà phòng hóa cho MUỐI + ANCOL (không phải axit + ancol như thủy phân axit).
+RCOOR' + NaOH → RCOONa + R'OH (một chiều — khác este hóa thuận nghịch).
+-5 điểm. Nhớ: NaOH → muối; H₂O/H⁺ → axit.`},
+  {ok:`✅ Axit béo (mạch dài C12–C24)!
+Lipid Scientist: "Glycerol (3 nhóm -OH) + 3 axit béo → triglyceryd + 3H₂O. Đây là cấu trúc của chất béo!"
+Axit palmitic (C16), stearic (C18), oleic (C18:1), linoleic (C18:2) — các axit béo phổ biến.
++10 điểm 🥩 Cấu trúc lipid giải mã!`,
+   fail:`❌ Chất béo = este của GLYCEROL với AXIT BÉO (axit carboxylic mạch dài).
+Không phải axit vô cơ (HCl không tạo chất béo).
+-5 điểm. Nhớ: glycerol (C₃H₅(OH)₃) + 3 axit béo → triglyceryd (chất béo).`},
+  {ok:`✅ Dầu chứa axit béo không no (C=C), mỡ chứa axit béo no!
+Oil Analyst: "Liên kết C=C làm phân tử không thẳng → khó xếp chặt → nhiệt độ nóng chảy thấp → lỏng."
+Dầu cá: nhiều Omega-3 (không no) | Bơ: nhiều axit stearic (no).
++10 điểm 🫙 Bí mật dầu mỡ giải mã!`,
+   fail:`❌ Sự khác biệt nằm ở MỨC ĐỘ NO của axit béo.
+Dầu: axit béo không no (C=C) → lỏng | Mỡ: axit béo no → rắn.
+Cả dầu lẫn mỡ đều có glycerol và đều là trieste (triglyceryd).
+-5 điểm.`},
+  {ok:`✅ 3 mol NaOH!
+Chef Ester nhảy lên vui mừng: "Triglyceryd có 3 liên kết este → xà phòng hóa với 3 NaOH → 3 phân tử muối xà phòng + 1 glycerol!"
+(RCOO)₃C₃H₅ + 3NaOH → 3RCOONa + C₃H₅(OH)₃
++10 điểm 🏆 Công thức bậc thầy giải mã!`,
+   fail:`❌ Triglyceryd có 3 liên kết este → cần đúng 3 mol NaOH (không phải 1 hay 2).
+Mỗi nhóm este (-COO-) + NaOH → RCOONa + R'OH.
+-5 điểm. Nhớ: TRI-glyceryd = 3 este = 3 NaOH.`}
+];
+function updateHud(){document.getElementById('sc').textContent=ST.score;document.getElementById('dn').textContent=ST.done;document.getElementById('ing').textContent='🧪'.repeat(ST.ing)+'💧'.repeat(3-ST.ing);}
+function startGame(){document.getElementById('intro').classList.remove('show');showScene(0);window.scrollTo({top:0,behavior:'smooth'});}
+function goTo(i){document.querySelectorAll('.scene').forEach(s=>s.classList.remove('show'));showScene(i);window.scrollTo({top:0,behavior:'smooth'});}
+function showScene(i){document.getElementById('scene-'+i).classList.add('show');initSB(i);initCC(i);}
+document.querySelectorAll('.opts').forEach((w,idx)=>{w.querySelectorAll('.opt').forEach(b=>b.addEventListener('click',()=>ans(idx,b,w)));});
+function ans(idx,btn,wrap){if(wrap.dataset.done==='1')return;wrap.dataset.done='1';const ok=btn.dataset.correct==='true';wrap.querySelectorAll('.opt').forEach(o=>{if(o.dataset.correct==='true')o.classList.add('correct');else if(o===btn&&!ok)o.classList.add('wrong');if(o.dataset.correct!=='true'&&o!==btn)o.classList.add('dim');});ST.done++;if(ok){ST.score+=10;flash('sg');doBurst(btn);}else{ST.score-=5;ST.ing=Math.max(0,ST.ing-1);flash('sr');}updateHud();const fb=document.getElementById('fb'+idx);fb.innerHTML='<strong>'+(ok?'✅ Chính xác!':'❌ Chưa đúng!')+'</strong>'+(ok?RESP[idx].ok:RESP[idx].fail);fb.className='fb show '+(ok?'ok':'fail');document.getElementById('nx'+idx).classList.add('show');}
+function finish(){document.querySelectorAll('.scene').forEach(s=>s.classList.remove('show'));document.getElementById('ending').classList.add('show');window.scrollTo({top:0,behavior:'smooth'});const win=ST.score>=50;document.getElementById('eS').textContent=`Điểm: ${ST.score}/50`;document.getElementById('eS').className='es '+(win?'win':'lose');setTimeout(()=>{document.getElementById('eM').style.width=Math.max(0,Math.min(100,ST.score/50*100))+'%';},200);if(win){document.getElementById('eT').textContent='Chef Ester lấy lại tất cả 5 công thức bí mật. Phòng lab sáng bừng mùi hương este. Bữa tiệc hóa học vĩ đại nhất trong lịch sử chính thức bắt đầu!';document.getElementById('eR').innerHTML='<h3 class="win">🍽️ Bữa tiệc hóa học thành công!</h3><p style="color:var(--muted);margin-top:8px">Chef Ester: "Ngươi không chỉ học hóa — ngươi đã hiểu khoa học sau mỗi món ăn!"</p>';}else{document.getElementById('eT').textContent='Một số công thức vẫn còn mã hóa. Chef Ester nhìn bạn với nụ cười khích lệ: "Ôn lại este và lipid, rồi quay lại phòng lab nhé!"';document.getElementById('eR').innerHTML='<h3 class="lose">🍳 Công thức chưa đầy đủ — thử lại!</h3>';}}
+function flash(c){const e=document.getElementById('sf');e.className='sf '+c;setTimeout(()=>e.className='sf',500);}
+function doBurst(btn){const r=btn.getBoundingClientRect();const x=r.left+r.width/2,y=r.top+r.height/2;const w=document.createElement('div');w.className='burst';w.style.cssText=`left:${x}px;top:${y}px`;const cols=['#ff8844','#ffcc88','#39d06f','#fff'];for(let i=0;i<16;i++){const d=document.createElement('div');d.className='bd';const a=Math.random()*Math.PI*2,s=50+Math.random()*100;d.style.cssText=`background:${cols[i%4]};--dx:${Math.cos(a)*s}px;--dy:${Math.sin(a)*s}px;--t:${.4+Math.random()*.5}s;left:-3px;top:-3px`;w.appendChild(d);}document.body.appendChild(w);setTimeout(()=>w.remove(),1200);}
+(function(){const c=document.getElementById('bgCanvas');const ctx=c.getContext('2d');let W,H,t=0;function resize(){W=c.width=window.innerWidth;H=c.height=window.innerHeight;}window.addEventListener('resize',resize);resize();const pts=[];for(let i=0;i<150;i++)pts.push({x:Math.random()*1e4,y:Math.random()*1e4,r:.4+Math.random()*.9,s:.03+Math.random()*.1,a:Math.random()*Math.PI*2,c:`hsla(${20+Math.random()*40},80%,60%,${.12+Math.random()*.25})`});function draw(){ctx.clearRect(0,0,W,H);t+=.016;pts.forEach(p=>{const ox=(p.x+Math.sin(t*p.s+p.a))%W,oy=(p.y+Math.cos(t*p.s+p.a))%H;ctx.fillStyle=p.c;ctx.beginPath();ctx.arc(ox,oy,p.r,0,Math.PI*2);ctx.fill();});requestAnimationFrame(draw);}draw();})();
+(function(){const c=document.getElementById('heroC');if(!c)return;const ctx=c.getContext('2d');const W=c.width,H=c.height;let t=0;
+function draw(){ctx.clearRect(0,0,W,H);t+=.016;
+// Draw ester molecule R-COO-R'
+const cx=W/2,cy=H*.45;
+// Acid part
+ctx.fillStyle='rgba(255,136,68,.6)';ctx.beginPath();ctx.arc(cx-50,cy,18,0,Math.PI*2);ctx.fill();ctx.fillStyle='#fff';ctx.font='bold 10px monospace';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('R',cx-50,cy);
+// COO bridge
+ctx.strokeStyle=`rgba(255,200,100,${.6+.3*Math.sin(t*2)})`;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(cx-32,cy);ctx.lineTo(cx+32,cy);ctx.stroke();ctx.fillStyle='rgba(255,200,100,.7)';ctx.font='bold 11px monospace';ctx.fillText('-COO-',cx,cy-18);
+// Alcohol part
+ctx.fillStyle='rgba(89,199,255,.6)';ctx.beginPath();ctx.arc(cx+50,cy,18,0,Math.PI*2);ctx.fill();ctx.fillStyle='#fff';ctx.fillText("R'",cx+50,cy);
+// Aroma lines
+for(let i=0;i<5;i++){const ax=cx+Math.cos(t+i*1.3)*W*.2,ay=cy-H*.15-i*12;ctx.fillStyle=`rgba(255,180,80,${.1+.06*Math.sin(t+i)})`;ctx.beginPath();ctx.arc(ax,ay,3,0,Math.PI*2);ctx.fill();}
+ctx.fillStyle='rgba(255,200,100,.5)';ctx.font='bold 12px monospace';ctx.textAlign='center';ctx.fillText('🍌 mùi chuối',cx,H*.2);
+requestAnimationFrame(draw);}draw();})();
+const sbCfg=[
+  function(ctx,W,H,t){ctx.fillStyle='#0e0402';ctx.fillRect(0,0,W,H);ctx.fillStyle=`rgba(255,136,68,${.2+.1*Math.sin(t)})`;ctx.font='bold 16px monospace';ctx.textAlign='center';ctx.fillText('RCOOH + HOR\' → RCOOR\' + H₂O',W/2,H*.4);for(let i=0;i<8;i++){const x=(i/8*W+t*10)%W;ctx.fillStyle=`rgba(255,180,80,${.12+.06*Math.sin(t+i)})`;ctx.beginPath();ctx.arc(x,H*.7+Math.sin(t+i)*20,4,0,Math.PI*2);ctx.fill();}},
+  function(ctx,W,H,t){ctx.fillStyle='#040810';ctx.fillRect(0,0,W,H);ctx.fillStyle=`rgba(89,199,255,${.2+.1*Math.sin(t)})`;ctx.font='bold 14px monospace';ctx.textAlign='center';ctx.fillText('RCOOR\' + NaOH → RCOONa + R\'OH',W/2,H*.4);for(let i=0;i<10;i++){const x=(i/10*W+t*8)%W;const y=H*.6+Math.sin(t*.8+i)*H*.15;ctx.fillStyle=`rgba(89,199,255,${.15+.07*Math.sin(t+i)})`;ctx.beginPath();ctx.arc(x,y,3,0,Math.PI*2);ctx.fill();}},
+  function(ctx,W,H,t){ctx.fillStyle='#080602';ctx.fillRect(0,0,W,H);// Glycerol + 3 acids
+const g=ctx.createRadialGradient(W/2,H/2,0,W/2,H/2,W*.4);g.addColorStop(0,'rgba(255,150,60,.15)');g.addColorStop(1,'transparent');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);ctx.fillStyle='rgba(255,180,80,.35)';ctx.font='bold 14px monospace';ctx.textAlign='center';ctx.fillText('Glycerol + 3 Axit béo',W/2,H*.3);ctx.fillText('→ Triglyceryd + 3H₂O',W/2,H*.5);},
+  function(ctx,W,H,t){ctx.fillStyle='#06080a';ctx.fillRect(0,0,W,H);// Oil drop (left) vs fat block (right)
+ctx.fillStyle=`rgba(255,220,80,${.3+.15*Math.sin(t)})`;ctx.beginPath();ctx.ellipse(W*.28,H*.5,W*.15,H*.25,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='rgba(220,180,80,.6)';ctx.font='bold 11px monospace';ctx.textAlign='center';ctx.fillText('🫙 Dầu',W*.28,H*.5);ctx.fillStyle=`rgba(200,180,160,${.35+.15*Math.sin(t+1)})`;ctx.fillRect(W*.58-W*.14,H*.35,W*.28,H*.3);ctx.fillStyle='rgba(180,150,120,.8)';ctx.fillText('🧈 Mỡ',W*.72,H*.5);ctx.fillStyle='rgba(255,200,100,.3)';ctx.fillText('không no ≠ no',W/2,H*.2);},
+  function(ctx,W,H,t){ctx.fillStyle='#0a0602';ctx.fillRect(0,0,W,H);const pg=ctx.createRadialGradient(W/2,H/2,0,W/2,H/2,W*.4);pg.addColorStop(0,`rgba(255,136,68,${.12+.08*Math.sin(t)})`);pg.addColorStop(1,'transparent');ctx.fillStyle=pg;ctx.fillRect(0,0,W,H);ctx.fillStyle=`rgba(255,200,100,${.4+.2*Math.sin(t)})`;ctx.font='bold 14px monospace';ctx.textAlign='center';ctx.fillText('(RCOO)₃C₃H₅ + 3NaOH',W/2,H*.38);ctx.fillText('→ 3RCOONa + C₃H₅(OH)₃',W/2,H*.55);}
+];
+const stT={};function initSB(i){if(stT[i])return;const c=document.getElementById('s'+i);if(!c)return;const ctx=c.getContext('2d');let t=0;function loop(){const W=c.offsetWidth||600,H=c.offsetHeight||200;c.width=W;c.height=H;sbCfg[i](ctx,W,H,t);t+=.016;stT[i]=requestAnimationFrame(loop);}loop();}
+const ccD=[
+  function(ctx,W,H,t){ctx.fillStyle='rgba(18,6,2,.7)';ctx.fillRect(0,0,W,H);const g=ctx.createRadialGradient(W/2,H*.4,0,W/2,H*.4,W*.4);g.addColorStop(0,'rgba(180,80,20,.2)');g.addColorStop(1,'transparent');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);ctx.font=`${W*.3}px serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('🧪',W/2,H*.38+Math.sin(t)*(H*.03));ctx.fillStyle=`rgba(255,136,68,${.5+.3*Math.sin(t*2)})`;ctx.font='bold 12px monospace';ctx.fillText('RCOOR\'',W/2,H*.7);},
+  function(ctx,W,H,t){ctx.fillStyle='rgba(2,8,16,.7)';ctx.fillRect(0,0,W,H);for(let i=0;i<6;i++){const ang=t+i*(Math.PI/3);const sg=ctx.createRadialGradient(W/2+Math.cos(ang)*W*.22,H*.45+Math.sin(ang)*H*.12,0,W/2+Math.cos(ang)*W*.22,H*.45+Math.sin(ang)*H*.12,W*.1);sg.addColorStop(0,'rgba(89,199,255,.35)');sg.addColorStop(1,'transparent');ctx.fillStyle=sg;ctx.beginPath();ctx.arc(W/2+Math.cos(ang)*W*.22,H*.45+Math.sin(ang)*H*.12,W*.1,0,Math.PI*2);ctx.fill();}ctx.font=`${W*.28}px serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('🧼',W/2,H*.38);},
+  function(ctx,W,H,t){ctx.fillStyle='rgba(12,8,2,.7)';ctx.fillRect(0,0,W,H);ctx.fillStyle=`rgba(255,200,80,${.3+.15*Math.sin(t)})`;ctx.beginPath();ctx.ellipse(W/2,H*.5,W*.28,H*.22,0,0,Math.PI*2);ctx.fill();ctx.font=`${W*.28}px serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('🥩',W/2,H*.38);ctx.fillStyle='rgba(255,180,80,.5)';ctx.font='bold 10px monospace';ctx.fillText('C₃H₅(OOCR)₃',W/2,H*.72);},
+  function(ctx,W,H,t){ctx.fillStyle='rgba(6,8,10,.7)';ctx.fillRect(0,0,W,H);ctx.fillStyle=`rgba(255,220,80,${.25+.12*Math.sin(t)})`;ctx.beginPath();ctx.ellipse(W*.35,H*.5,W*.2,H*.28+Math.sin(t*1.5)*5,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='rgba(200,170,130,.35)';ctx.fillRect(W*.58,H*.3,W*.3,H*.38);ctx.font=`${W*.12}px serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('🫙',W*.35,H*.38);ctx.fillText('🧈',W*.73,H*.47);},
+  function(ctx,W,H,t){const pulse=.5+.4*Math.sin(t*1.5);const g=ctx.createRadialGradient(W/2,H*.4,0,W/2,H*.4,W*.4);g.addColorStop(0,`rgba(180,80,20,${pulse*.25})`);g.addColorStop(1,'transparent');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);ctx.font=`${W*.3}px serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('🏆',W/2,H*.38+Math.sin(t)*(H*.025));ctx.fillStyle=`rgba(255,204,136,${pulse*.6})`;ctx.font='bold 11px monospace';ctx.fillText('+3 NaOH',W/2,H*.68);}
+];
+const ccT={};function initCC(i){if(ccT[i])return;const c=document.getElementById('c'+i);if(!c)return;const ctx=c.getContext('2d');let t=0;function loop(){const W=c.offsetWidth||190,H=c.offsetHeight||230;c.width=W;c.height=H;ctx.clearRect(0,0,W,H);ccD[i](ctx,W,H,t);t+=.016;ccT[i]=requestAnimationFrame(loop);}loop();}
+updateHud();
+</script>
+</body>
+</html>

@@ -1,0 +1,1544 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>⚛️ Giải cứu công chúa Electra – Animated Edition</title>
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;700&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#040d18;
+      --panel:rgba(10,22,38,.88);
+      --line:rgba(83,150,200,.32);
+      --text:#ecf4fb;
+      --muted:#a7bfd8;
+      --yellow:#f4c24f;
+      --green:#39d06f;
+      --red:#ff646e;
+      --blue:#59c7ff;
+      --purple:#b98bff;
+      --pink:#ffaad5;
+      --shadow:0 20px 48px rgba(0,0,0,.5);
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+
+    body{
+      font-family:'Quicksand',sans-serif;
+      color:var(--text);
+      background:#040d18;
+      min-height:100vh;
+      overflow-x:hidden;
+    }
+
+    /* ── CANVAS BACKGROUND ── */
+    #bgCanvas{
+      position:fixed; inset:0; z-index:0;
+      pointer-events:none;
+    }
+
+    /* ── SCANLINES OVERLAY ── */
+    .scanlines{
+      position:fixed; inset:0; z-index:1; pointer-events:none;
+      background:repeating-linear-gradient(
+        0deg, transparent, transparent 2px,
+        rgba(0,0,0,.06) 2px, rgba(0,0,0,.06) 4px
+      );
+    }
+
+    /* ── VIGNETTE ── */
+    .vignette{
+      position:fixed; inset:0; z-index:1; pointer-events:none;
+      background:radial-gradient(ellipse at center,transparent 55%,rgba(0,0,0,.65) 100%);
+    }
+
+    .app{
+      position:relative; z-index:2;
+      max-width:1200px;
+      margin:0 auto;
+      padding:20px 16px 60px;
+    }
+
+    /* ── TOPBAR ── */
+    .topbar{
+      display:flex; justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap;
+      background:rgba(6,18,34,.85);
+      border:1px solid rgba(89,199,255,.25);
+      border-radius:20px;
+      padding:14px 20px;
+      backdrop-filter:blur(16px);
+      box-shadow:0 0 24px rgba(89,199,255,.08), var(--shadow);
+      position:sticky; top:12px; z-index:30;
+    }
+    .title h1{
+      font-family:'Orbitron',sans-serif;
+      font-size:1.35rem; letter-spacing:.03em;
+      background:linear-gradient(90deg, var(--blue), var(--purple), var(--pink));
+      -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+      animation:hueShift 8s linear infinite;
+    }
+    @keyframes hueShift{0%{filter:hue-rotate(0deg)}100%{filter:hue-rotate(360deg)}}
+    .title p{color:var(--muted); font-size:.85rem; margin-top:2px}
+    .hud{display:flex; gap:10px; flex-wrap:wrap}
+    .pill{
+      min-width:100px; text-align:center;
+      background:rgba(255,255,255,.04);
+      border:1px solid rgba(89,199,255,.2);
+      border-radius:14px; padding:8px 12px;
+      transition:.3s ease;
+    }
+    .pill .k{font-size:.72rem; color:var(--muted); text-transform:uppercase; letter-spacing:.08em}
+    .pill .v{font-size:1.1rem; font-weight:700; margin-top:2px}
+    .pill.flash{animation:pillFlash .4s ease}
+    @keyframes pillFlash{0%,100%{transform:scale(1)}50%{transform:scale(1.18)}}
+
+    /* ── SECTIONS ── */
+    .intro,.scene,.ending{
+      margin-top:18px;
+      background:rgba(8,18,34,.88);
+      border:1px solid var(--line);
+      border-radius:26px;
+      box-shadow:var(--shadow);
+      overflow:hidden;
+      display:none;
+    }
+    .intro.show,.scene.show,.ending.show{display:block; animation:slideUp .5s cubic-bezier(.22,1,.36,1)}
+    @keyframes slideUp{
+      from{opacity:0;transform:translateY(28px) scale(.98)}
+      to{opacity:1;transform:none}
+    }
+
+    /* ── HERO ── */
+    .hero{
+      display:grid;
+      grid-template-columns:1.1fr .9fr;
+      gap:0;
+      min-height:500px;
+    }
+    .hero-left{
+      padding:40px 36px;
+      background:linear-gradient(135deg,rgba(12,28,50,.95),rgba(8,18,34,.9));
+      border-right:1px solid var(--line);
+      display:flex; flex-direction:column; justify-content:center;
+    }
+    .hero-left h2{
+      font-family:'Orbitron',sans-serif;
+      font-size:1.7rem;
+      background:linear-gradient(90deg,var(--blue),var(--purple));
+      -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+      margin-bottom:14px; line-height:1.3;
+    }
+    .hero-left p{color:var(--muted); line-height:1.75; white-space:pre-line}
+    .rules{
+      background:rgba(89,199,255,.06);
+      border:1px solid rgba(89,199,255,.2);
+      border-radius:16px;
+      padding:14px 18px; margin-top:16px;
+    }
+    .rules strong{color:var(--yellow)}
+    .rules ul{margin:8px 0 0 18px; color:var(--muted); line-height:1.8}
+
+    /* ── HERO VISUAL (Atom) ── */
+    .hero-right{
+      position:relative;
+      background:radial-gradient(ellipse at center, rgba(89,199,255,.08), transparent 68%),
+                 linear-gradient(180deg,#071424,#040d18);
+      display:flex; align-items:center; justify-content:center; overflow:hidden;
+    }
+    #atomCanvas{display:block}
+
+    /* ── SCENE BG ── */
+    .scene-header{
+      position:relative;
+      height:220px;
+      overflow:hidden;
+      border-bottom:1px solid var(--line);
+    }
+    #sceneBgCanvas{
+      position:absolute; inset:0; width:100%; height:100%;
+    }
+    .scene-header-overlay{
+      position:absolute; inset:0;
+      background:linear-gradient(0deg,rgba(8,18,34,.95) 0%,rgba(8,18,34,.25) 60%,transparent 100%);
+    }
+    .gate-badge{
+      position:absolute; top:16px; left:20px;
+      display:inline-flex; align-items:center; gap:8px;
+      border-radius:999px; padding:7px 14px;
+      background:rgba(0,0,0,.45); color:var(--yellow);
+      border:1px solid rgba(244,194,79,.3); font-weight:700;
+      backdrop-filter:blur(8px);
+    }
+
+    .scene-body{padding:24px}
+    .scene-title{
+      font-family:'Orbitron',sans-serif;
+      font-size:1.5rem; margin-bottom:10px;
+      background:linear-gradient(90deg,var(--text),var(--blue));
+      -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+    }
+    .narration{color:var(--muted); white-space:pre-line; line-height:1.75}
+
+    /* ── CHARACTER ROW ── */
+    .character-row{
+      display:grid;
+      grid-template-columns:200px 1fr;
+      gap:16px; margin-top:20px; align-items:stretch;
+    }
+    .portrait{
+      border-radius:20px;
+      border:1px solid var(--line);
+      min-height:240px;
+      overflow:hidden;
+      position:relative;
+      display:flex; align-items:center; justify-content:center;
+    }
+    .portrait canvas{position:absolute;inset:0;width:100%;height:100%}
+    .portrait .name{
+      position:absolute; left:10px; top:10px;
+      padding:5px 10px; border-radius:999px;
+      background:rgba(0,0,0,.5); border:1px solid rgba(255,255,255,.15);
+      font-weight:700; font-size:.88rem; z-index:2;
+    }
+
+    /* ── DIALOGUE ── */
+    .dialogue{
+      border-radius:20px;
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.025);
+      padding:16px;
+    }
+    .speech{
+      background:rgba(255,255,255,.035);
+      border:1px solid rgba(83,120,157,.25);
+      border-radius:16px; padding:14px 16px; margin-bottom:10px;
+    }
+    .speech:last-child{margin-bottom:0}
+    .speech small{display:block; font-weight:700; margin-bottom:6px}
+    .speech p{margin:0; white-space:pre-line; line-height:1.7}
+    .speech small.s-yellow{color:var(--yellow)}
+    .speech small.s-pink{color:var(--pink)}
+    .speech small.s-blue{color:var(--blue)}
+    .speech small.s-purple{color:var(--purple)}
+    .typewriter{overflow:hidden; border-right:.1em solid var(--blue); white-space:normal; animation:none}
+
+    /* ── QUESTION ── */
+    .question-card{
+      margin-top:20px;
+      background:rgba(255,255,255,.025);
+      border:1px solid var(--line);
+      border-radius:20px; padding:18px;
+    }
+    .question-title{
+      font-size:1.1rem; font-weight:700; margin-bottom:14px;
+      line-height:1.5;
+    }
+    .options{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+    button{font:inherit; cursor:pointer; border:none}
+    .option{
+      text-align:left; padding:14px 16px; border-radius:14px;
+      color:var(--text);
+      background:linear-gradient(135deg,rgba(255,255,255,.05),rgba(255,255,255,.02));
+      border:1px solid rgba(83,150,200,.28);
+      transition:.2s ease; min-height:70px;
+      position:relative; overflow:hidden;
+    }
+    .option::before{
+      content:''; position:absolute; inset:0;
+      background:linear-gradient(135deg,rgba(89,199,255,.08),transparent);
+      opacity:0; transition:.2s;
+    }
+    .option:hover{transform:translateY(-2px); border-color:rgba(89,199,255,.55)}
+    .option:hover::before{opacity:1}
+    .option.correct{
+      background:rgba(57,208,111,.18); border-color:rgba(57,208,111,.75);
+      animation:correctPop .4s ease;
+    }
+    @keyframes correctPop{
+      0%{transform:scale(1)} 40%{transform:scale(1.04)} 100%{transform:scale(1)}
+    }
+    .option.wrong{
+      background:rgba(255,100,110,.16); border-color:rgba(255,100,110,.75);
+      animation:wrongShake .4s ease;
+    }
+    @keyframes wrongShake{
+      0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)}
+    }
+    .option.dim{opacity:.3; pointer-events:none}
+
+    /* ── FEEDBACK ── */
+    .feedback{
+      display:none; margin-top:16px; padding:16px 18px;
+      border-radius:16px; border-left:4px solid var(--yellow);
+      background:rgba(255,255,255,.035);
+      color:var(--muted); white-space:pre-line; line-height:1.75;
+    }
+    .feedback.show{display:block; animation:fadeIn .35s ease}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+    .feedback strong{display:block; margin-bottom:6px; font-size:1.05rem}
+    .feedback.ok{border-color:var(--green)}
+    .feedback.ok strong{color:var(--green)}
+    .feedback.fail{border-color:var(--red)}
+    .feedback.fail strong{color:var(--red)}
+
+    .action-row{
+      margin-top:16px;
+      display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;
+    }
+    .status{color:var(--muted); font-size:.9rem}
+
+    /* ── BUTTONS ── */
+    .btn{
+      padding:11px 20px; border-radius:14px; font-weight:700;
+      transition:.2s ease; position:relative; overflow:hidden;
+    }
+    .btn-primary{
+      background:linear-gradient(135deg,#f4c24f,#e8a628);
+      color:#15202d;
+      box-shadow:0 4px 18px rgba(244,194,79,.3);
+    }
+    .btn-primary:hover{transform:translateY(-2px); box-shadow:0 8px 26px rgba(244,194,79,.45)}
+    .btn-secondary{
+      color:var(--text); background:rgba(255,255,255,.05);
+      border:1px solid var(--line);
+    }
+    .btn-secondary:hover{background:rgba(255,255,255,.09)}
+    .btns{display:flex; gap:12px; flex-wrap:wrap; margin-top:18px}
+    .next-btn{display:none}
+    .next-btn.show{display:inline-block; animation:fadeIn .3s ease}
+
+    /* ── ENDING ── */
+    .ending-body{padding:32px}
+    .ending-score{
+      font-family:'Orbitron',sans-serif;
+      font-size:2.2rem; margin:12px 0;
+    }
+    .ending-score.win{color:var(--green)}
+    .ending-score.lose{color:var(--red)}
+    .meter{
+      width:100%; height:16px; border-radius:999px;
+      border:1px solid var(--line); background:rgba(255,255,255,.05);
+      margin:14px 0; overflow:hidden;
+    }
+    .meter-fill{
+      height:100%; width:0%; border-radius:999px;
+      background:linear-gradient(90deg,var(--red),var(--yellow),var(--green));
+      transition:width 1.5s cubic-bezier(.22,1,.36,1);
+    }
+    .result-good{color:var(--green)}
+    .result-bad{color:var(--red)}
+
+    /* ── PARTICLE BURST ── */
+    .burst{position:fixed; pointer-events:none; z-index:100}
+    .burst-dot{
+      position:absolute; border-radius:50%; width:8px; height:8px;
+      animation:burstFly var(--t) ease-out forwards;
+    }
+    @keyframes burstFly{
+      0%{transform:translate(0,0) scale(1);opacity:1}
+      100%{transform:translate(var(--dx),var(--dy)) scale(0);opacity:0}
+    }
+
+    /* ── SCREEN FLASH ── */
+    .screen-flash{
+      position:fixed; inset:0; z-index:200;
+      pointer-events:none; opacity:0;
+    }
+    .screen-flash.flash-green{background:rgba(57,208,111,.18); animation:flashAnim .5s ease}
+    .screen-flash.flash-red{background:rgba(255,100,110,.18); animation:flashAnim .5s ease}
+    @keyframes flashAnim{0%{opacity:1}100%{opacity:0}}
+
+    /* ── ENERGY BAR ── */
+    .energy-bar-wrap{display:flex;gap:6px;align-items:center}
+    .energy-pip{
+      width:18px; height:18px; border-radius:50%;
+      border:1px solid rgba(255,255,255,.2);
+      background:rgba(255,255,255,.08);
+      transition:.3s ease;
+    }
+    .energy-pip.on{
+      background:var(--yellow);
+      box-shadow:0 0 10px var(--yellow);
+    }
+
+    /* ── RESPONSIVE ── */
+    @media(max-width:900px){
+      .hero{grid-template-columns:1fr}
+      .hero-right{height:300px}
+      .character-row{grid-template-columns:1fr}
+      .portrait{min-height:200px}
+    }
+    @media(max-width:660px){
+      .options{grid-template-columns:1fr}
+      .topbar{position:static}
+      .title h1{font-size:1.1rem}
+    }
+  </style>
+</head>
+<body>
+
+<!-- CANVAS PARTICLE BACKGROUND -->
+<canvas id="bgCanvas"></canvas>
+<div class="scanlines"></div>
+<div class="vignette"></div>
+<div class="screen-flash" id="screenFlash"></div>
+
+<div class="app">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="title">
+      <h1>⚛️ GIẢI CỨU CÔNG CHÚA ELECTRA</h1>
+      <p>Anime Visual Novel • Hóa học 10 – Cấu tạo nguyên tử</p>
+    </div>
+    <div class="hud">
+      <div class="pill" id="pill-score"><div class="k">Điểm</div><div class="v" id="score">0</div></div>
+      <div class="pill" id="pill-progress"><div class="k">Cổng</div><div class="v"><span id="done">0</span>/5</div></div>
+      <div class="pill"><div class="k">Năng lượng</div><div class="v energy-bar-wrap" id="gear">
+        <div class="energy-pip on" id="ep0"></div>
+        <div class="energy-pip on" id="ep1"></div>
+        <div class="energy-pip on" id="ep2"></div>
+      </div></div>
+    </div>
+  </div>
+
+  <!-- INTRO -->
+  <section class="intro show" id="intro">
+    <div class="hero">
+      <div class="hero-left">
+        <h2>🌌 Hành trình vào vương quốc Nguyên Tử</h2>
+        <p>Trong thế giới vi mô mang tên <strong>Nguyên Tử</strong>, mọi thứ không tạo nên từ đất, nước, lửa…
+mà từ <strong>proton, neutron và electron</strong>.
+
+Công chúa <strong>Electra</strong> – linh hồn của dòng electron – đã bị phù thủy <strong>Orbitalus</strong> giam giữ trong lõi nguyên tử.
+Muốn cứu nàng, bạn phải vượt qua <strong>5 cánh cổng kiến thức</strong>.
+
+Mỗi câu đúng giúp bạn mạnh hơn.
+Mỗi câu sai khiến công chúa bị bóng tối kéo xa hơn.</p>
+
+        <div class="rules">
+          <strong>🎯 Luật chơi</strong>
+          <ul>
+            <li>Trả lời đúng: <strong style="color:var(--green)">+10 điểm</strong> ⚡ năng lượng hồi phục</li>
+            <li>Trả lời sai: <strong style="color:var(--red)">-5 điểm</strong> 💔 mất 1 năng lượng</li>
+            <li>Đạt từ <strong>50 điểm</strong> trở lên → giải cứu thành công công chúa!</li>
+          </ul>
+        </div>
+
+        <div class="btns">
+          <button class="btn btn-primary" onclick="startGame()">⚔️ Bắt đầu hành trình</button>
+          <button class="btn btn-secondary" onclick="document.querySelector('.rules').scrollIntoView({behavior:'smooth'})">📜 Xem luật</button>
+        </div>
+      </div>
+      <div class="hero-right">
+        <canvas id="atomCanvas" width="400" height="500"></canvas>
+      </div>
+    </div>
+  </section>
+
+  <!-- SCENES -->
+  <section class="scene" id="scene-0">
+    <div class="scene-header" id="sh-0">
+      <canvas id="sceneBgCanvas-0" style="position:absolute;inset:0;width:100%;height:100%"></canvas>
+      <div class="scene-header-overlay"></div>
+      <div class="gate-badge">🚪 Cổng 1 • Proton Gate</div>
+    </div>
+    <div class="scene-body">
+      <h2 class="scene-title">Cánh cổng Nguyên Tố</h2>
+      <p class="narration">Bạn bước đến trước một cánh cổng đỏ khổng lồ. Những ký hiệu nguyên tử xoay tròn trên bề mặt như đang sống.
+Ở giữa cổng là một khối cầu rực sáng – hạt nhân nguyên tử đang đập theo nhịp tim của cả vương quốc.</p>
+      <div class="character-row">
+        <div class="portrait" id="port-0">
+          <canvas id="charCanvas-0"></canvas>
+          <div class="name">🧙‍♂️ Protonus</div>
+        </div>
+        <div class="dialogue">
+          <div class="speech"><small class="s-yellow">Protonus</small>
+            <p>"Danh tính của mọi nguyên tử… nằm trong ta.
+Chỉ kẻ hiểu proton mới có thể gọi đúng tên của thế giới này."</p>
+          </div>
+          <div class="speech"><small class="s-pink">Công chúa Electra 👸</small>
+            <p>"Em có thể nghe thấy anh… xin hãy đến gần hơn…"</p>
+          </div>
+        </div>
+      </div>
+      <div class="question-card">
+        <div class="question-title">⚗️ Câu 1. Nguyên tử có số proton = 8 là nguyên tố nào?</div>
+        <div class="options" data-q="0">
+          <button class="option" data-correct="false">A. Nitrogen (N)</button>
+          <button class="option" data-correct="true">B. Oxygen (O)</button>
+          <button class="option" data-correct="false">C. Carbon (C)</button>
+          <button class="option" data-correct="false">D. Neon (Ne)</button>
+        </div>
+        <div class="feedback" id="feedback-0"></div>
+        <div class="action-row">
+          <div class="status">💡 Số proton = Số hiệu nguyên tử Z = Danh tính nguyên tố</div>
+          <button class="btn btn-primary next-btn" id="next-0" onclick="goTo(1)">Tiến đến Electron Gate →</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="scene" id="scene-1">
+    <div class="scene-header" id="sh-1">
+      <canvas id="sceneBgCanvas-1" style="position:absolute;inset:0;width:100%;height:100%"></canvas>
+      <div class="scene-header-overlay"></div>
+      <div class="gate-badge">⚡ Cổng 2 • Electron Gate</div>
+    </div>
+    <div class="scene-body">
+      <h2 class="scene-title">Vùng xoáy của các electron</h2>
+      <p class="narration">Bạn bước qua cánh cổng đỏ. Phía trước là một cơn bão ánh sáng xanh lam.
+Hàng nghìn electron lướt quanh bạn như sao băng, vẽ thành những quỹ đạo mỏng đến mức chỉ cần chớp mắt là biến mất.</p>
+      <div class="character-row">
+        <div class="portrait" id="port-1">
+          <canvas id="charCanvas-1"></canvas>
+          <div class="name">⚡ Dòng Electron</div>
+        </div>
+        <div class="dialogue">
+          <div class="speech"><small class="s-blue">Giọng nói trong cơn bão</small>
+            <p>"Ta là kẻ luôn chuyển động… nhưng cũng quyết định tính chất của mọi thứ.
+Nếu không hiểu ta, ngươi sẽ bị chính ta đánh bật khỏi con đường này."</p>
+          </div>
+          <div class="speech"><small class="s-pink">Electra 👸</small>
+            <p>"Xin đừng để dòng điện nuốt mất thanh kiếm của anh…"</p>
+          </div>
+        </div>
+      </div>
+      <div class="question-card">
+        <div class="question-title">⚗️ Câu 2. Electron mang điện tích gì?</div>
+        <div class="options" data-q="1">
+          <button class="option" data-correct="false">A. Dương (+)</button>
+          <button class="option" data-correct="true">B. Âm (−)</button>
+          <button class="option" data-correct="false">C. Trung hòa (0)</button>
+          <button class="option" data-correct="false">D. Không có điện tích</button>
+        </div>
+        <div class="feedback" id="feedback-1"></div>
+        <div class="action-row">
+          <div class="status">💡 Electron: e⁻, khối lượng ≈ 0, điện tích = −1</div>
+          <button class="btn btn-primary next-btn" id="next-1" onclick="goTo(2)">Bước vào Orbital Maze →</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="scene" id="scene-2">
+    <div class="scene-header" id="sh-2">
+      <canvas id="sceneBgCanvas-2" style="position:absolute;inset:0;width:100%;height:100%"></canvas>
+      <div class="scene-header-overlay"></div>
+      <div class="gate-badge">🌀 Cổng 3 • Orbital Maze</div>
+    </div>
+    <div class="scene-body">
+      <h2 class="scene-title">Mê cung obitan</h2>
+      <p class="narration">Bạn đến một mê cung không gian ba chiều.
+Có lối đi hình cầu, có lối đi như cánh bướm, có những dải sáng gấp khúc như chính không gian đang gập lại.
+Mỗi con đường là một obitan – nơi electron chỉ "có khả năng" xuất hiện.</p>
+      <div class="character-row">
+        <div class="portrait" id="port-2">
+          <canvas id="charCanvas-2"></canvas>
+          <div class="name">🧿 Orbitalus</div>
+        </div>
+        <div class="dialogue">
+          <div class="speech"><small class="s-purple">Orbitalus</small>
+            <p>"Không gian không chỉ là nơi… mà là xác suất tồn tại.
+Nếu ngươi không hiểu obitan, ngươi sẽ đi lạc mãi mãi."</p>
+          </div>
+          <div class="speech"><small class="s-pink">Electra 👸</small>
+            <p>"Đừng để em biến mất giữa những lối đi này…"</p>
+          </div>
+        </div>
+      </div>
+      <div class="question-card">
+        <div class="question-title">⚗️ Câu 3. Phân lớp p có bao nhiêu obitan?</div>
+        <div class="options" data-q="2">
+          <button class="option" data-correct="false">A. 1 obitan</button>
+          <button class="option" data-correct="false">B. 2 obitan</button>
+          <button class="option" data-correct="true">C. 3 obitan (px, py, pz)</button>
+          <button class="option" data-correct="false">D. 5 obitan</button>
+        </div>
+        <div class="feedback" id="feedback-2"></div>
+        <div class="action-row">
+          <div class="status">💡 s=1, p=3, d=5, f=7 obitan</div>
+          <button class="btn btn-primary next-btn" id="next-2" onclick="goTo(3)">Leo lên Energy Tower →</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="scene" id="scene-3">
+    <div class="scene-header" id="sh-3">
+      <canvas id="sceneBgCanvas-3" style="position:absolute;inset:0;width:100%;height:100%"></canvas>
+      <div class="scene-header-overlay"></div>
+      <div class="gate-badge">🔋 Cổng 4 • Energy Tower</div>
+    </div>
+    <div class="scene-body">
+      <h2 class="scene-title">Tháp mức năng lượng</h2>
+      <p class="narration">Cuối mê cung là một tòa tháp vàng rực. Các bậc sáng lần lượt hiện ra: 1s, 2s, 2p…
+Bạn có cảm giác chỉ cần đặt sai một bước, cả cơ thể sẽ rơi khỏi quỹ đạo đang nâng đỡ mình.</p>
+      <div class="character-row">
+        <div class="portrait" id="port-3">
+          <canvas id="charCanvas-3"></canvas>
+          <div class="name">🔥 Ngọn lửa năng lượng</div>
+        </div>
+        <div class="dialogue">
+          <div class="speech"><small class="s-yellow">Ngọn lửa xanh</small>
+            <p>"Không phải mọi electron đều giống nhau.
+Vị trí của chúng quyết định mức năng lượng.
+Ngươi có dám bước đúng thứ tự không?"</p>
+          </div>
+          <div class="speech"><small class="s-pink">Electra 👸</small>
+            <p>"Mỗi lần anh ngã khỏi tháp… em lại bị bóng tối kéo sâu hơn…"</p>
+          </div>
+        </div>
+      </div>
+      <div class="question-card">
+        <div class="question-title">⚗️ Câu 4. Thứ tự mức năng lượng đúng là</div>
+        <div class="options" data-q="3">
+          <button class="option" data-correct="false">A. 1s → 2p → 2s</button>
+          <button class="option" data-correct="true">B. 1s → 2s → 2p</button>
+          <button class="option" data-correct="false">C. 2s → 1s → 2p</button>
+          <button class="option" data-correct="false">D. 2p → 2s → 1s</button>
+        </div>
+        <div class="feedback" id="feedback-3"></div>
+        <div class="action-row">
+          <div class="status">💡 Aufbau: điền từ mức năng lượng thấp → cao</div>
+          <button class="btn btn-primary next-btn" id="next-3" onclick="goTo(4)">Đến cánh cổng cuối →</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="scene" id="scene-4">
+    <div class="scene-header" id="sh-4">
+      <canvas id="sceneBgCanvas-4" style="position:absolute;inset:0;width:100%;height:100%"></canvas>
+      <div class="scene-header-overlay"></div>
+      <div class="gate-badge">🛡️ Cổng 5 • Periodic Guardian</div>
+    </div>
+    <div class="scene-body">
+      <h2 class="scene-title">Người giữ trật tự</h2>
+      <p class="narration">Trên đỉnh tháp là chiến binh khổng lồ mặc áo giáp được ghép từ những ô vuông phát sáng.
+Mỗi ô là một nguyên tố. Mỗi bước chân của hắn như tiếng gõ của định luật lên vũ trụ vi mô.</p>
+      <div class="character-row">
+        <div class="portrait" id="port-4">
+          <canvas id="charCanvas-4"></canvas>
+          <div class="name">🛡️ Periodic Guardian</div>
+        </div>
+        <div class="dialogue">
+          <div class="speech"><small class="s-blue">Periodic Guardian</small>
+            <p>"Nếu ngươi không hiểu số hiệu nguyên tử…
+làm sao bước vào căn phòng cuối cùng?
+Hãy cho ta thấy ngươi hiểu trật tự của bảng tuần hoàn."</p>
+          </div>
+          <div class="speech"><small class="s-pink">Electra 👸</small>
+            <p>"Em ở ngay phía sau cánh cửa này… xin anh, đừng dừng lại…"</p>
+          </div>
+        </div>
+      </div>
+      <div class="question-card">
+        <div class="question-title">⚗️ Câu 5. Nguyên tử có số hiệu nguyên tử Z = 11 là nguyên tố nào?</div>
+        <div class="options" data-q="4">
+          <button class="option" data-correct="false">A. Mg (Magnesium)</button>
+          <button class="option" data-correct="true">B. Na (Sodium)</button>
+          <button class="option" data-correct="false">C. Al (Aluminum)</button>
+          <button class="option" data-correct="false">D. K (Potassium)</button>
+        </div>
+        <div class="feedback" id="feedback-4"></div>
+        <div class="action-row">
+          <div class="status">💡 Z = số proton = số electron = vị trí trong bảng tuần hoàn</div>
+          <button class="btn btn-primary next-btn" id="next-4" onclick="finishGame()">🌟 Mở cánh cửa cuối →</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ENDING -->
+  <section class="ending" id="ending">
+    <canvas id="endingCanvas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none"></canvas>
+    <div class="ending-body" style="position:relative;z-index:2">
+      <div class="gate-badge">👑 Kết thúc hành trình</div>
+      <h2 class="scene-title" style="margin-top:14px">Phòng giam lõi nguyên tử</h2>
+      <p class="narration" id="endingText" style="margin-top:10px"></p>
+      <div class="ending-score" id="endingScore"></div>
+      <div class="meter"><div class="meter-fill" id="meterFill"></div></div>
+      <div id="endingResult" style="margin-top:16px"></div>
+      <div class="btns">
+        <button class="btn btn-primary" onclick="location.reload()">🔄 Chơi lại</button>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+// ═══════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════
+const state = { score:0, answered:0, energy:3 };
+
+// ═══════════════════════════════════════════
+//  FEEDBACK TEXTS
+// ═══════════════════════════════════════════
+const responses = [
+  {
+    correct:`✨ Ánh sáng đỏ bùng lên, hàng nghìn ký hiệu nguyên tử xoay tròn quanh cánh cổng.
+RẦM! Proton Gate từ từ mở ra.
+
+Protonus chống trượng xuống đất, khẽ gật đầu:
+"Khá lắm, hiệp sĩ trẻ… Ngươi đã nhận ra danh tính thật của nguyên tố."
+
+Thanh kiếm Electron Blade phát sáng dọc lưỡi kiếm.
++10 điểm ⚡ Vũ khí được cường hóa!`,
+    wrong:`⚡ Mặt đất rung lên. Các ký hiệu đỏ trên cánh cổng nổ tung thành tia lửa.
+Protonus trầm giọng:
+"Kẻ không hiểu proton… không thể gọi đúng tên thế giới này."
+
+Một mảng sáng trên thanh kiếm vụt tắt.
+−5 điểm 💔 Bạn mất bớt năng lượng.
+
+👸 Electra thì thầm: "Đừng bỏ cuộc…"`
+  },
+  {
+    correct:`🌟 Cơn bão electron dịu lại, những tia sáng xanh quay thành vòng tròn bảo vệ bạn.
+Giọng nói trong cơn bão vang lên:
+"Ngươi đã hiểu bản chất của dòng điện…"
+
+Orbital Shield được phủ thêm một lớp sáng mỏng.
++10 điểm ⚡ Lá chắn hồi phục sức mạnh!`,
+    wrong:`💥 Một tia điện quất ngang vai bạn, bàn tay cầm kiếm tê rát.
+"Không hiểu electron… ngươi sẽ bị chính chúng nuốt chửng."
+
+Lá chắn Orbital Shield nứt thêm một vết dài.
+−5 điểm 💔 Bạn mất thêm trang bị.
+
+👸 Electra gọi với: "Xin đừng để em biến mất giữa cơn bão…"`
+  },
+  {
+    correct:`✨ Ba lối đi phát sáng đồng thời, sương tím rẽ ra thành một con đường hoàn chỉnh.
+Orbitalus cười nhạt:
+"Ngươi đã nhìn thấy cấu trúc của không gian electron… thú vị đấy."
+
+Không gian quanh bạn ổn định lại, đôi chân không còn lạc hướng.
++10 điểm ⚡ Bạn giữ vững nhịp hành trình!`,
+    wrong:`🌫️ Bạn chọn sai lối đi. Những vệt sáng xoắn lại như chiếc lồng vô hình.
+Giọng Orbitalus vẳng tới:
+"Không hiểu obitan… thì ngươi chỉ là kẻ mãi đi lạc."
+
+Một mảnh giáp ở vai rơi xuống nền đá.
+−5 điểm 💔 Bạn mất thêm phòng thủ.
+
+👸 Electra hiện lên mờ nhạt trong sương: "Đừng để em biến mất…"`
+  },
+  {
+    correct:`🔥 Từng bậc thang mức năng lượng bừng sáng từ chân đến đỉnh.
+Ngọn lửa xanh reo lên:
+"Đúng rồi… ngươi hiểu quy luật của năng lượng!"
+
+Electron Blade rung lên và phát ra âm ngân vang như được thức tỉnh lần nữa.
++10 điểm ⚡ Sức mạnh tăng vọt!`,
+    wrong:`💥 Bạn đặt sai bước. Một bậc sáng dưới chân vụt tắt, bạn trượt xuống một tầng.
+Ngọn lửa xanh trầm giọng:
+"Không hiểu năng lượng… thì không thể leo cao."
+
+Chuôi kiếm nóng rực, bàn tay bỏng rát.
+−5 điểm 💔 Vũ khí suy yếu thêm.
+
+👸 Electra vọng xuống: "Mỗi lần anh ngã… bóng tối lại gần em hơn…"`
+  },
+  {
+    correct:`🛡️ Chiến binh khổng lồ hạ giáo xuống. Các ô nguyên tố trên áo giáp phát sáng đồng loạt.
+Periodic Guardian quỳ một gối:
+"Ngươi đã hiểu trật tự của bảng tuần hoàn. Hãy vào đi."
+
+Cánh cửa lõi nguyên tử mở tung bằng một tiếng chấn động sâu như sấm.
++10 điểm ⚡ Con đường đến Electra hoàn toàn mở ra!`,
+    wrong:`⚔️ Chiến binh khổng lồ đẩy lùi bạn một bước.
+"Ngươi đã đi rất xa… nhưng vẫn chưa đủ để chạm tới trật tự tuyệt đối."
+
+Chuôi kiếm rạn thêm một đường nứt.
+−5 điểm 💔 Bạn bước vào cánh cửa cuối với sức mạnh chưa nguyên vẹn.
+
+👸 Electra yếu ớt cất tiếng: "Anh vẫn còn cơ hội… đừng bỏ cuộc…"`
+  }
+];
+
+// ═══════════════════════════════════════════
+//  HUD
+// ═══════════════════════════════════════════
+function updateHud(){
+  document.getElementById('score').textContent = state.score;
+  document.getElementById('done').textContent = state.answered;
+  for(let i=0;i<3;i++){
+    const pip = document.getElementById('ep'+i);
+    pip.classList.toggle('on', i < state.energy);
+  }
+  ['pill-score','pill-progress'].forEach(id=>{
+    const el=document.getElementById(id);
+    el.classList.add('flash');
+    setTimeout(()=>el.classList.remove('flash'),400);
+  });
+}
+
+// ═══════════════════════════════════════════
+//  NAVIGATION
+// ═══════════════════════════════════════════
+function startGame(){
+  document.getElementById('intro').classList.remove('show');
+  showScene(0);
+  window.scrollTo({top:0,behavior:'smooth'});
+  playTone(440,.1,'sine');
+}
+
+function goTo(i){
+  document.querySelectorAll('.scene').forEach(s=>s.classList.remove('show'));
+  showScene(i);
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function showScene(i){
+  const s = document.getElementById('scene-'+i);
+  s.classList.add('show');
+  initSceneBg(i);
+  initCharCanvas(i);
+}
+
+// ═══════════════════════════════════════════
+//  ANSWER HANDLER
+// ═══════════════════════════════════════════
+document.querySelectorAll('.options').forEach((wrap,idx)=>{
+  wrap.querySelectorAll('.option').forEach(btn=>{
+    btn.addEventListener('click',()=>answer(idx,btn,wrap));
+  });
+});
+
+function answer(index,btn,wrap){
+  if(wrap.dataset.done==='1') return;
+  wrap.dataset.done='1';
+
+  const ok = btn.dataset.correct==='true';
+  wrap.querySelectorAll('.option').forEach(o=>{
+    if(o.dataset.correct==='true') o.classList.add('correct');
+    else if(o===btn&&!ok) o.classList.add('wrong');
+    if(o.dataset.correct!=='true'&&o!==btn) o.classList.add('dim');
+  });
+
+  state.answered++;
+  if(ok){ state.score+=10; }
+  else { state.score-=5; state.energy=Math.max(0,state.energy-1); }
+  updateHud();
+
+  // Visual effects
+  const rect = btn.getBoundingClientRect();
+  if(ok){
+    flashScreen('green');
+    burst(rect.left+rect.width/2, rect.top+rect.height/2, 'correct');
+    playTone(660,.15,'sine');
+    setTimeout(()=>playTone(880,.15,'sine'),150);
+  } else {
+    flashScreen('red');
+    burst(rect.left+rect.width/2, rect.top+rect.height/2, 'wrong');
+    playTone(180,.2,'sawtooth');
+  }
+
+  const fb = document.getElementById('feedback-'+index);
+  fb.innerHTML = '<strong>'+(ok?'✅ Chính xác!':'❌ Chưa đúng rồi!')+'</strong>'
+               +(ok?responses[index].correct:responses[index].wrong);
+  fb.className = 'feedback show '+(ok?'ok':'fail');
+  document.getElementById('next-'+index).classList.add('show');
+}
+
+// ═══════════════════════════════════════════
+//  FINISH
+// ═══════════════════════════════════════════
+function finishGame(){
+  document.querySelectorAll('.scene').forEach(s=>s.classList.remove('show'));
+  document.getElementById('ending').classList.add('show');
+  window.scrollTo({top:0,behavior:'smooth'});
+
+  const win = state.score>=50;
+  document.getElementById('endingScore').textContent = `Điểm cuối cùng: ${state.score} / 50`;
+  document.getElementById('endingScore').className = 'ending-score '+(win?'win':'lose');
+
+  setTimeout(()=>{
+    document.getElementById('meterFill').style.width =
+      Math.max(0,Math.min(100,(state.score/50)*100))+'%';
+  },200);
+
+  if(win){
+    document.getElementById('endingText').textContent =
+      'Bạn xông vào căn phòng cuối cùng. Quả cầu electron đang giam giữ công chúa Electra rung lên dưới ánh sáng của Electron Blade. Một nhát chém cuối cùng xé đôi màn năng lượng. Hàng nghìn electron bùng nổ như pháo hoa sao trời, và Electra rơi vào vòng tay bạn.';
+    document.getElementById('endingResult').innerHTML=`
+      <h3 class="result-good">🎉 Giải cứu thành công công chúa Electra!</h3>
+      <p class="narration" style="margin-top:10px">Electra mỉm cười: <em>"Anh không chỉ cứu em… anh còn hiểu được cấu tạo của thế giới này."</em></p>
+      <p class="narration" style="margin-top:8px">Vương quốc Nguyên Tử sáng rực trở lại. Những cánh cổng sau lưng bạn lần lượt mở bung, như chào đón một hiệp sĩ đã chiến thắng bằng kiến thức.</p>`;
+    startEndingCelebration();
+    for(let i=0;i<6;i++) setTimeout(()=>burstCenter(),i*220);
+  } else {
+    document.getElementById('endingText').textContent =
+      'Bạn chạm đến quả cầu giam giữ Electra, nhưng năng lượng từ lời nguyền orbital vẫn còn quá mạnh. Vết nứt vừa hiện ra đã khép lại. Ánh sáng quanh công chúa mờ dần, và bàn tay bạn chỉ chạm được vào lớp vỏ lạnh giá của trường năng lượng.';
+    document.getElementById('endingResult').innerHTML=`
+      <h3 class="result-bad">💀 Giải cứu chưa thành công</h3>
+      <p class="narration" style="margin-top:10px">Electra thì thầm: <em>"Anh đã đến rất gần rồi… hãy quay lại mạnh hơn."</em></p>
+      <p class="narration" style="margin-top:8px">Bạn lùi lại một bước, siết chặt thanh kiếm đã nứt. Cuộc giải cứu chưa kết thúc — chỉ là tạm hoãn cho lần trở lại tiếp theo.</p>`;
+  }
+}
+
+// ═══════════════════════════════════════════
+//  PARTICLE BURST
+// ═══════════════════════════════════════════
+function burst(x,y,type){
+  const colors = type==='correct'
+    ? ['#39d06f','#59c7ff','#f4c24f','#ffffff']
+    : ['#ff646e','#ff8866','#ff4444'];
+  const wrap = document.createElement('div');
+  wrap.className='burst';
+  wrap.style.cssText=`left:${x}px;top:${y}px`;
+  for(let i=0;i<20;i++){
+    const d=document.createElement('div');
+    d.className='burst-dot';
+    const ang=Math.random()*Math.PI*2;
+    const spd=60+Math.random()*120;
+    const dx=Math.cos(ang)*spd, dy=Math.sin(ang)*spd;
+    const t=(.5+Math.random()*.5)+'s';
+    d.style.cssText=`background:${colors[i%colors.length]};
+      --dx:${dx}px;--dy:${dy}px;--t:${t};
+      left:${-4}px;top:${-4}px`;
+    wrap.appendChild(d);
+  }
+  document.body.appendChild(wrap);
+  setTimeout(()=>wrap.remove(),1200);
+}
+
+function burstCenter(){
+  burst(window.innerWidth/2, window.innerHeight/2,'correct');
+}
+
+function flashScreen(color){
+  const el=document.getElementById('screenFlash');
+  el.className='screen-flash flash-'+color;
+  setTimeout(()=>el.className='screen-flash',500);
+}
+
+// ═══════════════════════════════════════════
+//  WEB AUDIO
+// ═══════════════════════════════════════════
+let audioCtx;
+function playTone(freq,dur,type){
+  try{
+    if(!audioCtx) audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+    const osc=audioCtx.createOscillator();
+    const gain=audioCtx.createGain();
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.type=type||'sine'; osc.frequency.value=freq;
+    gain.gain.setValueAtTime(.12,audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(.001,audioCtx.currentTime+dur);
+    osc.start(); osc.stop(audioCtx.currentTime+dur);
+  }catch(e){}
+}
+
+// ═══════════════════════════════════════════
+//  BG PARTICLE CANVAS
+// ═══════════════════════════════════════════
+(function initBgCanvas(){
+  const canvas=document.getElementById('bgCanvas');
+  const ctx=canvas.getContext('2d');
+  let W,H;
+  const particles=[];
+
+  function resize(){
+    W=canvas.width=window.innerWidth;
+    H=canvas.height=window.innerHeight;
+  }
+  window.addEventListener('resize',resize);
+  resize();
+
+  // Create stars + floating particles
+  for(let i=0;i<180;i++){
+    particles.push({
+      x:Math.random()*1e4, y:Math.random()*1e4,
+      r:Math.random()*.9+.3,
+      speed:Math.random()*.2+.05,
+      angle:Math.random()*Math.PI*2,
+      color:`hsla(${200+Math.random()*60},80%,75%,${.3+Math.random()*.4})`,
+      type:'star'
+    });
+  }
+  for(let i=0;i<30;i++){
+    particles.push({
+      x:Math.random()*1e4, y:Math.random()*1e4,
+      r:1.5+Math.random()*2.5,
+      speed:Math.random()*.4+.1,
+      angle:Math.random()*Math.PI*2,
+      vx:(Math.random()-.5)*.3,
+      vy:(Math.random()-.5)*.3,
+      color:`hsla(${180+Math.random()*80},90%,65%,${.15+Math.random()*.25})`,
+      type:'float',
+      pulse:Math.random()*Math.PI*2
+    });
+  }
+
+  let t=0;
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    t+=.016;
+
+    // Deep space gradient
+    const grad=ctx.createRadialGradient(W*.5,H*.3,0,W*.5,H*.3,Math.max(W,H)*.8);
+    grad.addColorStop(0,'rgba(10,28,55,.5)');
+    grad.addColorStop(1,'rgba(2,6,16,.0)');
+    ctx.fillStyle=grad;
+    ctx.fillRect(0,0,W,H);
+
+    particles.forEach(p=>{
+      if(p.type==='float'){
+        p.pulse+=.02;
+        p.x+=p.vx; p.y+=p.vy;
+        if(p.x<0)p.x=W; if(p.x>W)p.x=0;
+        if(p.y<0)p.y=H; if(p.y>H)p.y=0;
+        const r=p.r*(1+.3*Math.sin(p.pulse));
+        const g=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,r*4);
+        g.addColorStop(0,p.color);
+        g.addColorStop(1,'transparent');
+        ctx.fillStyle=g;
+        ctx.beginPath(); ctx.arc(p.x,p.y,r*4,0,Math.PI*2); ctx.fill();
+      } else {
+        const ox=(p.x%W+Math.sin(t*p.speed+p.angle)*1.5);
+        const oy=(p.y%H+Math.cos(t*p.speed+p.angle)*1.5);
+        ctx.fillStyle=p.color;
+        ctx.beginPath();
+        ctx.arc(ox%W,oy%H,p.r,0,Math.PI*2);
+        ctx.fill();
+      }
+    });
+
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ═══════════════════════════════════════════
+//  HERO ATOM CANVAS
+// ═══════════════════════════════════════════
+(function initAtom(){
+  const canvas=document.getElementById('atomCanvas');
+  if(!canvas) return;
+  const ctx=canvas.getContext('2d');
+  const W=canvas.width, H=canvas.height;
+  const cx=W/2, cy=H/2;
+  let t=0;
+
+  const orbits=[
+    {rx:110,ry:45,tilt:0,   color:'#59c7ff',electrons:[{phase:0}]},
+    {rx:110,ry:45,tilt:60,  color:'#b98bff',electrons:[{phase:Math.PI}]},
+    {rx:110,ry:45,tilt:120, color:'#39d06f',electrons:[{phase:Math.PI/2}]},
+  ];
+
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    t+=.016;
+
+    // Nucleus glow
+    for(let r=60;r>0;r-=10){
+      const alpha=.04*(r/60);
+      ctx.fillStyle=`rgba(255,120,100,${alpha})`;
+      ctx.beginPath(); ctx.arc(cx,cy,r*1.5,0,Math.PI*2); ctx.fill();
+    }
+    // Nucleus core
+    const ng=ctx.createRadialGradient(cx-8,cy-8,2,cx,cy,22);
+    ng.addColorStop(0,'#fff8f0');
+    ng.addColorStop(.4,'#ff9966');
+    ng.addColorStop(1,'#cc3322');
+    ctx.fillStyle=ng;
+    ctx.beginPath(); ctx.arc(cx,cy,22,0,Math.PI*2); ctx.fill();
+
+    // Orbits + electrons
+    orbits.forEach(o=>{
+      ctx.save();
+      ctx.translate(cx,cy);
+      ctx.rotate(o.tilt*Math.PI/180);
+
+      // Orbit ellipse
+      ctx.beginPath();
+      ctx.ellipse(0,0,o.rx,o.ry,0,0,Math.PI*2);
+      ctx.strokeStyle=o.color+'44';
+      ctx.lineWidth=1.5;
+      ctx.stroke();
+
+      // Electrons
+      o.electrons.forEach(e=>{
+        const angle=t*1.8+e.phase;
+        const ex=Math.cos(angle)*o.rx;
+        const ey=Math.sin(angle)*o.ry;
+
+        // Glow
+        const gg=ctx.createRadialGradient(ex,ey,0,ex,ey,12);
+        gg.addColorStop(0,o.color+'cc');
+        gg.addColorStop(1,'transparent');
+        ctx.fillStyle=gg;
+        ctx.beginPath(); ctx.arc(ex,ey,12,0,Math.PI*2); ctx.fill();
+
+        // Core dot
+        ctx.fillStyle=o.color;
+        ctx.beginPath(); ctx.arc(ex,ey,4.5,0,Math.PI*2); ctx.fill();
+        ctx.fillStyle='#fff';
+        ctx.beginPath(); ctx.arc(ex-1.2,ey-1.2,1.5,0,Math.PI*2); ctx.fill();
+      });
+
+      ctx.restore();
+    });
+
+    // Princess orb
+    const poy=Math.sin(t*.8)*12;
+    const pg=ctx.createRadialGradient(cx,cy-110+poy-8,4,cx,cy-110+poy,32);
+    pg.addColorStop(0,'#fff');
+    pg.addColorStop(.3,'#ffaad5cc');
+    pg.addColorStop(.7,'#b98bff88');
+    pg.addColorStop(1,'transparent');
+    ctx.fillStyle=pg;
+    ctx.beginPath(); ctx.arc(cx,cy-110+poy,32,0,Math.PI*2); ctx.fill();
+
+    ctx.font='2.4rem serif';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('👸',cx,cy-110+poy);
+
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ═══════════════════════════════════════════
+//  SCENE BACKGROUND CANVASES
+// ═══════════════════════════════════════════
+const sceneConfigs=[
+  { // Proton Gate – red nuclear
+    draw(ctx,W,H,t){
+      const g=ctx.createLinearGradient(0,0,0,H);
+      g.addColorStop(0,'#2a0808'); g.addColorStop(1,'#0d1424');
+      ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+
+      // Pulsing nucleus
+      const pr=50+8*Math.sin(t*2);
+      const ng=ctx.createRadialGradient(W/2,H/2,0,W/2,H/2,pr);
+      ng.addColorStop(0,'rgba(255,220,180,.9)');
+      ng.addColorStop(.5,'rgba(255,80,60,.6)');
+      ng.addColorStop(1,'transparent');
+      ctx.fillStyle=ng; ctx.beginPath();
+      ctx.arc(W/2,H/2,pr*2,0,Math.PI*2); ctx.fill();
+
+      // Orbiting particles
+      for(let i=0;i<12;i++){
+        const ang=t*.8+i*(Math.PI*2/12);
+        const r=70+20*Math.sin(t+i);
+        const px=W/2+Math.cos(ang)*r;
+        const py=H/2+Math.sin(ang)*r*.4;
+        ctx.fillStyle=`rgba(255,${100+i*10},80,${.5+.3*Math.sin(t+i)})`;
+        ctx.beginPath(); ctx.arc(px,py,3+Math.sin(t*2+i),0,Math.PI*2); ctx.fill();
+      }
+
+      // Atomic symbols rain
+      ctx.font='14px monospace'; ctx.fillStyle='rgba(255,120,80,.3)';
+      const syms=['H','He','Li','Be','B','C','N','O','F','Ne','Na','Mg'];
+      syms.forEach((s,i)=>{
+        const x=(i/syms.length*W+t*15)%W;
+        const y=(i*37+t*8)%H;
+        ctx.fillText(s,x,y);
+      });
+    }
+  },
+  { // Electron Gate – blue storm
+    draw(ctx,W,H,t){
+      const g=ctx.createLinearGradient(0,0,W,H);
+      g.addColorStop(0,'#020e20'); g.addColorStop(1,'#061828');
+      ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+
+      // Lightning bolts
+      for(let b=0;b<6;b++){
+        const bx=W*(b/6)+Math.sin(t*3+b)*40;
+        ctx.strokeStyle=`rgba(89,199,255,${.1+.2*Math.sin(t*4+b)})`;
+        ctx.lineWidth=1+Math.sin(t+b);
+        ctx.beginPath();
+        for(let y=0;y<H;y+=8){
+          ctx.lineTo(bx+Math.sin(t*5+y*.1+b)*20, y);
+        }
+        ctx.stroke();
+      }
+
+      // Swirling electrons
+      for(let i=0;i<40;i++){
+        const ang=t*(.5+i*.03)+i*(Math.PI*2/40);
+        const r=30+i*2.5+Math.sin(t+i)*15;
+        const ex=W/2+Math.cos(ang)*r;
+        const ey=H/2+Math.sin(ang)*r*.35;
+        const alpha=.4+.4*Math.sin(t+i*.5);
+        ctx.fillStyle=`rgba(89,199,255,${alpha})`;
+        ctx.beginPath(); ctx.arc(ex,ey,1.5,0,Math.PI*2); ctx.fill();
+      }
+    }
+  },
+  { // Orbital Maze – purple fog
+    draw(ctx,W,H,t){
+      ctx.fillStyle='#0c0520'; ctx.fillRect(0,0,W,H);
+
+      // Floating probability clouds
+      const clouds=[
+        {x:.3,y:.4,rx:80,ry:40,c:'185,139,255'},
+        {x:.7,y:.3,rx:60,ry:70,c:'150,100,255'},
+        {x:.5,y:.7,rx:90,ry:35,c:'200,160,255'},
+      ];
+      clouds.forEach((cl,i)=>{
+        const cx2=cl.x*W+Math.sin(t*.4+i)*25;
+        const cy2=cl.y*H+Math.cos(t*.3+i)*15;
+        const alpha=.06+.04*Math.sin(t+i);
+        const g=ctx.createRadialGradient(cx2,cy2,0,cx2,cy2,cl.rx);
+        g.addColorStop(0,`rgba(${cl.c},${alpha+.06})`);
+        g.addColorStop(1,`rgba(${cl.c},0)`);
+        ctx.fillStyle=g;
+        ctx.save(); ctx.scale(1,cl.ry/cl.rx);
+        ctx.beginPath(); ctx.arc(cx2,cy2*cl.rx/cl.ry,cl.rx,0,Math.PI*2); ctx.fill();
+        ctx.restore();
+      });
+
+      // Orbital paths
+      for(let i=0;i<5;i++){
+        ctx.beginPath();
+        ctx.ellipse(W/2,H/2, 60+i*20, 25+i*8, t*.1+i*.4, 0,Math.PI*2);
+        ctx.strokeStyle=`rgba(185,139,255,${.08+.04*Math.sin(t+i)})`;
+        ctx.lineWidth=1; ctx.stroke();
+      }
+    }
+  },
+  { // Energy Tower – golden stairs
+    draw(ctx,W,H,t){
+      const g=ctx.createLinearGradient(0,0,0,H);
+      g.addColorStop(0,'#1a0c00'); g.addColorStop(1,'#0a1220');
+      ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+
+      // Energy levels
+      const levels=['1s','2s','2p','3s','3p','4s','3d'];
+      levels.forEach((lv,i)=>{
+        const y=H-40-i*(H*.12);
+        const alpha=.2+.15*Math.sin(t*2-i*.5);
+        ctx.fillStyle=`rgba(244,194,79,${alpha})`;
+        ctx.fillRect(W*.15,y,W*.7,3);
+        ctx.fillStyle=`rgba(244,194,79,${alpha+.2})`;
+        ctx.font='bold 12px monospace';
+        ctx.fillText(lv, W*.1, y+5);
+
+        // Moving electron on level
+        const ex=W*.2+((t*(0.8+i*.1)*60)%(W*.6));
+        if(i<3){
+          ctx.fillStyle=`rgba(89,199,255,${.6+.3*Math.sin(t*3+i)})`;
+          ctx.beginPath(); ctx.arc(ex,y-5,5,0,Math.PI*2); ctx.fill();
+        }
+      });
+    }
+  },
+  { // Periodic Guardian – green grid
+    draw(ctx,W,H,t){
+      const g=ctx.createLinearGradient(0,0,0,H);
+      g.addColorStop(0,'#061810'); g.addColorStop(1,'#0a1422');
+      ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+
+      // Periodic table cells
+      const elems=[
+        'H','He','Li','Be','B','C','N','O','F','Ne',
+        'Na','Mg','Al','Si','P','S','Cl','Ar','K','Ca'
+      ];
+      const cols=10, cw=W/cols, ch=H/4;
+      elems.forEach((el,i)=>{
+        const col=i%cols, row=Math.floor(i/cols);
+        const x=col*cw, y=row*ch+H*.1;
+        const pulse=Math.sin(t*1.5+i*.3)*.5+.5;
+        ctx.strokeStyle=`rgba(102,255,184,${.1+.12*pulse})`;
+        ctx.lineWidth=1;
+        ctx.strokeRect(x+4,y+4,cw-8,ch-8);
+        ctx.fillStyle=`rgba(102,255,184,${.04+.06*pulse})`;
+        ctx.fillRect(x+4,y+4,cw-8,ch-8);
+        ctx.fillStyle=`rgba(200,255,230,${.4+.3*pulse})`;
+        ctx.font=`bold ${cw*.28}px monospace`;
+        ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillText(el,x+cw/2,y+ch/2);
+      });
+    }
+  }
+];
+
+const sceneTimers={};
+function initSceneBg(i){
+  if(sceneTimers[i]) return;
+  const canvas=document.getElementById('sceneBgCanvas-'+i);
+  if(!canvas) return;
+  const ctx=canvas.getContext('2d');
+  const cfg=sceneConfigs[i];
+  let t=0;
+  function loop(){
+    const W=canvas.offsetWidth||600, H=canvas.offsetHeight||220;
+    canvas.width=W; canvas.height=H;
+    cfg.draw(ctx,W,H,t);
+    t+=.016;
+    sceneTimers[i]=requestAnimationFrame(loop);
+  }
+  loop();
+}
+
+// ═══════════════════════════════════════════
+//  CHARACTER CANVASES
+// ═══════════════════════════════════════════
+const charDrawers=[
+  // Protonus – red wizard
+  function(ctx,W,H,t){
+    // bg gradient
+    const g=ctx.createRadialGradient(W/2,H*.4,10,W/2,H*.4,W*.7);
+    g.addColorStop(0,'rgba(255,80,60,.15)'); g.addColorStop(1,'transparent');
+    ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+
+    // robe
+    ctx.fillStyle='#8b1a1a'; ctx.beginPath();
+    ctx.moveTo(W*.3,H*.45); ctx.lineTo(W*.1,H); ctx.lineTo(W*.9,H);
+    ctx.lineTo(W*.7,H*.45); ctx.closePath(); ctx.fill();
+
+    // body
+    ctx.fillStyle='#c0392b';
+    ctx.beginPath(); ctx.ellipse(W/2,H*.38,W*.14,H*.15,0,0,Math.PI*2); ctx.fill();
+
+    // head
+    ctx.fillStyle='#f5c5a0';
+    ctx.beginPath(); ctx.arc(W/2,H*.25,W*.13,0,Math.PI*2); ctx.fill();
+
+    // hat
+    ctx.fillStyle='#6b1010';
+    ctx.beginPath(); ctx.moveTo(W*.28,H*.22); ctx.lineTo(W*.5,H*.02); ctx.lineTo(W*.72,H*.22); ctx.closePath(); ctx.fill();
+
+    // eyes
+    ctx.fillStyle='#ff6644';
+    ctx.beginPath(); ctx.arc(W*.44,H*.24,W*.02,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(W*.56,H*.24,W*.02,0,Math.PI*2); ctx.fill();
+
+    // staff + orb
+    ctx.strokeStyle='#8b6914'; ctx.lineWidth=3;
+    ctx.beginPath(); ctx.moveTo(W*.68,H*.4); ctx.lineTo(W*.75,H); ctx.stroke();
+    const orb=ctx.createRadialGradient(W*.65,H*.36,2,W*.65,H*.36,12);
+    orb.addColorStop(0,'#fff8f0'); orb.addColorStop(1,'rgba(255,80,60,0)');
+    ctx.fillStyle=orb;
+    ctx.beginPath(); ctx.arc(W*.65,H*.36+Math.sin(t*2)*4,12,0,Math.PI*2); ctx.fill();
+  },
+  // Electron storm – blue energy
+  function(ctx,W,H,t){
+    ctx.clearRect(0,0,W,H);
+    ctx.fillStyle='rgba(4,14,30,.5)'; ctx.fillRect(0,0,W,H);
+
+    // Energy swirls
+    for(let i=0;i<3;i++){
+      const ang=t*1.2+i*(Math.PI*2/3);
+      const r=W*.25+Math.sin(t+i)*W*.05;
+      const ex=W/2+Math.cos(ang)*r;
+      const ey=H/2+Math.sin(ang)*r*.6;
+      const sg=ctx.createRadialGradient(ex,ey,0,ex,ey,W*.15);
+      sg.addColorStop(0,'rgba(89,199,255,.7)');
+      sg.addColorStop(1,'transparent');
+      ctx.fillStyle=sg;
+      ctx.beginPath(); ctx.arc(ex,ey,W*.15,0,Math.PI*2); ctx.fill();
+    }
+
+    // Core
+    const cg=ctx.createRadialGradient(W/2,H/2,0,W/2,H/2,W*.2);
+    cg.addColorStop(0,'rgba(200,240,255,.9)');
+    cg.addColorStop(.5,'rgba(89,199,255,.5)');
+    cg.addColorStop(1,'transparent');
+    ctx.fillStyle=cg;
+    ctx.beginPath(); ctx.arc(W/2,H/2,W*.2,0,Math.PI*2); ctx.fill();
+
+    // lightning lines
+    for(let i=0;i<8;i++){
+      const ang=t*2+i*(Math.PI*2/8);
+      ctx.strokeStyle=`rgba(89,199,255,${.3+.3*Math.sin(t*3+i)})`;
+      ctx.lineWidth=1.5;
+      ctx.beginPath();
+      ctx.moveTo(W/2,H/2);
+      ctx.lineTo(W/2+Math.cos(ang)*(W*.3+Math.sin(t*4+i)*W*.08),
+                 H/2+Math.sin(ang)*(H*.3+Math.cos(t*4+i)*H*.08));
+      ctx.stroke();
+    }
+  },
+  // Orbitalus – purple villain
+  function(ctx,W,H,t){
+    const g=ctx.createRadialGradient(W/2,H*.4,10,W/2,H*.4,W*.7);
+    g.addColorStop(0,'rgba(120,60,200,.18)'); g.addColorStop(1,'transparent');
+    ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+
+    // robe
+    ctx.fillStyle='#2d0d4e';
+    ctx.beginPath();
+    ctx.moveTo(W*.25,H*.48); ctx.lineTo(W*.05,H); ctx.lineTo(W*.95,H); ctx.lineTo(W*.75,H*.48); ctx.closePath(); ctx.fill();
+
+    // body
+    ctx.fillStyle='#4a1a7a';
+    ctx.beginPath(); ctx.ellipse(W/2,H*.38,W*.14,H*.15,0,0,Math.PI*2); ctx.fill();
+
+    // head
+    ctx.fillStyle='#d4a0c0';
+    ctx.beginPath(); ctx.arc(W/2,H*.25,W*.13,0,Math.PI*2); ctx.fill();
+
+    // sinister eyes
+    ctx.fillStyle='#cc44ff';
+    ctx.beginPath(); ctx.arc(W*.43,H*.24,W*.025,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(W*.57,H*.24,W*.025,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#fff';
+    ctx.beginPath(); ctx.arc(W*.44,H*.235,W*.008,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(W*.58,H*.235,W*.008,0,Math.PI*2); ctx.fill();
+
+    // floating orbitals
+    for(let i=0;i<4;i++){
+      const ang=t+i*(Math.PI/2);
+      const r=W*.34;
+      const ox=W/2+Math.cos(ang)*r;
+      const oy=H*.38+Math.sin(ang)*r*.4;
+      ctx.strokeStyle=`rgba(185,139,255,${.3+.2*Math.sin(t*2+i)})`;
+      ctx.lineWidth=1.5;
+      ctx.beginPath(); ctx.arc(ox,oy,6,0,Math.PI*2); ctx.stroke();
+    }
+  },
+  // Energy flame – golden fire
+  function(ctx,W,H,t){
+    ctx.fillStyle='rgba(8,12,24,.6)'; ctx.fillRect(0,0,W,H);
+
+    // Flame layers
+    const flameColors=['#ff6600','#ff9900','#ffcc00','#ffffaa'];
+    for(let layer=0;layer<4;layer++){
+      const h2=H*.6-layer*H*.1;
+      const w2=W*(.6-layer*.1);
+      const yoff=Math.sin(t*2+layer)*(H*.04);
+      const fg=ctx.createRadialGradient(W/2,H-h2/2+yoff,0,W/2,H-h2/2+yoff,w2*.5);
+      fg.addColorStop(0,flameColors[layer]+'cc');
+      fg.addColorStop(1,'transparent');
+      ctx.fillStyle=fg;
+      ctx.beginPath();
+      ctx.ellipse(W/2,H-h2/2+yoff,w2*.5,h2*.5,0,0,Math.PI*2);
+      ctx.fill();
+    }
+
+    // Core white
+    const cg=ctx.createRadialGradient(W/2,H*.5,0,W/2,H*.5,W*.1);
+    cg.addColorStop(0,'rgba(255,255,240,.95)');
+    cg.addColorStop(1,'transparent');
+    ctx.fillStyle=cg;
+    ctx.beginPath(); ctx.arc(W/2,H*.5,W*.1,0,Math.PI*2); ctx.fill();
+
+    // Energy level labels
+    ['1s','2s','2p'].forEach((lv,i)=>{
+      const y=H*(.7-i*.2)+Math.sin(t+i)*(H*.02);
+      ctx.fillStyle=`rgba(255,220,100,${.5+.3*Math.sin(t*2+i)})`;
+      ctx.font=`bold ${W*.1}px monospace`;
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(lv,W/2,y);
+    });
+  },
+  // Periodic Guardian – armored warrior
+  function(ctx,W,H,t){
+    const g=ctx.createRadialGradient(W/2,H*.4,10,W/2,H*.4,W*.7);
+    g.addColorStop(0,'rgba(60,180,120,.12)'); g.addColorStop(1,'transparent');
+    ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+
+    // Armor body (periodic table cells)
+    const colors=['#39d06f','#59c7ff','#b98bff','#f4c24f','#ff646e'];
+    const elems=['Na','Mg','Al','Si','P','S','K','Ca','Fe','Cu'];
+    // body plate
+    ctx.fillStyle='#1a2a1a';
+    ctx.beginPath();
+    ctx.roundRect(W*.25,H*.38,W*.5,H*.48,8);
+    ctx.fill();
+    // cells on armor
+    elems.forEach((el,i)=>{
+      const col=i%2, row=Math.floor(i/2);
+      const x=W*.27+col*W*.24, y=H*.4+row*H*.1;
+      const pulse=.4+.3*Math.sin(t*1.5+i*.4);
+      ctx.strokeStyle=colors[i%5];
+      ctx.lineWidth=1.5;
+      ctx.strokeRect(x,y,W*.22,H*.08);
+      ctx.fillStyle=colors[i%5].replace(')',`,${pulse})`).replace('rgb','rgba');
+      ctx.fillRect(x+1,y+1,W*.22-2,H*.08-2);
+      ctx.fillStyle='rgba(255,255,255,.9)';
+      ctx.font=`bold ${W*.07}px monospace`;
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(el,x+W*.11,y+H*.04);
+    });
+
+    // Head
+    ctx.fillStyle='#c8e8c8';
+    ctx.beginPath(); ctx.arc(W/2,H*.24,W*.12,0,Math.PI*2); ctx.fill();
+
+    // Helmet
+    ctx.fillStyle='#2a4a2a';
+    ctx.beginPath();
+    ctx.arc(W/2,H*.2,W*.14,Math.PI,0);
+    ctx.lineTo(W*.64,H*.3); ctx.lineTo(W*.36,H*.3); ctx.closePath(); ctx.fill();
+
+    // Eyes
+    ctx.fillStyle='#66ffb4';
+    ctx.shadowColor='#66ffb4'; ctx.shadowBlur=8;
+    ctx.beginPath(); ctx.arc(W*.44,H*.24,W*.025,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(W*.56,H*.24,W*.025,0,Math.PI*2); ctx.fill();
+    ctx.shadowBlur=0;
+  }
+];
+
+const charTimers={};
+function initCharCanvas(sceneIdx){
+  if(charTimers[sceneIdx]) return;
+  const canvas=document.getElementById('charCanvas-'+sceneIdx);
+  if(!canvas) return;
+  const ctx=canvas.getContext('2d');
+  const drawer=charDrawers[sceneIdx];
+  if(!drawer) return;
+  let t=0;
+  function loop(){
+    const W=canvas.offsetWidth||200, H=canvas.offsetHeight||240;
+    canvas.width=W; canvas.height=H;
+    ctx.clearRect(0,0,W,H);
+    drawer(ctx,W,H,t);
+    t+=.016;
+    charTimers[sceneIdx]=requestAnimationFrame(loop);
+  }
+  loop();
+}
+
+// ═══════════════════════════════════════════
+//  ENDING CELEBRATION CANVAS
+// ═══════════════════════════════════════════
+function startEndingCelebration(){
+  const canvas=document.getElementById('endingCanvas');
+  if(!canvas) return;
+  const ctx=canvas.getContext('2d');
+  let t=0;
+  const confetti=[];
+  for(let i=0;i<120;i++){
+    confetti.push({
+      x:Math.random()*800, y:Math.random()*600-200,
+      vx:(Math.random()-.5)*4, vy:1+Math.random()*3,
+      size:4+Math.random()*8,
+      color:`hsl(${Math.random()*360},80%,60%)`,
+      angle:Math.random()*Math.PI*2,
+      spin:(Math.random()-.5)*.2
+    });
+  }
+  function loop(){
+    const W=canvas.offsetWidth||800, H=canvas.offsetHeight||600;
+    canvas.width=W; canvas.height=H;
+    ctx.clearRect(0,0,W,H);
+    confetti.forEach(c=>{
+      c.y+=c.vy; c.x+=c.vx; c.angle+=c.spin;
+      if(c.y>H){c.y=-10; c.x=Math.random()*W}
+      ctx.save();
+      ctx.translate(c.x,c.y); ctx.rotate(c.angle);
+      ctx.fillStyle=c.color;
+      ctx.fillRect(-c.size/2,-c.size/2,c.size,c.size/2);
+      ctx.restore();
+    });
+    t++;
+    requestAnimationFrame(loop);
+  }
+  loop();
+}
+
+// Init HUD
+updateHud();
+</script>
+</body>
+</html>

@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>🌑 Dark Kingdom – Nitơ & Sunfua</title>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600;700&family=Orbitron:wght@700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#06020e;--accent:#9955ff;--a2:#cc88ff;--text:#ece0ff;--muted:#8870a8;--green:#39d06f;--red:#ff646e;--yellow:#f4c24f;--shadow:0 18px 44px rgba(0,0,0,.6)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Quicksand',sans-serif;color:var(--text);background:var(--bg);min-height:100vh;overflow-x:hidden}
+#bgCanvas{position:fixed;inset:0;z-index:0;pointer-events:none}
+.vig{position:fixed;inset:0;z-index:1;pointer-events:none;background:radial-gradient(ellipse at center,transparent 48%,rgba(0,0,0,.75)100%)}
+.app{position:relative;z-index:2;max-width:1100px;margin:0 auto;padding:18px 16px 50px}
+.topbar{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;background:rgba(12,4,22,.88);border:1px solid rgba(153,85,255,.25);border-radius:18px;padding:13px 18px;backdrop-filter:blur(14px);box-shadow:var(--shadow);position:sticky;top:10px;z-index:30}
+.title h1{font-family:'Orbitron',sans-serif;font-size:1.2rem;background:linear-gradient(90deg,var(--accent),var(--a2),var(--red));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.title p{color:var(--muted);font-size:.82rem;margin-top:2px}
+.hud{display:flex;gap:10px;flex-wrap:wrap}
+.pill{min-width:95px;text-align:center;background:rgba(153,85,255,.07);border:1px solid rgba(153,85,255,.22);border-radius:13px;padding:7px 12px}
+.pill .k{font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em}
+.pill .v{font-size:1.05rem;font-weight:700;margin-top:2px}
+.intro,.scene,.ending{margin-top:16px;background:rgba(10,4,20,.9);border:1px solid rgba(153,85,255,.2);border-radius:24px;box-shadow:var(--shadow);overflow:hidden;display:none}
+.intro.show,.scene.show,.ending.show{display:block;animation:up .45s cubic-bezier(.22,1,.36,1)}
+@keyframes up{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:none}}
+.hero{display:grid;grid-template-columns:1.1fr .9fr;min-height:440px}
+.hl{padding:34px 30px;background:linear-gradient(135deg,rgba(14,4,28,.96),rgba(8,2,16,.92));border-right:1px solid rgba(153,85,255,.16);display:flex;flex-direction:column;justify-content:center}
+.hl h2{font-family:'Orbitron',sans-serif;font-size:1.4rem;background:linear-gradient(90deg,var(--accent),var(--a2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:12px;line-height:1.35}
+.hl p{color:var(--muted);line-height:1.8;white-space:pre-line}
+.rules{background:rgba(153,85,255,.06);border:1px solid rgba(153,85,255,.2);border-radius:14px;padding:12px 15px;margin-top:14px}
+.rules ul{margin:7px 0 0 16px;color:var(--muted);line-height:1.8}
+.hr2{position:relative;background:radial-gradient(ellipse at center,rgba(100,40,180,.1),transparent 68%),linear-gradient(180deg,#08021a,#040010);display:flex;align-items:center;justify-content:center;overflow:hidden}
+.sh{position:relative;height:200px;overflow:hidden;border-bottom:1px solid rgba(153,85,255,.18)}
+.sh canvas{position:absolute;inset:0;width:100%;height:100%}
+.sho{position:absolute;inset:0;background:linear-gradient(0deg,rgba(8,2,16,.95)0%,rgba(8,2,16,.2)55%,transparent 100%)}
+.badge{position:absolute;top:14px;left:18px;display:inline-flex;align-items:center;gap:7px;border-radius:999px;padding:6px 13px;background:rgba(0,0,0,.55);color:var(--a2);border:1px solid rgba(204,136,255,.28);font-weight:700;font-size:.88rem;backdrop-filter:blur(8px)}
+.sb{padding:22px}
+.stitle{font-family:'Orbitron',sans-serif;font-size:1.3rem;background:linear-gradient(90deg,var(--text),var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:9px}
+.nar{color:var(--muted);white-space:pre-line;line-height:1.75}
+.cr{display:grid;grid-template-columns:190px 1fr;gap:14px;margin-top:18px;align-items:stretch}
+.port{border-radius:18px;border:1px solid rgba(153,85,255,.22);min-height:230px;overflow:hidden;position:relative}
+.port canvas{position:absolute;inset:0;width:100%;height:100%}
+.port .pn{position:absolute;left:10px;top:10px;padding:4px 10px;border-radius:999px;background:rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.12);font-weight:700;font-size:.83rem;z-index:2}
+.dlg{border-radius:18px;border:1px solid rgba(153,85,255,.18);background:rgba(255,255,255,.02);padding:14px}
+.sp{background:rgba(255,255,255,.03);border:1px solid rgba(153,85,255,.16);border-radius:14px;padding:12px 14px;margin-bottom:9px}
+.sp:last-child{margin-bottom:0}
+.sp small{display:block;font-weight:700;margin-bottom:5px}
+.sp p{margin:0;white-space:pre-line;line-height:1.7;color:var(--muted)}
+.qc{margin-top:18px;background:rgba(255,255,255,.02);border:1px solid rgba(153,85,255,.18);border-radius:18px;padding:16px}
+.qt{font-size:1.05rem;font-weight:700;margin-bottom:13px;line-height:1.5}
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+button{font:inherit;cursor:pointer;border:none}
+.opt{text-align:left;padding:12px 14px;border-radius:13px;color:var(--text);background:rgba(153,85,255,.04);border:1px solid rgba(153,85,255,.2);transition:.18s ease;min-height:64px}
+.opt:hover{transform:translateY(-2px);border-color:rgba(153,85,255,.6)}
+.opt.correct{background:rgba(57,208,111,.18);border-color:rgba(57,208,111,.75);animation:pop .35s ease}
+.opt.wrong{background:rgba(255,100,110,.15);border-color:rgba(255,100,110,.75);animation:shk .35s ease}
+.opt.dim{opacity:.28;pointer-events:none}
+@keyframes pop{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}
+@keyframes shk{0%,100%{transform:translateX(0)}30%{transform:translateX(-5px)}70%{transform:translateX(5px)}}
+.fb{display:none;margin-top:13px;padding:13px 15px;border-radius:14px;border-left:4px solid var(--accent);background:rgba(255,255,255,.03);color:var(--muted);white-space:pre-line;line-height:1.75}
+.fb.show{display:block;animation:up .3s ease}
+.fb strong{display:block;margin-bottom:5px}
+.fb.ok{border-color:var(--green)}.fb.ok strong{color:var(--green)}
+.fb.fail{border-color:var(--red)}.fb.fail strong{color:var(--red)}
+.ar{margin-top:13px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.stat{color:var(--muted);font-size:.87rem}
+.btn{padding:10px 18px;border-radius:13px;font-weight:700;transition:.18s ease}
+.btnp{background:linear-gradient(135deg,#9955ff,#7733dd);color:#f0e0ff;box-shadow:0 4px 16px rgba(153,85,255,.3)}
+.btnp:hover{transform:translateY(-2px)}
+.btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:15px}
+.nx{display:none}.nx.show{display:inline-block;animation:up .3s ease}
+.eb{padding:26px;position:relative;z-index:2}
+.es{font-family:'Orbitron',sans-serif;font-size:1.9rem;margin:10px 0}
+.win{color:var(--green)}.lose{color:var(--red)}
+.meter{width:100%;height:13px;border-radius:999px;border:1px solid rgba(153,85,255,.2);background:rgba(255,255,255,.04);margin:11px 0;overflow:hidden}
+.mf{height:100%;width:0%;border-radius:999px;background:linear-gradient(90deg,var(--red),var(--accent),var(--green));transition:width 1.4s cubic-bezier(.22,1,.36,1)}
+.burst{position:fixed;pointer-events:none;z-index:100}
+.bd{position:absolute;border-radius:50%;width:7px;height:7px;animation:fly var(--t) ease-out forwards}
+@keyframes fly{0%{transform:translate(0,0) scale(1);opacity:1}100%{transform:translate(var(--dx),var(--dy)) scale(0);opacity:0}}
+.sf{position:fixed;inset:0;z-index:200;pointer-events:none;opacity:0}
+.sg{background:rgba(57,208,111,.16);animation:fl .45s ease}.sr{background:rgba(255,100,110,.16);animation:fl .45s ease}
+@keyframes fl{0%{opacity:1}100%{opacity:0}}
+@media(max-width:840px){.hero{grid-template-columns:1fr}.hr2{height:250px}.cr{grid-template-columns:1fr}}
+@media(max-width:600px){.opts{grid-template-columns:1fr}.topbar{position:static}}
+</style>
+</head>
+<body>
+<canvas id="bgCanvas"></canvas><div class="vig"></div><div class="sf" id="sf"></div>
+<div class="app">
+<div class="topbar">
+  <div class="title"><h1>🌑 DARK KINGDOM</h1><p>Nitơ & Sunfua • Hóa học 11 THPT • 5 Thử thách tăm tối</p></div>
+  <div class="hud">
+    <div class="pill"><div class="k">Điểm</div><div class="v" id="sc">0</div></div>
+    <div class="pill"><div class="k">Cổng</div><div class="v"><span id="dn">0</span>/5</div></div>
+    <div class="pill"><div class="k">Linh hồn</div><div class="v" id="soul">💜💜💜</div></div>
+  </div>
+</div>
+<section class="intro show" id="intro">
+  <div class="hero">
+    <div class="hl">
+      <h2>🌑 Vương quốc Bóng Tối Hóa Học</h2>
+      <p>Sâu trong lòng đại khí quyển và lòng đất, hai vương quốc hóa học đen tối đang nổi lên: <strong>Vương quốc Nitơ</strong> — nơi N₂ im lặng nhưng biến thành NH₃, HNO₃ gây tử vong — và <strong>Vương quốc Sunfua</strong> — nơi SO₂ đầu độc bầu trời và H₂SO₄ ăn mòn vạn vật.
+
+Nữ hoàng <strong>Atmosphere</strong> đã bị hai vương quốc này giam cầm. Chỉ có kiến thức hóa học 11 mới phá tan được bóng tối.</p>
+      <div class="rules"><strong>🎯 Luật chơi</strong><ul><li>Đúng: <strong style="color:#39d06f">+10 điểm</strong> | Sai: <strong style="color:#ff646e">-5 điểm</strong></li><li>Đạt <strong>50 điểm</strong> → giải cứu Nữ hoàng Atmosphere!</li></ul></div>
+      <div class="btns"><button class="btn btnp" onclick="startGame()">🌑 Bước vào bóng tối</button></div>
+    </div>
+    <div class="hr2"><canvas id="heroC" width="380" height="440"></canvas></div>
+  </div>
+</section>
+
+<section class="scene" id="scene-0">
+  <div class="sh"><canvas id="s0"></canvas><div class="sho"></div><div class="badge">💨 Cổng 1 • Nitrogen Void</div></div>
+  <div class="sb">
+    <h2 class="stitle">Hư Không Nitơ</h2>
+    <p class="nar">78% không khí là N₂ — vô hình, vô mùi, và gần như trơ. Nhưng khi bị khuất phục, nitơ biến thành những hợp chất nguy hiểm nhất trên Trái Đất.</p>
+    <div class="cr">
+      <div class="port"><canvas id="c0"></canvas><div class="pn">💨 Nitro Phantom</div></div>
+      <div class="dlg">
+        <div class="sp"><small style="color:#9955ff">Nitro Phantom</small><p>"N₂ trong không khí gần như hoàn toàn trơ ở điều kiện thường. Muốn ta phản ứng, phải đạt nhiệt độ cao hoặc có xúc tác đặc biệt. Ta hỏi: N₂ cần điều kiện gì để tác dụng với H₂ tạo NH₃?"</p></div>
+        <div class="sp"><small style="color:#cc88ff">Nữ hoàng Atmosphere</small><p>"Hãy phá tan sự trơ của nitơ — và giải phóng ta!"</p></div>
+      </div>
+    </div>
+    <div class="qc">
+      <div class="qt">⚗️ Câu 1. Phản ứng tổng hợp NH₃: N₂ + 3H₂ ⇌ 2NH₃. Điều kiện phản ứng là</div>
+      <div class="opts" data-q="0">
+        <button class="opt" data-correct="false">A. Điều kiện thường, không cần xúc tác</button>
+        <button class="opt" data-correct="true">B. Nhiệt độ cao (400–500°C), áp suất cao, xúc tác Fe</button>
+        <button class="opt" data-correct="false">C. Điện phân trong nước</button>
+        <button class="opt" data-correct="false">D. Chiếu sáng UV, nhiệt độ thấp</button>
+      </div>
+      <div class="fb" id="fb0"></div>
+      <div class="ar">
+        <div class="stat">💡 Tổng hợp Haber-Bosch: 400–500°C, 150–300 atm, Fe xúc tác</div>
+        <button class="btn btnp nx" id="nx0" onclick="goTo(1)">Tiến đến Acid Storm →</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="scene" id="scene-1">
+  <div class="sh"><canvas id="s1"></canvas><div class="sho"></div><div class="badge">💥 Cổng 2 • Acid Storm</div></div>
+  <div class="sb">
+    <h2 class="stitle">Cơn bão Axit Nitric</h2>
+    <p class="nar">HNO₃ đặc — axit mạnh, tính oxi hóa cực mạnh. Nó tấn công cả những kim loại "bất khả xâm phạm" như đồng và bạc.</p>
+    <div class="cr">
+      <div class="port"><canvas id="c1"></canvas><div class="pn">💥 Acid Demon</div></div>
+      <div class="dlg">
+        <div class="sp"><small style="color:#ff646e">Acid Demon</small><p>"Cu không tan trong HCl hay H₂SO₄ loãng. Nhưng trước HNO₃ đặc, ngay cả đồng cũng phải khuất phục. Hãy nói cho ta biết sản phẩm khi Cu + HNO₃ đặc!"</p></div>
+        <div class="sp"><small style="color:#cc88ff">Nữ hoàng Atmosphere</small><p>"Đây là phản ứng oxi hóa khử — hãy cân bằng điện tử cẩn thận!"</p></div>
+      </div>
+    </div>
+    <div class="qc">
+      <div class="qt">⚗️ Câu 2. Cu + HNO₃ đặc → Sản phẩm khí thoát ra là</div>
+      <div class="opts" data-q="1">
+        <button class="opt" data-correct="false">A. NO (khí không màu)</button>
+        <button class="opt" data-correct="true">B. NO₂ (khí màu nâu đỏ)</button>
+        <button class="opt" data-correct="false">C. N₂O (khí cười)</button>
+        <button class="opt" data-correct="false">D. NH₃ (khí mùi khai)</button>
+      </div>
+      <div class="fb" id="fb1"></div>
+      <div class="ar">
+        <div class="stat">💡 HNO₃ đặc → NO₂ (nâu đỏ) | HNO₃ loãng → NO (không màu)</div>
+        <button class="btn btnp nx" id="nx1" onclick="goTo(2)">Tiến đến Sulfur Swamp →</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="scene" id="scene-2">
+  <div class="sh"><canvas id="s2"></canvas><div class="sho"></div><div class="badge">🌋 Cổng 3 • Sulfur Swamp</div></div>
+  <div class="sb">
+    <h2 class="stitle">Đầm lầy Lưu Huỳnh</h2>
+    <p class="nar">Lưu huỳnh — nguyên tố của núi lửa, của mùi trứng thối. S có nhiều trạng thái oxi hóa từ -2 đến +6, tạo nên vô số hợp chất độc hại và hữu ích.</p>
+    <div class="cr">
+      <div class="port"><canvas id="c2"></canvas><div class="pn">🌋 Sulfur Witch</div></div>
+      <div class="dlg">
+        <div class="sp"><small style="color:#f4c24f">Sulfur Witch</small><p>"S đốt cháy trong không khí. Khói màu xanh lam lan ra, mùi hắc nồng nặc. Đây là phản ứng cơ bản nhất của lưu huỳnh — nhưng ngươi có biết sản phẩm không?"</p></div>
+        <div class="sp"><small style="color:#cc88ff">Nữ hoàng Atmosphere</small><p>"SO₂ — kẻ thù của bầu khí quyển và là nguồn gốc mưa axit!"</p></div>
+      </div>
+    </div>
+    <div class="qc">
+      <div class="qt">⚗️ Câu 3. Đốt cháy hoàn toàn S trong O₂, sản phẩm thu được là</div>
+      <div class="opts" data-q="2">
+        <button class="opt" data-correct="false">A. SO₃</button>
+        <button class="opt" data-correct="true">B. SO₂</button>
+        <button class="opt" data-correct="false">C. H₂S</button>
+        <button class="opt" data-correct="false">D. S₂O</button>
+      </div>
+      <div class="fb" id="fb2"></div>
+      <div class="ar">
+        <div class="stat">💡 S + O₂ → SO₂ (đốt trực tiếp) | SO₂ + ½O₂ → SO₃ (cần xúc tác V₂O₅)</div>
+        <button class="btn btnp nx" id="nx2" onclick="goTo(3)">Tiến đến Acid Rain Gate →</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="scene" id="scene-3">
+  <div class="sh"><canvas id="s3"></canvas><div class="sho"></div><div class="badge">🌧️ Cổng 4 • Acid Rain Gate</div></div>
+  <div class="sb">
+    <h2 class="stitle">Cổng Mưa Axit</h2>
+    <p class="nar">SO₂ bay lên khí quyển, tác dụng với nước và O₂ tạo H₂SO₄ — mưa axit, kẻ thù của rừng và công trình kiến trúc.</p>
+    <div class="cr">
+      <div class="port"><canvas id="c3"></canvas><div class="pn">🌧️ Rain Specter</div></div>
+      <div class="dlg">
+        <div class="sp"><small style="color:#59c7ff">Rain Specter</small><p>"H₂SO₄ đặc — axit vua. Nó không chỉ mạnh mà còn háo nước, tạo nhiệt mãnh liệt khi pha loãng. Đặc tính nào phân biệt H₂SO₄ đặc với loãng?"</p></div>
+        <div class="sp"><small style="color:#cc88ff">Nữ hoàng Atmosphere</small><p>"Hãy cẩn thận — H₂SO₄ đặc có tính chất đặc biệt mà loãng không có!"</p></div>
+      </div>
+    </div>
+    <div class="qc">
+      <div class="qt">⚗️ Câu 4. H₂SO₄ đặc có tính chất đặc biệt nào mà H₂SO₄ loãng không có?</div>
+      <div class="opts" data-q="3">
+        <button class="opt" data-correct="false">A. Tính axit mạnh</button>
+        <button class="opt" data-correct="true">B. Tính háo nước và tính oxi hóa mạnh (tác dụng với kim loại, phi kim)</button>
+        <button class="opt" data-correct="false">C. Làm quỳ tím hóa đỏ</button>
+        <button class="opt" data-correct="false">D. Tác dụng với bazơ tạo muối</button>
+      </div>
+      <div class="fb" id="fb3"></div>
+      <div class="ar">
+        <div class="stat">💡 H₂SO₄ đặc: háo nước (than hóa đường), oxi hóa mạnh (Cu+H₂SO₄đặc→CuSO₄+SO₂+H₂O)</div>
+        <button class="btn btnp nx" id="nx3" onclick="goTo(4)">Đến cổng cuối →</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="scene" id="scene-4">
+  <div class="sh"><canvas id="s4"></canvas><div class="sho"></div><div class="badge">👑 Cổng 5 • Final Darkness</div></div>
+  <div class="sb">
+    <h2 class="stitle">Bóng Tối Cuối Cùng</h2>
+    <p class="nar">Nữ hoàng Atmosphere đang bị giam trong một bong bóng NH₃ khổng lồ. Câu hỏi cuối về tính chất của NH₃ sẽ giải phóng bà.</p>
+    <div class="cr">
+      <div class="port"><canvas id="c4"></canvas><div class="pn">👑 Dark Overlord</div></div>
+      <div class="dlg">
+        <div class="sp"><small style="color:#9955ff">Dark Overlord</small><p>"NH₃ — khí mùi khai, tan nhiều trong nước. Khi tan vào nước, dung dịch thu được có tính gì? Đây là câu hỏi cuối giữ ta và ngươi!"</p></div>
+        <div class="sp"><small style="color:#cc88ff">Nữ hoàng Atmosphere</small><p>"NH₃ + H₂O… hãy nghĩ về ion OH⁻…"</p></div>
+      </div>
+    </div>
+    <div class="qc">
+      <div class="qt">⚗️ Câu 5. Dung dịch NH₃ trong nước (NH₃·H₂O) có tính</div>
+      <div class="opts" data-q="4">
+        <button class="opt" data-correct="false">A. Tính axit mạnh</button>
+        <button class="opt" data-correct="false">B. Trung tính</button>
+        <button class="opt" data-correct="true">C. Tính bazơ yếu</button>
+        <button class="opt" data-correct="false">D. Tính axit yếu</button>
+      </div>
+      <div class="fb" id="fb4"></div>
+      <div class="ar">
+        <div class="stat">💡 NH₃ + H₂O ⇌ NH₄⁺ + OH⁻ → tạo OH⁻ → bazơ yếu (pH > 7)</div>
+        <button class="btn btnp nx" id="nx4" onclick="finish()">🌟 Xua tan bóng tối →</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="ending" id="ending">
+  <canvas id="endC" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none"></canvas>
+  <div class="eb">
+    <div class="badge" style="position:static;display:inline-flex;margin-bottom:14px">🌅 Bình minh hóa học</div>
+    <h2 class="stitle">Vương Quốc Bóng Tối</h2>
+    <p class="nar" id="eT" style="margin-top:10px"></p>
+    <div class="es" id="eS"></div>
+    <div class="meter"><div class="mf" id="eM"></div></div>
+    <div id="eR" style="margin-top:14px"></div>
+    <div class="btns"><button class="btn btnp" onclick="location.reload()">🔄 Chơi lại</button></div>
+  </div>
+</section>
+</div>
+<script>
+const ST={score:0,done:0,soul:3};
+const RESP=[
+  {ok:`✅ 400–500°C, áp suất cao, xúc tác Fe — quy trình Haber-Bosch!
+Nitro Phantom tan biến: "Ngươi biết bí mật của vương quốc nitơ — phản ứng tổng hợp NH₃ vĩ đại nhất lịch sử."
+Hàng năm sản xuất 150 triệu tấn NH₃ = 50% phân bón toàn thế giới!
++10 điểm 💜 Nitrogen Void khuất phục!`,
+   fail:`❌ Phản ứng Haber-Bosch cần: 400–500°C, 150–300 atm, xúc tác Fe.
+N₂ rất trơ ở điều kiện thường vì liên kết ba N≡N rất bền.
+-5 điểm. Nhớ: Fritz Haber & Carl Bosch = Nobel Hóa học cho quy trình này.`},
+  {ok:`✅ NO₂ — khí màu nâu đỏ đặc trưng!
+Acid Demon rút lui: "HNO₃ đặc oxi hóa Cu về +2, còn N⁺⁵ bị khử thành N⁺⁴ trong NO₂."
+Phương trình: Cu + 4HNO₃(đặc) → Cu(NO₃)₂ + 2NO₂↑ + 2H₂O
++10 điểm 💜 Acid Storm khuất phục!`,
+   fail:`❌ HNO₃ ĐẶC cho NO₂ (nâu đỏ), HNO₃ LOÃNG mới cho NO (không màu).
+Câu nhớ: "đặc nâu, loãng trắng" — NO₂ nâu đỏ, NO không màu.
+-5 điểm. Đây là điểm phân biệt quan trọng trong đề thi!`},
+  {ok:`✅ SO₂! S cháy trong O₂ tạo SO₂ trực tiếp.
+Sulfur Witch khuất phục: "Đúng rồi — S + O₂ → SO₂. Muốn tiếp tục thành SO₃ cần xúc tác V₂O₅."
+SO₂ là nguyên nhân mưa axit, gây hại hệ hô hấp.
++10 điểm 💜 Sulfur Swamp chinh phục!`,
+   fail:`❌ S đốt cháy trong O₂ tạo SO₂, không phải SO₃.
+SO₃ hình thành khi SO₂ + ½O₂ với xúc tác V₂O₅ ở 450°C (quy trình tiếp xúc).
+-5 điểm. Nhớ: đốt S → SO₂; thêm xúc tác → SO₃.`},
+  {ok:`✅ Tính háo nước và tính oxi hóa mạnh!
+Rain Specter cúi đầu: "H₂SO₄ đặc có thể đốt cháy giấy, than hóa đường, và tác dụng với Cu, S, C."
+Ví dụ: Cu + 2H₂SO₄(đặc) → CuSO₄ + SO₂↑ + 2H₂O
++10 điểm 💜 Acid Rain Gate chinh phục!`,
+   fail:`❌ Tính axit mạnh và làm đỏ quỳ tím thì cả loãng lẫn đặc đều có.
+Tính ĐẶC BIỆT của H₂SO₄ đặc: háo nước (char hóa đường) + oxi hóa mạnh (tan Cu, S, C).
+-5 điểm. Đây là câu hỏi phân loại quan trọng trong đề thi hóa 11.`},
+  {ok:`✅ Bazơ yếu!
+Dark Overlord tan biến trong màn tối: "NH₃ + H₂O ⇌ NH₄⁺ + OH⁻ — tạo OH⁻ nên có tính bazơ yếu."
+Nữ hoàng Atmosphere được giải phóng! Bầu trời hóa học trong sáng trở lại.
++10 điểm 🌅 Bóng tối bị xua tan!`,
+   fail:`❌ NH₃ tan trong nước tạo NH₄OH (NH₃·H₂O) — điện ly một phần → bazơ YẾU.
+NH₃ + H₂O ⇌ NH₄⁺ + OH⁻ (cân bằng dịch chuyển về trái → bazơ yếu, không phải mạnh).
+-5 điểm. Nữ hoàng Atmosphere vẫn bị giam — hãy thử lại!`}
+];
+function updateHud(){document.getElementById('sc').textContent=ST.score;document.getElementById('dn').textContent=ST.done;document.getElementById('soul').textContent='💜'.repeat(ST.soul)+'🖤'.repeat(3-ST.soul);}
+function startGame(){document.getElementById('intro').classList.remove('show');showScene(0);window.scrollTo({top:0,behavior:'smooth'});}
+function goTo(i){document.querySelectorAll('.scene').forEach(s=>s.classList.remove('show'));showScene(i);window.scrollTo({top:0,behavior:'smooth'});}
+function showScene(i){document.getElementById('scene-'+i).classList.add('show');initSB(i);initCC(i);}
+document.querySelectorAll('.opts').forEach((w,idx)=>{w.querySelectorAll('.opt').forEach(b=>b.addEventListener('click',()=>ans(idx,b,w)));});
+function ans(idx,btn,wrap){if(wrap.dataset.done==='1')return;wrap.dataset.done='1';const ok=btn.dataset.correct==='true';wrap.querySelectorAll('.opt').forEach(o=>{if(o.dataset.correct==='true')o.classList.add('correct');else if(o===btn&&!ok)o.classList.add('wrong');if(o.dataset.correct!=='true'&&o!==btn)o.classList.add('dim');});ST.done++;if(ok){ST.score+=10;flash('sg');doBurst(btn);}else{ST.score-=5;ST.soul=Math.max(0,ST.soul-1);flash('sr');}updateHud();const fb=document.getElementById('fb'+idx);fb.innerHTML='<strong>'+(ok?'✅ Chính xác!':'❌ Chưa đúng!')+'</strong>'+(ok?RESP[idx].ok:RESP[idx].fail);fb.className='fb show '+(ok?'ok':'fail');document.getElementById('nx'+idx).classList.add('show');}
+function finish(){document.querySelectorAll('.scene').forEach(s=>s.classList.remove('show'));document.getElementById('ending').classList.add('show');window.scrollTo({top:0,behavior:'smooth'});const win=ST.score>=50;document.getElementById('eS').textContent=`Điểm: ${ST.score}/50`;document.getElementById('eS').className='es '+(win?'win':'lose');setTimeout(()=>{document.getElementById('eM').style.width=Math.max(0,Math.min(100,ST.score/50*100))+'%';},200);if(win){document.getElementById('eT').textContent='Màn tối tan biến. Bầu trời hóa học trong sáng trở lại. Nữ hoàng Atmosphere thoát khỏi bong bóng NH₃, nhìn lại vương quốc mình với ánh mắt tràn hy vọng.';document.getElementById('eR').innerHTML='<h3 class="win">🌅 Nữ hoàng Atmosphere được giải phóng!</h3><p style="color:var(--muted);margin-top:8px">Nữ hoàng: "Ngươi đã học được ngôn ngữ của bóng tối — và dùng nó để mang lại ánh sáng."</p>';}else{document.getElementById('eT').textContent='Bóng tối vẫn còn đó. Nữ hoàng Atmosphere nhìn bạn qua lớp NH₃ mờ đục: "Hãy ôn lại nitơ và sunfua, rồi quay lại!"';document.getElementById('eR').innerHTML='<h3 class="lose">🌑 Bóng tối chưa tan — thử lại!</h3>';}}
+function flash(c){const e=document.getElementById('sf');e.className='sf '+c;setTimeout(()=>e.className='sf',500);}
+function doBurst(btn){const r=btn.getBoundingClientRect();const x=r.left+r.width/2,y=r.top+r.height/2;const w=document.createElement('div');w.className='burst';w.style.cssText=`left:${x}px;top:${y}px`;const cols=['#9955ff','#cc88ff','#39d06f','#fff'];for(let i=0;i<16;i++){const d=document.createElement('div');d.className='bd';const a=Math.random()*Math.PI*2,s=50+Math.random()*100;d.style.cssText=`background:${cols[i%4]};--dx:${Math.cos(a)*s}px;--dy:${Math.sin(a)*s}px;--t:${.4+Math.random()*.5}s;left:-3px;top:-3px`;w.appendChild(d);}document.body.appendChild(w);setTimeout(()=>w.remove(),1200);}
+// BG
+(function(){const c=document.getElementById('bgCanvas');const ctx=c.getContext('2d');let W,H,t=0;const pts=[];function resize(){W=c.width=window.innerWidth;H=c.height=window.innerHeight;}window.addEventListener('resize',resize);resize();for(let i=0;i<160;i++)pts.push({x:Math.random()*1e4,y:Math.random()*1e4,r:.3+Math.random()*.8,s:.04+Math.random()*.1,a:Math.random()*Math.PI*2,c:`hsla(${260+Math.random()*40},70%,60%,${.15+Math.random()*.3})`});function draw(){ctx.clearRect(0,0,W,H);t+=.016;pts.forEach(p=>{const ox=(p.x+Math.sin(t*p.s+p.a))%W,oy=(p.y+Math.cos(t*p.s+p.a))%H;ctx.fillStyle=p.c;ctx.beginPath();ctx.arc(ox,oy,p.r,0,Math.PI*2);ctx.fill();});requestAnimationFrame(draw);}draw();})();
+// HERO
+(function(){const c=document.getElementById('heroC');if(!c)return;const ctx=c.getContext('2d');const W=c.width,H=c.height;let t=0;function draw(){ctx.clearRect(0,0,W,H);t+=.016;// N2 molecule
+const cx=W*.35,cy=H*.45;ctx.strokeStyle=`rgba(153,85,255,${.5+.3*Math.sin(t)})`;ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(cx-20,cy);ctx.lineTo(cx+20,cy);ctx.stroke();ctx.beginPath();ctx.moveTo(cx-20,cy-6);ctx.lineTo(cx+20,cy-6);ctx.stroke();ctx.beginPath();ctx.moveTo(cx-20,cy+6);ctx.lineTo(cx+20,cy+6);ctx.stroke();['N','N'].forEach((s,i)=>{ctx.fillStyle='rgba(153,85,255,.8)';ctx.beginPath();ctx.arc(cx+(i*40-20),cy,18,0,Math.PI*2);ctx.fill();ctx.fillStyle='#fff';ctx.font='bold 13px monospace';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(s,cx+(i*40-20),cy);});
+// SO2 molecule
+const sx=W*.72,sy=H*.45;ctx.strokeStyle=`rgba(255,200,80,${.5+.3*Math.sin(t+1)})`;ctx.lineWidth=2;[[-30,20],[30,20]].forEach(([dx,dy])=>{ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(sx+dx,sy+dy);ctx.stroke();ctx.fillStyle='rgba(255,200,80,.7)';ctx.beginPath();ctx.arc(sx+dx,sy+dy,13,0,Math.PI*2);ctx.fill();ctx.fillStyle='#fff';ctx.font='bold 10px monospace';ctx.fillText('O',sx+dx,sy+dy);});ctx.fillStyle='rgba(255,100,80,.8)';ctx.beginPath();ctx.arc(sx,sy,18,0,Math.PI*2);ctx.fill();ctx.fillStyle='#fff';ctx.font='bold 12px monospace';ctx.fillText('S',sx,sy);
+// Labels
+ctx.fillStyle='rgba(153,85,255,.6)';ctx.font='bold 13px monospace';ctx.textAlign='center';ctx.fillText('N≡N',cx,H*.28);ctx.fillStyle='rgba(255,200,80,.6)';ctx.fillText('SO₂',sx,H*.28);requestAnimationFrame(draw);}draw();})();
+// Scene backgrounds
+const sbCfg=[
+  function(ctx,W,H,t){ctx.fillStyle='#04010a';ctx.fillRect(0,0,W,H);for(let i=0;i<20;i++){const x=(i/20*W+t*8)%W,y=H*(.3+Math.sin(t+i)*.2);ctx.fillStyle=`rgba(153,85,255,${.12+.06*Math.sin(t+i)})`;ctx.font='bold 14px monospace';ctx.textAlign='center';ctx.fillText('N₂',x,y);}ctx.fillStyle=`rgba(100,50,180,${.2+.1*Math.sin(t)})`;const g=ctx.createRadialGradient(W/2,H/2,0,W/2,H/2,W*.5);g.addColorStop(0,'rgba(100,50,180,.2)');g.addColorStop(1,'transparent');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);},
+  function(ctx,W,H,t){ctx.fillStyle='#100202';ctx.fillRect(0,0,W,H);for(let i=0;i<8;i++){const x=i*(W/8)+W/16,y=H/2+Math.sin(t*1.5+i)*H*.25;ctx.fillStyle=`rgba(255,80,40,${.25+.15*Math.sin(t+i)})`;ctx.beginPath();ctx.arc(x,y,8+Math.sin(t+i)*4,0,Math.PI*2);ctx.fill();}ctx.fillStyle='rgba(255,100,40,.15)';ctx.font='bold 22px monospace';ctx.textAlign='center';ctx.fillText('NO₂',W/2,H*.25);},
+  function(ctx,W,H,t){ctx.fillStyle='#080602';ctx.fillRect(0,0,W,H);for(let i=0;i<12;i++){const x=(i/12*W+t*5)%W,y=H*(.5+Math.sin(t*.8+i)*.3);ctx.fillStyle=`rgba(255,200,60,${.1+.06*Math.sin(t+i)})`;ctx.beginPath();ctx.arc(x,y,4+i%4,0,Math.PI*2);ctx.fill();}ctx.fillStyle='rgba(200,160,20,.2)';ctx.font='bold 20px monospace';ctx.textAlign='center';ctx.fillText('S + O₂ → SO₂',W/2,H*.2);},
+  function(ctx,W,H,t){ctx.fillStyle='#020810';ctx.fillRect(0,0,W,H);for(let i=0;i<6;i++){const ry=H*.2+i*(H*.12)+Math.sin(t+i)*5;ctx.strokeStyle=`rgba(89,199,255,${.12+.06*Math.sin(t+i)})`;ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(0,ry);ctx.lineTo(W,ry+20);ctx.stroke();}ctx.fillStyle='rgba(89,199,255,.2)';ctx.font='bold 18px monospace';ctx.textAlign='center';ctx.fillText('H₂SO₄ đặc',W/2,H*.2);},
+  function(ctx,W,H,t){ctx.fillStyle='#04020e';ctx.fillRect(0,0,W,H);const pg=ctx.createRadialGradient(W/2,H/2,0,W/2,H/2,W*.4);pg.addColorStop(0,`rgba(153,85,255,${.15+.1*Math.sin(t)})`);pg.addColorStop(1,'transparent');ctx.fillStyle=pg;ctx.fillRect(0,0,W,H);ctx.fillStyle=`rgba(204,136,255,${.4+.2*Math.sin(t)})`;ctx.font='bold 20px monospace';ctx.textAlign='center';ctx.fillText('NH₃ + H₂O ⇌ NH₄⁺ + OH⁻',W/2,H*.5);}
+];
+const stT={};function initSB(i){if(stT[i])return;const c=document.getElementById('s'+i);if(!c)return;const ctx=c.getContext('2d');let t=0;function loop(){const W=c.offsetWidth||600,H=c.offsetHeight||200;c.width=W;c.height=H;sbCfg[i](ctx,W,H,t);t+=.016;stT[i]=requestAnimationFrame(loop);}loop();}
+// Char drawers (simplified atmospheric)
+const ccD=[
+  function(ctx,W,H,t){ctx.fillStyle='rgba(8,2,18,.7)';ctx.fillRect(0,0,W,H);const g=ctx.createRadialGradient(W/2,H*.4,0,W/2,H*.4,W*.45);g.addColorStop(0,'rgba(100,50,180,.3)');g.addColorStop(1,'transparent');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);ctx.font=`${W*.35}px serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('💨',W/2,H*.42+Math.sin(t)*(H*.03));ctx.fillStyle=`rgba(153,85,255,${.5+.3*Math.sin(t*2)})`;ctx.font='bold 14px monospace';ctx.fillText('N≡N',W/2,H*.7);},
+  function(ctx,W,H,t){ctx.fillStyle='rgba(18,2,2,.7)';ctx.fillRect(0,0,W,H);for(let i=0;i<8;i++){const ang=t*1.2+i*(Math.PI/4);const r=W*.25;const x=W/2+Math.cos(ang)*r,y=H*.45+Math.sin(ang)*r*.5;ctx.fillStyle=`rgba(255,80,40,${.3+.2*Math.sin(t+i)})`;ctx.beginPath();ctx.arc(x,y,5,0,Math.PI*2);ctx.fill();}ctx.font=`${W*.3}px serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('💥',W/2,H*.42);},
+  function(ctx,W,H,t){ctx.fillStyle='rgba(14,10,2,.7)';ctx.fillRect(0,0,W,H);const fg=ctx.createRadialGradient(W/2,H*.55,0,W/2,H*.55,W*.3);fg.addColorStop(0,'rgba(255,200,40,.4)');fg.addColorStop(1,'transparent');ctx.fillStyle=fg;ctx.fillRect(0,0,W,H);ctx.font=`${W*.32}px serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('🌋',W/2,H*.44);ctx.fillStyle=`rgba(255,200,60,${.5+.3*Math.sin(t*2)})`;ctx.font='bold 12px monospace';ctx.fillText('S+O₂→SO₂',W/2,H*.72);},
+  function(ctx,W,H,t){ctx.fillStyle='rgba(2,6,14,.7)';ctx.fillRect(0,0,W,H);for(let i=0;i<12;i++){const x=(W*.1+i*(W*.07)+Math.sin(t+i)*10),y=H*(.2+Math.sin(t*.8+i)*.15)+i*8;ctx.fillStyle=`rgba(89,199,255,${.15+.1*Math.sin(t+i)})`;ctx.beginPath();ctx.arc(x%W,y,3,0,Math.PI*2);ctx.fill();}ctx.font=`${W*.3}px serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('🌧️',W/2,H*.42);},
+  function(ctx,W,H,t){const pulse=.5+.4*Math.sin(t*1.5);const g=ctx.createRadialGradient(W/2,H*.4,0,W/2,H*.4,W*.45);g.addColorStop(0,`rgba(80,20,150,${pulse*.3})`);g.addColorStop(1,'transparent');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);ctx.font=`${W*.32}px serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('👑',W/2,H*.38+Math.sin(t)*(H*.03));ctx.fillStyle=`rgba(204,136,255,${pulse*.6})`;ctx.font='bold 12px monospace';ctx.fillText('NH₃·H₂O',W/2,H*.68);}
+];
+const ccT={};function initCC(i){if(ccT[i])return;const c=document.getElementById('c'+i);if(!c)return;const ctx=c.getContext('2d');let t=0;function loop(){const W=c.offsetWidth||190,H=c.offsetHeight||230;c.width=W;c.height=H;ctx.clearRect(0,0,W,H);ccD[i](ctx,W,H,t);t+=.016;ccT[i]=requestAnimationFrame(loop);}loop();}
+updateHud();
+</script>
+</body>
+</html>

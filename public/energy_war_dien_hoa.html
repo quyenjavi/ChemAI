@@ -1,0 +1,1055 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Energy War - Cuoc Chien Dien Hoa</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #020b18;
+    color: #e0f4ff;
+    font-family: 'Segoe UI', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  #bgCanvas {
+    position: fixed; top: 0; left: 0;
+    width: 100vw; height: 100vh;
+    z-index: 0; pointer-events: none;
+  }
+  .game-wrapper {
+    position: relative; z-index: 1;
+    max-width: 860px; margin: 0 auto;
+    padding: 20px;
+  }
+
+  /* HEADER */
+  .game-header {
+    text-align: center; padding: 28px 20px 18px;
+    background: linear-gradient(135deg, #0a1f40 0%, #051228 100%);
+    border-radius: 18px;
+    border: 2px solid #1a6fff44;
+    box-shadow: 0 0 40px #1a6fff33, inset 0 1px 0 #1a6fff22;
+    margin-bottom: 22px;
+  }
+  .game-header h1 {
+    font-size: 2.2rem; font-weight: 900;
+    background: linear-gradient(90deg, #00cfff, #1a6fff, #00cfff);
+    background-size: 200%; -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: shimmer 2.5s linear infinite;
+    letter-spacing: 2px;
+  }
+  @keyframes shimmer { 0%{background-position:0%} 100%{background-position:200%} }
+  .game-header p { color: #7fbfff; font-size: 1rem; margin-top: 6px; }
+
+  /* HUD */
+  .hud {
+    display: flex; justify-content: space-between; align-items: center;
+    background: #051228cc; border: 1px solid #1a6fff33;
+    border-radius: 12px; padding: 12px 20px;
+    margin-bottom: 20px;
+  }
+  .hud-score { font-size: 1.4rem; font-weight: 700; color: #00cfff; }
+  .energy-bar-wrap { flex: 1; margin: 0 20px; }
+  .energy-bar-bg {
+    height: 14px; background: #0a1f40; border-radius: 7px;
+    border: 1px solid #1a6fff44; overflow: hidden;
+  }
+  .energy-bar-fill {
+    height: 100%; width: 0%;
+    background: linear-gradient(90deg, #1a6fff, #00cfff);
+    border-radius: 7px;
+    transition: width 0.5s ease;
+    box-shadow: 0 0 10px #00cfff88;
+  }
+  .hud-stage { font-size: 0.9rem; color: #7fbfff; }
+
+  /* SCREEN: intro */
+  #screen-intro {
+    background: linear-gradient(135deg, #0a1f40 0%, #051228 100%);
+    border-radius: 18px; border: 2px solid #1a6fff44;
+    padding: 36px 32px; text-align: center;
+    box-shadow: 0 0 60px #1a6fff22;
+  }
+  #screen-intro canvas { border-radius: 12px; margin-bottom: 20px; }
+  #screen-intro h2 { font-size: 1.7rem; color: #00cfff; margin-bottom: 14px; }
+  #screen-intro p { color: #a0c8f0; line-height: 1.8; margin-bottom: 22px; font-size: 1.05rem; }
+  .btn-start {
+    background: linear-gradient(135deg, #1a6fff, #00cfff);
+    color: #fff; border: none; padding: 14px 40px;
+    border-radius: 30px; font-size: 1.15rem; font-weight: 700;
+    cursor: pointer; letter-spacing: 1px;
+    box-shadow: 0 4px 24px #1a6fff55;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .btn-start:hover { transform: scale(1.06); box-shadow: 0 6px 32px #00cfff77; }
+
+  /* SCREEN: scene/question */
+  .screen-scene { display: none; }
+  .scene-card {
+    border-radius: 18px; border: 2px solid #1a6fff44;
+    overflow: hidden; margin-bottom: 20px;
+    box-shadow: 0 0 40px #1a6fff22;
+  }
+  .scene-bg-wrap { position: relative; height: 200px; }
+  .scene-bg-wrap canvas { width: 100%; height: 100%; display: block; }
+  .scene-char-overlay {
+    position: absolute; right: 24px; bottom: 0;
+  }
+  .scene-char-overlay canvas { display: block; }
+  .scene-content {
+    background: #051228ee; padding: 24px 28px;
+  }
+  .scene-label {
+    font-size: 0.78rem; letter-spacing: 3px; color: #1a6fff;
+    text-transform: uppercase; margin-bottom: 8px; font-weight: 700;
+  }
+  .scene-title { font-size: 1.3rem; color: #00cfff; font-weight: 800; margin-bottom: 10px; }
+  .scene-narr { color: #a0c8f0; line-height: 1.75; font-size: 0.97rem; margin-bottom: 18px; }
+
+  /* QUESTION */
+  .question-box {
+    background: #0a1f40; border-radius: 14px;
+    border: 1px solid #1a6fff44; padding: 20px 22px;
+  }
+  .question-text { font-size: 1.08rem; color: #e0f4ff; font-weight: 600; margin-bottom: 16px; }
+  .choices { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .choice-btn {
+    background: #051228; border: 1.5px solid #1a6fff55;
+    color: #a0c8f0; padding: 12px 14px; border-radius: 10px;
+    font-size: 0.95rem; cursor: pointer; text-align: left;
+    transition: all 0.18s; line-height: 1.4;
+  }
+  .choice-btn:hover { background: #0a2a5a; border-color: #00cfff; color: #fff; }
+  .choice-btn.correct {
+    background: #0a3a1a; border-color: #00ff88;
+    color: #00ff88; box-shadow: 0 0 12px #00ff8844;
+  }
+  .choice-btn.wrong {
+    background: #3a0a0a; border-color: #ff4466;
+    color: #ff4466; box-shadow: 0 0 12px #ff446644;
+  }
+  .choice-btn:disabled { cursor: default; }
+
+  /* FEEDBACK */
+  .feedback-box {
+    display: none; margin-top: 16px;
+    border-radius: 12px; padding: 16px 18px;
+    border-left: 4px solid;
+    animation: fadeSlide 0.35s ease;
+  }
+  @keyframes fadeSlide { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+  .feedback-box.correct { background: #0a2a1a; border-color: #00ff88; }
+  .feedback-box.wrong   { background: #2a0a0a; border-color: #ff4466; }
+  .feedback-title { font-weight: 700; font-size: 1rem; margin-bottom: 6px; }
+  .feedback-box.correct .feedback-title { color: #00ff88; }
+  .feedback-box.wrong   .feedback-title { color: #ff4466; }
+  .feedback-text { color: #a0c8f0; font-size: 0.93rem; line-height: 1.65; }
+  .btn-next {
+    display: none; margin-top: 16px;
+    background: linear-gradient(135deg, #1a6fff, #00cfff);
+    color: #fff; border: none; padding: 11px 30px;
+    border-radius: 22px; font-size: 0.98rem; font-weight: 700;
+    cursor: pointer; box-shadow: 0 3px 16px #1a6fff44;
+    transition: transform 0.15s;
+  }
+  .btn-next:hover { transform: scale(1.05); }
+
+  /* SCREEN: end */
+  #screen-end {
+    display: none;
+    background: linear-gradient(135deg, #0a1f40 0%, #051228 100%);
+    border-radius: 18px; border: 2px solid #00cfff55;
+    padding: 40px 32px; text-align: center;
+    box-shadow: 0 0 80px #00cfff22;
+  }
+  #screen-end canvas { border-radius: 12px; margin-bottom: 22px; }
+  #screen-end h2 { font-size: 1.9rem; font-weight: 900; margin-bottom: 10px; }
+  .end-win  h2 { color: #00cfff; }
+  .end-lose h2 { color: #ff4466; }
+  #screen-end p { color: #a0c8f0; font-size: 1.05rem; line-height: 1.8; margin-bottom: 24px; }
+  .btn-restart {
+    background: linear-gradient(135deg, #1a6fff, #00cfff);
+    color: #fff; border: none; padding: 13px 36px;
+    border-radius: 26px; font-size: 1.05rem; font-weight: 700;
+    cursor: pointer; box-shadow: 0 4px 24px #1a6fff55;
+    transition: transform 0.15s;
+  }
+  .btn-restart:hover { transform: scale(1.06); }
+
+  /* PARTICLES */
+  .particle-burst {
+    position: fixed; pointer-events: none; z-index: 999;
+  }
+
+  /* FLASH */
+  .flash-overlay {
+    position: fixed; inset: 0; pointer-events: none;
+    z-index: 998; opacity: 0;
+    transition: opacity 0.1s;
+  }
+
+  @keyframes pop { 0%{transform:scale(0.8);opacity:0} 60%{transform:scale(1.08)} 100%{transform:scale(1);opacity:1} }
+  @keyframes shakeX { 0%,100%{transform:translateX(0)} 20%,60%{transform:translateX(-8px)} 40%,80%{transform:translateX(8px)} }
+  .anim-pop   { animation: pop   0.4s ease forwards; }
+  .anim-shake { animation: shakeX 0.4s ease forwards; }
+
+  @media(max-width:600px) {
+    .choices { grid-template-columns: 1fr; }
+    .game-header h1 { font-size: 1.5rem; }
+    .scene-char-overlay { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Global animated lightning background -->
+<canvas id="bgCanvas"></canvas>
+
+<div class="flash-overlay" id="flashOverlay"></div>
+
+<div class="game-wrapper">
+  <!-- HEADER -->
+  <div class="game-header">
+    <h1>ENERGY WAR</html>
+    <p>Cuoc Chien Dien Hoa - Hoa 12 | Oxi Hoa va Khu</p>
+  </div>
+
+  <!-- HUD -->
+  <div class="hud">
+    <div>
+      <div style="font-size:0.75rem;color:#7fbfff;letter-spacing:2px;">NANG LUONG</div>
+      <div class="hud-score" id="scoreDisplay">0</div>
+    </div>
+    <div class="energy-bar-wrap">
+      <div style="font-size:0.7rem;color:#7fbfff;margin-bottom:4px;text-align:center;">ELECTRON CHARGE</div>
+      <div class="energy-bar-bg">
+        <div class="energy-bar-fill" id="energyBar"></div>
+      </div>
+    </div>
+    <div class="hud-stage" id="stageDisplay">Cua 0/5</div>
+  </div>
+
+  <!-- INTRO SCREEN -->
+  <div id="screen-intro">
+    <canvas id="introCanvas" width="780" height="220"></canvas>
+    <h2>Cuoc Chien Dien Hoa Bat Dau!</h2>
+    <p>
+      Vuong quoc Electron dang bi quan doi Oxi Hoa tan cong!<br>
+      Chi co nguoi chien binh hieu duoc bi mat cua <strong>pin dien hoa</strong>,
+      <strong>dien phan</strong> va <strong>an mon kim loai</strong> moi co the
+      kich hoat <em>He Thong Nang Luong</em> — va cuu vot the gioi.<br><br>
+      Ban co du suc manh de tham gia cuoc chien nay khong?
+    </p>
+    <button class="btn-start" onclick="startGame()">THAM CHIEN NGAY</button>
+  </div>
+
+  <!-- SCENES (5 questions) -->
+  <div id="screen-scenes">
+    <!-- Scene 1 -->
+    <div class="screen-scene" id="scene-1">
+      <div class="scene-card">
+        <div class="scene-bg-wrap">
+          <canvas id="sceneBgCanvas-1" width="820" height="200"></canvas>
+          <div class="scene-char-overlay">
+            <canvas id="charCanvas-1" width="130" height="190"></canvas>
+          </div>
+        </div>
+        <div class="scene-content">
+          <div class="scene-label">Cua 1 / Cap Nhat 1</div>
+          <div class="scene-title">Tuong Quan Oxi Hoa Xuat Hien!</div>
+          <div class="scene-narr">
+            "Chao nguoi chien binh!", giong Tuong Quan Oxi Hoa reng len.
+            "Ngat tat ca nguon pin dien hoa! Nang luong chi la chuyen doi, khong ai co the bat duoc no!"
+            Ban buoc phai tra loi cau hoi cua han de vuot qua rào can nang luong nay.
+          </div>
+          <div class="question-box">
+            <div class="question-text">Pin dien hoa bien doi nang luong gi thanh dien nang?</div>
+            <div class="choices">
+              <button class="choice-btn" onclick="answer(1,0)">Quang nang</button>
+              <button class="choice-btn" onclick="answer(1,1)">Hoa nang (phan ung oxi hoa - khu tu phat)</button>
+              <button class="choice-btn" onclick="answer(1,2)">Nhiet nang</button>
+              <button class="choice-btn" onclick="answer(1,3)">Co nang</button>
+            </div>
+            <div class="feedback-box" id="fb-1">
+              <div class="feedback-title" id="fb-title-1"></div>
+              <div class="feedback-text" id="fb-text-1"></div>
+            </div>
+            <button class="btn-next" id="next-1" onclick="nextScene(2)">Tien len Cua 2 &rsaquo;</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scene 2 -->
+    <div class="screen-scene" id="scene-2">
+      <div class="scene-card">
+        <div class="scene-bg-wrap">
+          <canvas id="sceneBgCanvas-2" width="820" height="200"></canvas>
+          <div class="scene-char-overlay">
+            <canvas id="charCanvas-2" width="130" height="190"></canvas>
+          </div>
+        </div>
+        <div class="scene-content">
+          <div class="scene-label">Cua 2 / Thap Anot</div>
+          <div class="scene-title">Linh Hon Anot Hien Ra!</div>
+          <div class="scene-narr">
+            Mot linh hon phat sang xuyen qua man khoi: Anot - cuc am va cuc duong - ai la ai?
+            "Ta la Anot!", linh hon thach thuc. "Neu ngươi biet ta la cuc nao, duong ray se mo!"
+            Trong pin Zn-Cu: Zn la anot, Cu la catot. Vay Zn o dau?
+          </div>
+          <div class="question-box">
+            <div class="question-text">Trong pin dien hoa Zn-Cu (dung dich H2SO4 loang), cuc nao la ANOT (cuc am)?</div>
+            <div class="choices">
+              <button class="choice-btn" onclick="answer(2,0)">Dong (Cu) — vi Cu hoat dong manh hon</button>
+              <button class="choice-btn" onclick="answer(2,1)">Kem (Zn) — vi Zn bi oxi hoa, nhuong electron</button>
+              <button class="choice-btn" onclick="answer(2,2)">Ca hai cuc deu la anot</button>
+              <button class="choice-btn" onclick="answer(2,3)">Khong co anot trong pin dien hoa</button>
+            </div>
+            <div class="feedback-box" id="fb-2">
+              <div class="feedback-title" id="fb-title-2"></div>
+              <div class="feedback-text" id="fb-text-2"></div>
+            </div>
+            <button class="btn-next" id="next-2" onclick="nextScene(3)">Tien len Cua 3 &rsaquo;</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scene 3 -->
+    <div class="screen-scene" id="scene-3">
+      <div class="scene-card">
+        <div class="scene-bg-wrap">
+          <canvas id="sceneBgCanvas-3" width="820" height="200"></canvas>
+          <div class="scene-char-overlay">
+            <canvas id="charCanvas-3" width="130" height="190"></canvas>
+          </div>
+        </div>
+        <div class="scene-content">
+          <div class="scene-label">Cua 3 / Ham Dien Phan</div>
+          <div class="scene-title">Quy Dien Phan Chan Loi!</div>
+          <div class="scene-narr">
+            "Ha ha!", Quy Dien Phan cươi tham. "Ngươi co biet dien phan NaCl nong chay tao ra gi o catot khong?
+            Neu sai, nguon dien se bi ngat vinh vien!"
+            Trong dien phan NaCl nong chay, khong co nuoc — chi co Na+ va Cl-.
+          </div>
+          <div class="question-box">
+            <div class="question-text">Dien phan NaCl nong chay, san pham o CATOT (cuc am) la gi?</div>
+            <div class="choices">
+              <button class="choice-btn" onclick="answer(3,0)">Khi Cl2</button>
+              <button class="choice-btn" onclick="answer(3,1)">Kim loai Na</button>
+              <button class="choice-btn" onclick="answer(3,2)">Khi H2</button>
+              <button class="choice-btn" onclick="answer(3,3)">Khi O2</button>
+            </div>
+            <div class="feedback-box" id="fb-3">
+              <div class="feedback-title" id="fb-title-3"></div>
+              <div class="feedback-text" id="fb-text-3"></div>
+            </div>
+            <button class="btn-next" id="next-3" onclick="nextScene(4)">Tien len Cua 4 &rsaquo;</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scene 4 -->
+    <div class="screen-scene" id="scene-4">
+      <div class="scene-card">
+        <div class="scene-bg-wrap">
+          <canvas id="sceneBgCanvas-4" width="820" height="200"></canvas>
+          <div class="scene-char-overlay">
+            <canvas id="charCanvas-4" width="130" height="190"></canvas>
+          </div>
+        </div>
+        <div class="scene-content">
+          <div class="scene-label">Cua 4 / Vung An Mon</div>
+          <div class="scene-title">Vua An Mon Xuat Hien!</div>
+          <div class="scene-narr">
+            "Tat ca kim loai se bi an mon!", Vua An Mon tuyen bo. "Tru khi ngươi biet cach bao ve chung!
+            Giai thich duoc qua trinh an mon dien hoa thi moi vuot qua ta!"
+            An mon dien hoa xay ra khi 2 kim loai khac nhau tiep xuc trong dung dich dien ly.
+          </div>
+          <div class="question-box">
+            <div class="question-text">Trong an mon dien hoa (pin Zn-Fe tiep xuc trong nuoc bien), kim loai nao bi an mon TRUOC?</div>
+            <div class="choices">
+              <button class="choice-btn" onclick="answer(4,0)">Sat (Fe) — vi Fe la catot</button>
+              <button class="choice-btn" onclick="answer(4,1)">Kem (Zn) — vi Zn hoat dong manh hon, la anot bi oxi hoa</button>
+              <button class="choice-btn" onclick="answer(4,2)">Ca hai bi an mon nhu nhau</button>
+              <button class="choice-btn" onclick="answer(4,3)">Khong kim loai nao bi an mon</button>
+            </div>
+            <div class="feedback-box" id="fb-4">
+              <div class="feedback-title" id="fb-title-4"></div>
+              <div class="feedback-text" id="fb-text-4"></div>
+            </div>
+            <button class="btn-next" id="next-4" onclick="nextScene(5)">Tien len Cua 5 &rsaquo;</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scene 5 -->
+    <div class="screen-scene" id="scene-5">
+      <div class="scene-card">
+        <div class="scene-bg-wrap">
+          <canvas id="sceneBgCanvas-5" width="820" height="200"></canvas>
+          <div class="scene-char-overlay">
+            <canvas id="charCanvas-5" width="130" height="190"></canvas>
+          </div>
+        </div>
+        <div class="scene-content">
+          <div class="scene-label">Cua 5 / Tran Chung Ket</div>
+          <div class="scene-title">Bo Chi Huy Oxi Hoa Toi!</div>
+          <div class="scene-narr">
+            "Day la tran chung ket!", Bo Chi Huy Oxi Hoa gao to. "Moi phan ung o CATOT trong dien phan la loai phan ung gi?
+            Neu sai — Vuong quoc Electron se sup do vinh vien!"
+            Hay nho: catot la noi nhan electron (khu), anot la noi nhuong electron (oxi hoa).
+          </div>
+          <div class="question-box">
+            <div class="question-text">Phan ung xay ra o CATOT trong qua trinh dien phan la phan ung:</div>
+            <div class="choices">
+              <button class="choice-btn" onclick="answer(5,0)">Oxi hoa — mat electron</button>
+              <button class="choice-btn" onclick="answer(5,1)">Khu — nhan electron</button>
+              <button class="choice-btn" onclick="answer(5,2)">Trung hoa axit-bazo</button>
+              <button class="choice-btn" onclick="answer(5,3)">Phan ung the</button>
+            </div>
+            <div class="feedback-box" id="fb-5">
+              <div class="feedback-title" id="fb-title-5"></div>
+              <div class="feedback-text" id="fb-text-5"></div>
+            </div>
+            <button class="btn-next" id="next-5" onclick="endGame()">Xem Ket Qua Chien Dau &rsaquo;</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- END SCREEN -->
+  <div id="screen-end">
+    <canvas id="endCanvas" width="780" height="220"></canvas>
+    <h2 id="endTitle"></h2>
+    <p id="endText"></p>
+    <button class="btn-restart" onclick="restartGame()">Chien Lai Tu Dau</button>
+  </div>
+</div>
+
+<script>
+/* =========================================================
+   GAME DATA
+   correct answers: scene -> index (0-based)
+   ========================================================= */
+const ANSWERS = { 1:1, 2:1, 3:1, 4:1, 5:1 };
+
+const FEEDBACK = {
+  1: {
+    correct: {
+      title: "Dung! Hoa nang chuyen thanh dien nang!",
+      text: "Pin dien hoa hoat dong dua tren phan ung oxi hoa - khu tu phat sinh. Nang luong hoa hoc tu phan ung nay duoc chuyen truc tiep thanh dien nang. Vi du: pin Zn-Cu, pin khô, pin Li-ion trong dien thoai."
+    },
+    wrong: {
+      title: "Sai roi! Nang luong hoa hoc moi dung!",
+      text: "Trong pin dien hoa, phan ung oxi hoa - khu xay ra tu phat, giai phong nang luong hoa hoc va chuyen no thanh dien nang. Khac voi pin mat troi (quang nang) hay dong co (co nang)."
+    }
+  },
+  2: {
+    correct: {
+      title: "Chuan xac! Kem (Zn) la ANOT!",
+      text: "Trong pin Zn-Cu: Zn hoat dong manh hon (dung tru dien hoa Zn dung truoc Cu). Zn bi oxi hoa o anot: Zn → Zn²⁺ + 2e⁻. Electron chay qua day dan den catot Cu, noi H⁺ bi khu: 2H⁺ + 2e⁻ → H₂."
+    },
+    wrong: {
+      title: "Sai! Anot la noi bi oxi hoa, chinh la Zn!",
+      text: "Cu khong bi oxi hoa trong truong hop nay vi Cu dung sau Zn trong day hoat dong hoa hoc. Anot (cuc am trong pin) chinh la Zn — noi xay ra oxi hoa: Zn → Zn²⁺ + 2e⁻."
+    }
+  },
+  3: {
+    correct: {
+      title: "Chien thang! Na kim loai thu duoc o catot!",
+      text: "Dien phan NaCl nong chay: Catot (-): Na⁺ + e⁻ → Na (khu Na⁺ thanh Na kim loai). Anot (+): 2Cl⁻ → Cl₂ + 2e⁻ (oxi hoa Cl⁻ thanh Cl₂). Day la cach cong nghiep san xuat Na kim loai va Cl₂ khi."
+    },
+    wrong: {
+      title: "Sai! O catot thu duoc Na kim loai, khong phai khi!",
+      text: "NaCl nong chay (khong co nuoc) nen khong co H₂O bi dien phan. Na⁺ bi khu o catot tao ra Na kim loai. Cl₂ thoat ra o anot. Chi khi dien phan dung dich NaCl moi co H₂ o catot."
+    }
+  },
+  4: {
+    correct: {
+      title: "Dung! Kem (Zn) bi an mon truoc!",
+      text: "Trong cap Zn-Fe tiep xuc, Zn hoat dong manh hon nen la anot, bi oxi hoa truoc: Zn → Zn²⁺ + 2e⁻. Fe la catot duoc bao ve. Day chinh la nguyen ly BAO VE BANG KIM LOAI HI SINH — dung Zn bao ve Fe (thep) trong cong nghiep."
+    },
+    wrong: {
+      title: "Sai! Kem bi an mon truoc de bao ve Sat!",
+      text: "Kim loai hoat dong manh hon (Zn) se la anot va bi oxi hoa truoc. Fe (sat) la catot, duoc bao ve. Nguyen ly nay duoc ung dung rong rai: ma kem len thep (ton), gan khoi Zn vao than tau, duong ong ngam dat..."
+    }
+  },
+  5: {
+    correct: {
+      title: "TOAN THANG! Catot la noi KHU (nhan electron)!",
+      text: "Quy tac vang dien phan: CATOT (-) la noi NHAN electron → xay ra phan ung KHU (X⁺ + e⁻ → X). ANOT (+) la noi NHUONG electron → xay ra phan ung OXI HOA (X → X^n⁺ + ne⁻). Ghi nho: Ca-Khu, An-Oxi! (CAtot-KHU, ANot-OXI)."
+    },
+    wrong: {
+      title: "Sai! Catot la noi KHU — nhan electron!",
+      text: "Dung viet nhau: CATOT nhan electron nen xay ra phan ung KHU. ANOT mAt electron nen xay ra OXI HOA. Meo nho: 'Ca-Khu, An-Oxi' — Catot Khu, Anot Oxi hoa. Day la nguyen tac co ban cua dien phan."
+    }
+  }
+};
+
+/* =========================================================
+   GAME STATE
+   ========================================================= */
+let score = 0;
+let answered = new Set();
+
+function updateHUD(scene) {
+  document.getElementById('scoreDisplay').textContent = score;
+  document.getElementById('stageDisplay').textContent = `Cua ${scene-1}/5`;
+  const pct = Math.max(0, Math.min(100, (score / 50) * 100));
+  document.getElementById('energyBar').style.width = pct + '%';
+}
+
+/* =========================================================
+   ANSWER HANDLER
+   ========================================================= */
+function answer(scene, choiceIdx) {
+  if (answered.has(scene)) return;
+  answered.add(scene);
+
+  const correct = ANSWERS[scene] === choiceIdx;
+  const btns = document.querySelectorAll(`#scene-${scene} .choice-btn`);
+  btns.forEach(b => b.disabled = true);
+  btns[choiceIdx].classList.add(correct ? 'correct' : 'wrong');
+  if (!correct) btns[ANSWERS[scene]].classList.add('correct');
+
+  if (correct) { score += 10; playTone(660, 0.18); flashScreen('#00cfff'); burstParticles('#00cfff'); }
+  else         { score -= 5;  playTone(180, 0.25); flashScreen('#ff4466'); burstParticles('#ff4466'); }
+
+  const fb = document.getElementById(`fb-${scene}`);
+  fb.className = 'feedback-box ' + (correct ? 'correct' : 'wrong');
+  document.getElementById(`fb-title-${scene}`).textContent = correct ? FEEDBACK[scene].correct.title : FEEDBACK[scene].wrong.title;
+  document.getElementById(`fb-text-${scene}`).textContent  = correct ? FEEDBACK[scene].correct.text  : FEEDBACK[scene].wrong.text;
+  fb.style.display = 'block';
+  document.getElementById(`next-${scene}`).style.display = 'inline-block';
+
+  updateHUD(scene + 1);
+}
+
+/* =========================================================
+   NAVIGATION
+   ========================================================= */
+function startGame() {
+  document.getElementById('screen-intro').style.display = 'none';
+  nextScene(1);
+}
+
+function nextScene(n) {
+  document.querySelectorAll('.screen-scene').forEach(s => s.style.display = 'none');
+  if (n <= 5) {
+    const el = document.getElementById(`scene-${n}`);
+    el.style.display = 'block';
+    el.classList.remove('anim-pop');
+    void el.offsetWidth;
+    el.classList.add('anim-pop');
+    updateHUD(n);
+    drawSceneBg(n);
+    drawChar(n);
+  }
+}
+
+function endGame() {
+  document.querySelectorAll('.screen-scene').forEach(s => s.style.display = 'none');
+  const end = document.getElementById('screen-end');
+  end.style.display = 'block';
+  const win = score >= 30;
+  end.className = win ? 'end-win' : 'end-lose';
+  document.getElementById('endTitle').textContent = win
+    ? `CHIEN THANG! Diem so: ${score}/50`
+    : `THE TRAN... Diem so: ${score}/50`;
+  document.getElementById('endText').textContent = win
+    ? `Xuat sac! Ban da kich hoat toan bo He Thong Nang Luong! Vuong quoc Electron duoc giai phong khoi gong cum cua quan doi Oxi Hoa. Ban hieu sau ve dien hoa hoc: pin dien hoa, dien phan, an mon kim loai va bao ve chung. Hoa 12 khong con la tro ngai!`
+    : `Quan doi Oxi Hoa da chiem uu the... Nhung moi that bai la mot bai hoc quy gia. Hay on lai ly thuyet dien hoa: nguyen tac hoat dong cua pin, qua trinh dien phan, an mon dien hoa va cac phuong phap bao ve kim loai. Roi tham chien lai!`;
+  drawEndCanvas(win);
+  if (win) { playTone(880, 0.3); setTimeout(()=>playTone(1100,0.3),320); burstParticles('#00cfff'); }
+}
+
+function restartGame() {
+  score = 0; answered.clear();
+  document.getElementById('screen-end').style.display = 'none';
+  document.getElementById('screen-intro').style.display = 'block';
+  document.getElementById('scoreDisplay').textContent = '0';
+  document.getElementById('energyBar').style.width = '0%';
+  document.getElementById('stageDisplay').textContent = 'Cua 0/5';
+  document.querySelectorAll('.choice-btn').forEach(b => {
+    b.disabled = false;
+    b.classList.remove('correct','wrong');
+  });
+  document.querySelectorAll('.feedback-box').forEach(f => f.style.display='none');
+  document.querySelectorAll('.btn-next').forEach(b => b.style.display='none');
+}
+
+/* =========================================================
+   AUDIO
+   ========================================================= */
+function playTone(freq, dur) {
+  try {
+    const ctx = new (window.AudioContext||window.webkitAudioContext)();
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.connect(g); g.connect(ctx.destination);
+    o.type = 'sawtooth'; o.frequency.value = freq;
+    g.gain.setValueAtTime(0.15, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
+    o.start(); o.stop(ctx.currentTime + dur);
+  } catch(e){}
+}
+
+/* =========================================================
+   FLASH + PARTICLES
+   ========================================================= */
+function flashScreen(color) {
+  const el = document.getElementById('flashOverlay');
+  el.style.background = color;
+  el.style.opacity = '0.18';
+  setTimeout(() => el.style.opacity = '0', 180);
+}
+
+function burstParticles(color) {
+  const N = 22, cx = window.innerWidth/2, cy = window.innerHeight/2;
+  const canvas = document.createElement('canvas');
+  canvas.className = 'particle-burst';
+  canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+  canvas.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:999;';
+  document.body.appendChild(canvas);
+  const ctx = canvas.getContext('2d');
+  const pts = Array.from({length:N}, () => ({
+    x: cx, y: cy,
+    vx: (Math.random()-0.5)*14,
+    vy: (Math.random()-0.5)*14,
+    r: Math.random()*5+2, life:1
+  }));
+  function frame() {
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    let alive = false;
+    pts.forEach(p => {
+      p.x+=p.vx; p.y+=p.vy; p.vy+=0.4; p.life-=0.03;
+      if(p.life>0){ alive=true;
+        ctx.globalAlpha=p.life;
+        ctx.fillStyle=color;
+        ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill();
+      }
+    });
+    ctx.globalAlpha=1;
+    if(alive) requestAnimationFrame(frame);
+    else canvas.remove();
+  }
+  requestAnimationFrame(frame);
+}
+
+/* =========================================================
+   BG CANVAS: global lightning field
+   ========================================================= */
+(function() {
+  const canvas = document.getElementById('bgCanvas');
+  const ctx = canvas.getContext('2d');
+
+  function resize() {
+    canvas.width  = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  // Stars + electric particles
+  const stars = Array.from({length:80}, () => ({
+    x: Math.random(), y: Math.random(),
+    r: Math.random()*1.5+0.3,
+    bright: Math.random(), phase: Math.random()*Math.PI*2
+  }));
+
+  const bolts = [];
+  function makeBolt() {
+    return {
+      x: Math.random() * window.innerWidth,
+      y: 0,
+      segs: [],
+      life: 1,
+      fade: 0.04 + Math.random()*0.04,
+    };
+  }
+  function genSegs(bolt) {
+    bolt.segs = [];
+    let cx = bolt.x, cy = bolt.y;
+    while(cy < window.innerHeight * 0.7) {
+      const nx = cx + (Math.random()-0.5)*80;
+      const ny = cy + 20 + Math.random()*40;
+      bolt.segs.push({x1:cx,y1:cy,x2:nx,y2:ny});
+      cx=nx; cy=ny;
+    }
+  }
+
+  let lastBolt = 0;
+  let t = 0;
+
+  function draw(ts) {
+    t = ts * 0.001;
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    // Dark gradient bg
+    const grd = ctx.createLinearGradient(0,0,0,canvas.height);
+    grd.addColorStop(0,'#010c1e');
+    grd.addColorStop(1,'#020b18');
+    ctx.fillStyle = grd;
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+
+    // Stars
+    stars.forEach(s => {
+      const a = 0.3 + 0.5 * (0.5 + 0.5*Math.sin(t*1.2 + s.phase));
+      ctx.globalAlpha = a;
+      ctx.fillStyle = '#7fbfff';
+      ctx.beginPath();
+      ctx.arc(s.x*canvas.width, s.y*canvas.height, s.r, 0, Math.PI*2);
+      ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+
+    // Lightning bolts
+    if(ts - lastBolt > 1400 + Math.random()*1200) {
+      const b = makeBolt();
+      genSegs(b);
+      bolts.push(b);
+      lastBolt = ts;
+    }
+    bolts.forEach((b,i) => {
+      b.life -= b.fade;
+      if(b.life <= 0) return;
+      ctx.globalAlpha = b.life * 0.7;
+      ctx.strokeStyle = '#00cfff';
+      ctx.lineWidth = 1.5;
+      ctx.shadowColor = '#00cfff';
+      ctx.shadowBlur = 8;
+      b.segs.forEach(s => {
+        ctx.beginPath();
+        ctx.moveTo(s.x1,s.y1);
+        ctx.lineTo(s.x2,s.y2);
+        ctx.stroke();
+      });
+      ctx.shadowBlur = 0;
+    });
+    // Clean up dead bolts
+    for(let i=bolts.length-1;i>=0;i--) if(bolts[i].life<=0) bolts.splice(i,1);
+
+    ctx.globalAlpha = 1;
+    requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+})();
+
+/* =========================================================
+   INTRO CANVAS
+   ========================================================= */
+(function() {
+  const c = document.getElementById('introCanvas');
+  if (!c) return;
+  const ctx = c.getContext('2d');
+  let t = 0;
+
+  // Pin dien hoa diagram: two electrodes, electron flow
+  function drawIntro() {
+    ctx.clearRect(0,0,c.width,c.height);
+
+    // Background
+    const grd = ctx.createLinearGradient(0,0,c.width,c.height);
+    grd.addColorStop(0,'#010c1e');
+    grd.addColorStop(1,'#020b18');
+    ctx.fillStyle = grd;
+    ctx.fillRect(0,0,c.width,c.height);
+
+    // Grid lines
+    ctx.strokeStyle='#1a6fff11'; ctx.lineWidth=1;
+    for(let x=0;x<c.width;x+=40){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,c.height);ctx.stroke();}
+    for(let y=0;y<c.height;y+=40){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(c.width,y);ctx.stroke();}
+
+    const cx = c.width/2, cy = c.height/2;
+
+    // Zn electrode (left)
+    ctx.fillStyle = '#3a7aff';
+    ctx.fillRect(cx-220, cy-60, 30, 120);
+    ctx.fillStyle='#7fbfff'; ctx.font='bold 13px Segoe UI'; ctx.textAlign='center';
+    ctx.fillText('Zn (Anot)',cx-205, cy+90);
+    ctx.fillText('Oxi hoa',cx-205, cy+105);
+
+    // Cu electrode (right)
+    ctx.fillStyle = '#ffb300';
+    ctx.fillRect(cx+190, cy-60, 30, 120);
+    ctx.fillStyle='#ffdb77'; ctx.font='bold 13px Segoe UI';
+    ctx.fillText('Cu (Catot)',cx+205, cy+90);
+    ctx.fillText('Khu',cx+205, cy+105);
+
+    // Solution
+    ctx.fillStyle='#00cfff11';
+    ctx.fillRect(cx-190, cy-40, 380, 80);
+    ctx.strokeStyle='#00cfff44'; ctx.lineWidth=1.5;
+    ctx.strokeRect(cx-190, cy-40, 380, 80);
+    ctx.fillStyle='#7fbfff88'; ctx.font='12px Segoe UI';
+    ctx.fillText('Dung dich dien ly (H2SO4)',cx, cy+5);
+
+    // Wire on top
+    ctx.strokeStyle='#ffd700'; ctx.lineWidth=3;
+    ctx.beginPath();
+    ctx.moveTo(cx-190, cy-60);
+    ctx.lineTo(cx-190, cy-80);
+    ctx.lineTo(cx+190, cy-80);
+    ctx.lineTo(cx+190, cy-60);
+    ctx.stroke();
+
+    // Electrons moving on wire
+    for(let i=0;i<5;i++){
+      const prog = ((t*0.4 + i*0.2) % 1);
+      const ex = cx-190 + prog*(380);
+      const ey = cy-80;
+      ctx.fillStyle='#00cfff';
+      ctx.shadowColor='#00cfff'; ctx.shadowBlur=10;
+      ctx.beginPath(); ctx.arc(ex,ey,5,0,Math.PI*2); ctx.fill();
+      ctx.shadowBlur=0;
+      ctx.fillStyle='#fff'; ctx.font='bold 8px sans-serif';
+      ctx.fillText('e-',ex-3,ey+3);
+    }
+
+    // Label
+    ctx.fillStyle='#1a6fff';
+    ctx.font='bold 11px Segoe UI'; ctx.textAlign='center';
+    ctx.fillText('electron chay tu Zn → Cu',cx,cy-88);
+
+    // Title glow
+    ctx.font='bold 22px Segoe UI';
+    ctx.shadowColor='#00cfff'; ctx.shadowBlur=18;
+    ctx.fillStyle='#00cfff';
+    ctx.fillText('ENERGY WAR — CUOC CHIEN DIEN HOA',cx, 30);
+    ctx.shadowBlur=0;
+
+    t += 0.016;
+    requestAnimationFrame(drawIntro);
+  }
+  requestAnimationFrame(drawIntro);
+})();
+
+/* =========================================================
+   SCENE BACKGROUNDS
+   ========================================================= */
+const sceneBgAnimFrames = {};
+
+function drawSceneBg(n) {
+  const canvas = document.getElementById(`sceneBgCanvas-${n}`);
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  if (sceneBgAnimFrames[n]) cancelAnimationFrame(sceneBgAnimFrames[n]);
+
+  const themes = {
+    1: { bg1:'#010c1e', bg2:'#020b18', accent:'#00cfff', label:'Pin Dien Hoa' },
+    2: { bg1:'#010c1e', bg2:'#0a0520', accent:'#7b2fff', label:'Anot & Catot' },
+    3: { bg1:'#030a1a', bg2:'#0a1010', accent:'#00ff88', label:'Dien Phan NaCl' },
+    4: { bg1:'#0a0808', bg2:'#1a0808', accent:'#ff6600', label:'An Mon Dien Hoa' },
+    5: { bg1:'#00050f', bg2:'#0a1020', accent:'#ffd700', label:'Tran Cuoi Dien Hoa' },
+  };
+  const th = themes[n];
+  let t = 0;
+  const W = canvas.width, H = canvas.height;
+
+  // Moving electric lines
+  const lines = Array.from({length:6}, (_,i) => ({
+    y: (i+1) * H/7,
+    speed: 0.5 + Math.random()*0.5,
+    phase: Math.random()*Math.PI*2,
+    amp: 10 + Math.random()*14
+  }));
+
+  function frame() {
+    ctx.clearRect(0,0,W,H);
+    const grd = ctx.createLinearGradient(0,0,W,H);
+    grd.addColorStop(0, th.bg1);
+    grd.addColorStop(1, th.bg2);
+    ctx.fillStyle=grd; ctx.fillRect(0,0,W,H);
+
+    // Horizontal electric waves
+    lines.forEach(ln => {
+      ctx.strokeStyle = th.accent + '55';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      for(let x=0;x<=W;x+=4){
+        const y = ln.y + ln.amp * Math.sin(x*0.04 + t*ln.speed + ln.phase);
+        x===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+      }
+      ctx.stroke();
+    });
+
+    // Small orbiting circles
+    for(let i=0;i<3;i++){
+      const angle = t*0.8 + i*Math.PI*2/3;
+      const ox = W*0.5 + Math.cos(angle)*60;
+      const oy = H*0.5 + Math.sin(angle)*30;
+      ctx.fillStyle = th.accent + '66';
+      ctx.beginPath(); ctx.arc(ox,oy,5,0,Math.PI*2); ctx.fill();
+    }
+
+    // Label
+    ctx.font='bold 18px Segoe UI';
+    ctx.fillStyle=th.accent;
+    ctx.shadowColor=th.accent; ctx.shadowBlur=12;
+    ctx.textAlign='left';
+    ctx.fillText(th.label, 20, H-18);
+    ctx.shadowBlur=0;
+
+    t += 0.016;
+    sceneBgAnimFrames[n] = requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+}
+
+/* =========================================================
+   CHARACTER CANVASES
+   ========================================================= */
+function drawChar(n) {
+  const canvas = document.getElementById(`charCanvas-${n}`);
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W=canvas.width, H=canvas.height;
+  let t=0;
+
+  const chars = {
+    1: { color:'#00cfff', name:'Tuong Quan Oxi Hoa', shape:'wizard' },
+    2: { color:'#7b2fff', name:'Linh Hon Anot',       shape:'spirit' },
+    3: { color:'#00ff88', name:'Quy Dien Phan',        shape:'demon'  },
+    4: { color:'#ff6600', name:'Vua An Mon',            shape:'king'   },
+    5: { color:'#ffd700', name:'Bo Chi Huy',            shape:'boss'   },
+  };
+  const ch = chars[n];
+
+  function frame() {
+    ctx.clearRect(0,0,W,H);
+    const bob = Math.sin(t*2)*4;
+    const cx=W/2, cy=H*0.42 + bob;
+
+    ctx.shadowColor=ch.color; ctx.shadowBlur=18;
+
+    // Body
+    ctx.fillStyle=ch.color+'bb';
+    ctx.beginPath(); ctx.ellipse(cx,cy+30,22,38,0,0,Math.PI*2); ctx.fill();
+
+    // Head
+    ctx.fillStyle=ch.color;
+    ctx.beginPath(); ctx.arc(cx,cy-10,22,0,Math.PI*2); ctx.fill();
+
+    // Eyes
+    ctx.fillStyle='#fff';
+    ctx.beginPath(); ctx.arc(cx-8,cy-12,5,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx+8,cy-12,5,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#000';
+    ctx.beginPath(); ctx.arc(cx-8,cy-12,2.5,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx+8,cy-12,2.5,0,Math.PI*2); ctx.fill();
+
+    // Special element
+    if(ch.shape==='wizard'||ch.shape==='boss'){
+      // Staff / crown spikes
+      ctx.strokeStyle=ch.color; ctx.lineWidth=3;
+      ctx.beginPath();ctx.moveTo(cx+24,cy+10);ctx.lineTo(cx+24,cy-40);ctx.stroke();
+      ctx.fillStyle=ch.color;
+      ctx.beginPath();ctx.arc(cx+24,cy-44,7,0,Math.PI*2);ctx.fill();
+    }
+    if(ch.shape==='spirit'){
+      // Trailing wisps
+      for(let i=0;i<3;i++){
+        const a = t*1.5 + i*Math.PI*2/3;
+        ctx.fillStyle=ch.color+'88';
+        ctx.beginPath();
+        ctx.arc(cx+Math.cos(a)*28, cy+Math.sin(a)*20, 5,0,Math.PI*2);
+        ctx.fill();
+      }
+    }
+
+    // Name label
+    ctx.shadowBlur=0;
+    ctx.font='bold 8.5px Segoe UI';
+    ctx.fillStyle=ch.color;
+    ctx.textAlign='center';
+    ctx.fillText(ch.name, cx, H-8);
+
+    t+=0.016;
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+}
+
+/* =========================================================
+   END CANVAS
+   ========================================================= */
+function drawEndCanvas(win) {
+  const canvas = document.getElementById('endCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W=canvas.width, H=canvas.height;
+  let t=0;
+
+  function frame() {
+    ctx.clearRect(0,0,W,H);
+    const grd=ctx.createLinearGradient(0,0,W,H);
+    if(win){grd.addColorStop(0,'#010c1e');grd.addColorStop(1,'#001a30');}
+    else{grd.addColorStop(0,'#0a0505');grd.addColorStop(1,'#1a0505');}
+    ctx.fillStyle=grd; ctx.fillRect(0,0,W,H);
+
+    const color = win ? '#00cfff' : '#ff4466';
+
+    if(win){
+      // Victory: electric crown radiating outward
+      for(let i=0;i<8;i++){
+        const a = (i/8)*Math.PI*2 + t*0.5;
+        const r = 70 + 20*Math.sin(t*2+i);
+        ctx.strokeStyle=color+'88'; ctx.lineWidth=2;
+        ctx.beginPath();
+        ctx.moveTo(W/2,H/2);
+        ctx.lineTo(W/2+Math.cos(a)*r, H/2+Math.sin(a)*r);
+        ctx.stroke();
+      }
+      // Center star
+      ctx.fillStyle=color; ctx.shadowColor=color; ctx.shadowBlur=30;
+      ctx.beginPath(); ctx.arc(W/2,H/2,28,0,Math.PI*2); ctx.fill();
+      ctx.shadowBlur=0;
+      ctx.font='bold 18px Segoe UI'; ctx.fillStyle='#fff';
+      ctx.textAlign='center'; ctx.fillText('WIN!',W/2,H/2+6);
+
+      // Confetti
+      for(let i=0;i<20;i++){
+        const px = (Math.sin(t*1.3+i*0.9)*0.4+0.5)*W;
+        const py = ((t*0.08+i*0.05) % 1)*H;
+        ctx.fillStyle = ['#00cfff','#ffd700','#00ff88','#ff66aa'][i%4];
+        ctx.fillRect(px,py,6,6);
+      }
+    } else {
+      // Defeat: dark cracked field
+      ctx.strokeStyle=color+'44'; ctx.lineWidth=1.5;
+      for(let i=0;i<6;i++){
+        const a = (i/6)*Math.PI*2;
+        ctx.beginPath();
+        ctx.moveTo(W/2,H/2);
+        ctx.lineTo(W/2+Math.cos(a)*120, H/2+Math.sin(a)*90);
+        ctx.stroke();
+      }
+      ctx.fillStyle=color+'aa'; ctx.shadowColor=color; ctx.shadowBlur=20;
+      ctx.beginPath(); ctx.arc(W/2,H/2,24,0,Math.PI*2); ctx.fill();
+      ctx.shadowBlur=0;
+      ctx.font='bold 16px Segoe UI'; ctx.fillStyle='#fff';
+      ctx.textAlign='center'; ctx.fillText('...',W/2,H/2+6);
+    }
+
+    // Title
+    ctx.font='bold 20px Segoe UI';
+    ctx.shadowColor=color; ctx.shadowBlur=12;
+    ctx.fillStyle=color; ctx.textAlign='center';
+    ctx.fillText(win ? 'VUONG QUOC ELECTRON DUOC GIAI PHONG!' : 'NANG LUONG DA SUT GIAM...', W/2, 30);
+    ctx.shadowBlur=0;
+
+    t+=0.016;
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,170 @@
+
+> chemai-uyen-sensei@0.1.0 dev
+> next dev
+
+  ▲ Next.js 14.2.7
+  - Local:        http://localhost:3000
+  - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 2.1s
+ ✓ Compiled /middleware in 433ms (190 modules)
+ ✓ Compiled /api/teacher/questions in 332ms (196 modules)
+ GET /api/teacher/questions?page=1&page_size=1 401 in 412ms
+<w> [webpack.cache.PackFileCacheStrategy] Serializing big strings (133kiB) impacts deserialization performance (consider using Buffer instead and decode when needed)
+ ✓ Compiled in 67ms (196 modules)
+ ✓ Compiled in 60ms (196 modules)
+ ✓ Compiled in 58ms (196 modules)
+ GET /api/teacher/questions?page=1&page_size=1 401 in 32ms
+ ✓ Compiled in 70ms (196 modules)
+ ✓ Compiled in 50ms (196 modules)
+ ✓ Compiled in 65ms (196 modules)
+ ✓ Compiled in 46ms (196 modules)
+ ✓ Compiled in 67ms (196 modules)
+ ✓ Compiled in 9ms
+ ○ Compiling /teacher_dashboard/questions ...
+ ✓ Compiled /teacher_dashboard/questions in 1952ms (913 modules)
+Using the user object as returned from supabase.auth.getSession() or from some supabase.auth.onAuthStateChange() events could be insecure! This value comes directly from the storage medium (usually cookies on the server) and may not be authentic. Use supabase.auth.getUser() instead which authenticates the data by contacting the Supabase Auth server.
+ GET /teacher_dashboard/questions 200 in 3205ms
+ ✓ Compiled /api/teacher/questions in 118ms (555 modules)
+ ✓ Compiled (557 modules)
+Using the user object as returned from supabase.auth.getSession() or from some supabase.auth.onAuthStateChange() events could be insecure! This value comes directly from the storage medium (usually cookies on the server) and may not be authentic. Use supabase.auth.getUser() instead which authenticates the data by contacting the Supabase Auth server.
+Questions API Error: { message: 'Bad Request' }
+ GET /api/teacher/questions?page=1&page_size=20&sort_key=total_attempts&sort_dir=desc 500 in 3891ms
+Questions API Error: { message: 'Bad Request' }
+ GET /api/teacher/questions?page=1&page_size=20&sort_key=total_attempts&sort_dir=desc 500 in 4608ms
+ GET /api/teacher/questions/meta 200 in 4854ms
+Using the user object as returned from supabase.auth.getSession() or from some supabase.auth.onAuthStateChange() events could be insecure! This value comes directly from the storage medium (usually cookies on the server) and may not be authentic. Use supabase.auth.getUser() instead which authenticates the data by contacting the Supabase Auth server.
+ GET /api/teacher/questions/meta 200 in 1048ms
+ GET /teacher_dashboard/questions 200 in 393ms
+Questions API Error: { message: 'Bad Request' }
+ GET /api/teacher/questions?page=1&page_size=20&sort_key=total_attempts&sort_dir=desc 500 in 1853ms
+Questions API Error: { message: 'Bad Request' }
+ GET /api/teacher/questions?page=1&page_size=20&sort_key=total_attempts&sort_dir=desc 500 in 2122ms
+ GET /api/teacher/questions/meta 200 in 2173ms
+ GET /api/teacher/questions/meta 200 in 1681ms
+ ✓ Compiled /login in 226ms (955 modules)
+ ✓ Compiled /api/auth/cookie in 107ms (565 modules)
+ POST /api/auth/cookie 200 in 613ms
+ ✓ Compiled /dashboard in 53ms (567 modules)
+ ✓ Compiled in 167ms (386 modules)
+ POST /api/profile/migrate 200 in 775ms
+ ✓ Compiled /api/grades/[gradeId]/lessons in 69ms (579 modules)
+ GET /api/grades/11111111-1111-1111-1111-111111111110/lessons 200 in 700ms
+ ✓ Compiled /teacher_dashboard in 253ms (976 modules)
+Using the user object as returned from supabase.auth.getSession() or from some supabase.auth.onAuthStateChange() events could be insecure! This value comes directly from the storage medium (usually cookies on the server) and may not be authentic. Use supabase.auth.getUser() instead which authenticates the data by contacting the Supabase Auth server.
+ ✓ Compiled /api/teacher/classes in 83ms (590 modules)
+Using the user object as returned from supabase.auth.getSession() or from some supabase.auth.onAuthStateChange() events could be insecure! This value comes directly from the storage medium (usually cookies on the server) and may not be authentic. Use supabase.auth.getUser() instead which authenticates the data by contacting the Supabase Auth server.
+ GET /api/teacher/classes 200 in 1827ms
+ ✓ Compiled /api/teacher/classes/[classId]/students in 77ms (592 modules)
+ GET /api/teacher/classes 200 in 1096ms
+ GET /api/teacher/classes/4281058f-9917-4b66-8f7a-779cf4deb88f/students 200 in 1560ms
+ GET /api/teacher/questions/meta 200 in 962ms
+Questions API Error: { message: 'Bad Request' }
+ GET /api/teacher/questions?page=1&page_size=20&sort_key=total_attempts&sort_dir=desc 500 in 1437ms
+Questions API Error: { message: 'Bad Request' }
+ GET /api/teacher/questions?page=1&page_size=20&sort_key=total_attempts&sort_dir=desc 500 in 1616ms
+ GET /api/teacher/questions/meta 200 in 759ms
+ GET /api/grades/11111111-1111-1111-1111-111111111112/lessons 200 in 1194ms
+ ✓ Compiled in 801ms (982 modules)
+ ✓ Compiled in 182ms (402 modules)
+ GET /api/grades/11111111-1111-1111-1111-111111111111/lessons 200 in 1269ms
+ GET /api/grades/11111111-1111-1111-1111-111111111112/lessons 200 in 822ms
+ ✓ Compiled /api/teacher/classes in 154ms (580 modules)
+ ✓ Compiled /api/teacher/questions in 179ms (582 modules)
+ ✓ Compiled in 0ms (584 modules)
+ ✓ Compiled in 0ms (584 modules)
+ ✓ Compiled in 1ms (584 modules)
+Using the user object as returned from supabase.auth.getSession() or from some supabase.auth.onAuthStateChange() events could be insecure! This value comes directly from the storage medium (usually cookies on the server) and may not be authentic. Use supabase.auth.getUser() instead which authenticates the data by contacting the Supabase Auth server.
+Using the user object as returned from supabase.auth.getSession() or from some supabase.auth.onAuthStateChange() events could be insecure! This value comes directly from the storage medium (usually cookies on the server) and may not be authentic. Use supabase.auth.getUser() instead which authenticates the data by contacting the Supabase Auth server.
+ GET /api/teacher/classes 200 in 3800ms
+ GET /api/teacher/questions/meta 200 in 2135ms
+Options query error: { message: 'Bad Request' }
+Questions API Error: { message: 'Bad Request' }
+ GET /api/teacher/questions?page=1&page_size=20&sort_key=total_attempts&sort_dir=desc 500 in 2589ms
+ GET /api/teacher/classes 200 in 1384ms
+Options query error: { message: 'Bad Request' }
+Questions API Error: { message: 'Bad Request' }
+ GET /api/teacher/questions?page=1&page_size=20&sort_key=total_attempts&sort_dir=desc 500 in 3035ms
+ GET /api/teacher/questions/meta 200 in 1050ms
+Using the user object as returned from supabase.auth.getSession() or from some supabase.auth.onAuthStateChange() events could be insecure! This value comes directly from the storage medium (usually cookies on the server) and may not be authentic. Use supabase.auth.getUser() instead which authenticates the data by contacting the Supabase Auth server.
+ GET /teacher_dashboard/questions 200 in 193ms
+ GET /api/teacher/questions/meta 200 in 1034ms
+Options query error: { message: 'Bad Request' }
+Questions API Error: { message: 'Bad Request' }
+ GET /api/teacher/questions?page=1&page_size=20&sort_key=total_attempts&sort_dir=desc 500 in 1327ms
+Options query error: { message: 'Bad Request' }
+Questions API Error: { message: 'Bad Request' }
+ GET /api/teacher/questions?page=1&page_size=20&sort_key=total_attempts&sort_dir=desc 500 in 1339ms
+ GET /api/teacher/questions/meta 200 in 1196ms
+Using the user object as returned from supabase.auth.getSession() or from some supabase.auth.onAuthStateChange() events could be insecure! This value comes directly from the storage medium (usually cookies on the server) and may not be authentic. Use supabase.auth.getUser() instead which authenticates the data by contacting the Supabase Auth server.
+ GET /teacher_dashboard/questions 200 in 194ms
+ GET /api/teacher/questions/meta 200 in 799ms
+Options query error: { message: 'Bad Request' }
+Questions API Error: { message: 'Bad Request' }
+ GET /api/teacher/questions?page=1&page_size=20&sort_key=total_attempts&sort_dir=desc 500 in 1163ms
+ GET /api/teacher/questions/meta 200 in 881ms
+Options query error: { message: 'Bad Request' }
+Questions API Error: { message: 'Bad Request' }
+ GET /api/teacher/questions?page=1&page_size=20&sort_key=total_attempts&sort_dir=desc 500 in 1694ms
+Using the user object as returned from supabase.auth.getSession() or from some supabase.auth.onAuthStateChange() events could be insecure! This value comes directly from the storage medium (usually cookies on the server) and may not be authentic. Use supabase.auth.getUser() instead which authenticates the data by contacting the Supabase Auth server.
+ GET /teacher_dashboard/questions 200 in 195ms
+ GET /api/teacher/questions/meta 200 in 1148ms
+Options query error: { message: 'Bad Request' }
+Questions API Error: { message: 'Bad Request' }
+ GET /api/teacher/questions?page=1&page_size=20&sort_key=total_attempts&sort_dir=desc 500 in 1181ms
+Options query error: { message: 'Bad Request' }
+Questions API Error: { message: 'Bad Request' }
+ GET /api/teacher/questions?page=1&page_size=20&sort_key=total_attempts&sort_dir=desc 500 in 1196ms
+ GET /api/teacher/questions/meta 200 in 953ms
+[Error: ENOENT: no such file or directory, stat '/Users/apple/Documents/AIID/TRAE/ChemAI/.next/cache/webpack/server-development/4.pack.gz'] {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'stat',
+  path: '/Users/apple/Documents/AIID/TRAE/ChemAI/.next/cache/webpack/server-development/4.pack.gz'
+}
+ ⨯ unhandledRejection: [Error: ENOENT: no such file or directory, stat '/Users/apple/Documents/AIID/TRAE/ChemAI/.next/cache/webpack/server-development/4.pack.gz'] {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'stat',
+  path: '/Users/apple/Documents/AIID/TRAE/ChemAI/.next/cache/webpack/server-development/4.pack.gz'
+}
+ ⨯ unhandledRejection: [Error: ENOENT: no such file or directory, stat '/Users/apple/Documents/AIID/TRAE/ChemAI/.next/cache/webpack/server-development/4.pack.gz'] {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'stat',
+  path: '/Users/apple/Documents/AIID/TRAE/ChemAI/.next/cache/webpack/server-development/4.pack.gz'
+}
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, stat '/Users/apple/Documents/AIID/TRAE/ChemAI/.next/cache/webpack/server-development/4.pack.gz'
+ ✓ Compiled in 1116ms (954 modules)
+ ✓ Compiled in 724ms (402 modules)
+ ✓ Compiled in 1460ms (954 modules)
+ ✓ Compiled in 598ms (402 modules)
+ ✓ Compiled in 674ms (402 modules)
+ ✓ Compiled in 234ms (402 modules)
+ ✓ Compiled in 124ms (402 modules)
+ ✓ Compiled in 1300ms (954 modules)
+ ✓ Compiled in 279ms (402 modules)
+ ✓ Compiled in 1328ms (954 modules)
+ ✓ Compiled in 1021ms (954 modules)
+ ✓ Compiled in 191ms (402 modules)
+ ✓ Compiled in 1400ms (402 modules)
+ ✓ Compiled in 1238ms (402 modules)
+ ⚠ ./app/teacher_dashboard/questions/page.tsx
+Attempted import error: './QuestionsClient' does not contain a default export (imported as 'QuestionsClient').
+
+Import trace for requested module:
+./app/teacher_dashboard/questions/page.tsx
+ ✓ Compiled in 1430ms (954 modules)
+ ✓ Compiled in 380ms (402 modules)
+ ✓ Compiled in 1669ms (402 modules)
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename '/Users/apple/Documents/AIID/TRAE/ChemAI/.next/cache/webpack/client-development/0.pack.gz_' -> '/Users/apple/Documents/AIID/TRAE/ChemAI/.next/cache/webpack/client-development/0.pack.gz'
+ ✓ Compiled in 1913ms (402 modules)
+ ✓ Compiled in 1874ms (402 modules)
+ ✓ Compiled in 1274ms (402 modules)
+ ✓ Compiled in 1526ms (402 modules)
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename '/Users/apple/Documents/AIID/TRAE/ChemAI/.next/cache/webpack/client-development/0.pack.gz_' -> '/Users/apple/Documents/AIID/TRAE/ChemAI/.next/cache/webpack/client-development/0.pack.gz'
+ ✓ Compiled in 1542ms (402 modules)
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename '/Users/apple/Documents/AIID/TRAE/ChemAI/.next/cache/webpack/client-development/0.pack.gz_' -> '/Users/apple/Documents/AIID/TRAE/ChemAI/.next/cache/webpack/client-development/0.pack.gz'
+ ✓ Compiled in 1545ms (402 modules)
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename '/Users/apple/Documents/AIID/TRAE/ChemAI/.next/cache/webpack/client-development/0.pack.gz_' -> '/Users/apple/Documents/AIID/TRAE/ChemAI/.next/cache/webpack/client-development/0.pack.gz'

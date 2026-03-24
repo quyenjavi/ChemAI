@@ -34,11 +34,36 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
                 <span className="text-xs sm:text-sm font-semibold tracking-wide" style={{color:'var(--gold)'}}>CHEMAI LUYỆN HÓA THPT</span>
               </span>
             </Link>
-            <div className="flex items-center gap-2">
-              {session ? <Link href="/teacher_dashboard" prefetch={false} className="text-sm underline" style={{color:'var(--gold)'}}>Giáo viên</Link> : null}
-              {session ? <Link href="/profile" prefetch={false} className="text-sm underline" style={{color:'var(--gold)'}}>Hồ sơ</Link> : null}
-              {session ? <SignOutButton /> : null}
-            </div>
+            {session ? (
+              <>
+                <div className="hidden sm:flex items-center gap-2">
+                  <Link href="/teacher_dashboard" prefetch={false} className="text-sm underline" style={{color:'var(--gold)'}}>Giáo viên</Link>
+                  <Link href="/profile" prefetch={false} className="text-sm underline" style={{color:'var(--gold)'}}>Hồ sơ</Link>
+                  <SignOutButton />
+                </div>
+                <div className="sm:hidden">
+                  <details className="relative">
+                    <summary
+                      aria-label="Mở menu"
+                      className="list-none cursor-pointer select-none rounded-md border border-[var(--divider)] px-2 py-2"
+                    >
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M4 7h16" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                        <path d="M4 12h16" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                        <path d="M4 17h16" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                      </svg>
+                    </summary>
+                    <div className="absolute right-0 mt-2 w-44 rounded-md border border-[var(--divider)] bg-slate-950/95 backdrop-blur p-2 shadow-lg">
+                      <Link href="/teacher_dashboard" prefetch={false} className="block px-3 py-2 text-sm rounded hover:bg-slate-800/60" style={{color:'var(--gold)'}}>Giáo viên</Link>
+                      <Link href="/profile" prefetch={false} className="block px-3 py-2 text-sm rounded hover:bg-slate-800/60" style={{color:'var(--gold)'}}>Hồ sơ</Link>
+                      <div className="px-3 py-2">
+                        <SignOutButton />
+                      </div>
+                    </div>
+                  </details>
+                </div>
+              </>
+            ) : null}
           </div>
         </header>
         <main className="mx-auto max-w-6xl px-4 py-6">

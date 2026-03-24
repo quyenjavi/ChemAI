@@ -76,7 +76,6 @@ export default function QuizClient({ lessonId, n }: { lessonId: string, n?: stri
     let isMounted = true
     
     const initQuiz = async () => {
-      console.log('--- Initializing Quiz ---')
       setInitError('')
       const { data } = await supabaseBrowser.auth.getUser()
       if (!data.user) {
@@ -102,7 +101,6 @@ export default function QuizClient({ lessonId, n }: { lessonId: string, n?: stri
 
       try {
         // 1. Create attempt first
-        console.log('Step 1: Creating attempt for lesson:', lessonId)
         let createRes = await fetch('/api/attempts/create', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -111,9 +109,7 @@ export default function QuizClient({ lessonId, n }: { lessonId: string, n?: stri
         })
         
         if (createRes.status === 401) {
-          console.log('Create attempt 401, syncing auth cookie and retrying once...')
           const ok = await syncServerCookieOnce()
-          console.log('Cookie sync result:', ok)
           if (ok) {
             createRes = await fetch('/api/attempts/create', {
               method: 'POST',
@@ -125,7 +121,6 @@ export default function QuizClient({ lessonId, n }: { lessonId: string, n?: stri
         }
 
         const createJson = await createRes.json().catch(() => ({}))
-        console.log('Create attempt response:', { status: createRes.status, body: createJson })
 
         if (!createRes.ok) {
           throw new Error(createJson.error || 'Không thể khởi tạo bài làm. Vui lòng đăng nhập lại.')
@@ -137,7 +132,6 @@ export default function QuizClient({ lessonId, n }: { lessonId: string, n?: stri
         if (!isMounted) return
         attemptIdRef.current = newAttemptId
         setAttemptId(newAttemptId)
-        console.log('Received attemptId:', newAttemptId)
 
         // 2. Fetch questions with attemptId
         const qParams = new URLSearchParams()
@@ -145,14 +139,11 @@ export default function QuizClient({ lessonId, n }: { lessonId: string, n?: stri
         if (desiredCount) qParams.set('n', String(desiredCount))
         
         const qUrl = `/api/lessons/${lessonId}/questions?${qParams.toString()}`
-        console.log('Step 2: Fetching questions URL:', qUrl)
         
         fetchCountRef.current += 1
         let qRes = await fetch(qUrl, { credentials: 'include' })
         if (qRes.status === 401) {
-          console.log('Fetch questions 401, syncing auth cookie and retrying once...')
           const ok = await syncServerCookieOnce()
-          console.log('Cookie sync result:', ok)
           if (ok) {
             qRes = await fetch(qUrl, { credentials: 'include' })
           }
@@ -167,7 +158,6 @@ export default function QuizClient({ lessonId, n }: { lessonId: string, n?: stri
         const list: Q[] = Array.isArray(qJson) ? qJson : (qJson?.questions || [])
         setQuestions(list)
         setLessonType(qJson?.lesson?.lesson_type === 'exam' ? 'exam' : 'practice')
-        console.log('Fetch questions successful. Count:', fetchCountRef.current, 'Questions:', list.length)
 
       } catch (err: any) {
         console.error('Quiz initialization error:', err)

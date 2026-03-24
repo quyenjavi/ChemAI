@@ -262,7 +262,6 @@ export default function QuestionsClient() {
       .then(data => {
         if (data.error) throw new Error(data.error)
         
-        console.log('Raw Question Detail:', data)
         const { question: q, stats, options, statements, short_answers, reports: qReports } = data
         
         const mappedDetail: QuestionRow = {
@@ -305,16 +304,6 @@ export default function QuestionsClient() {
         setEditStatements(mappedDetail.statements || [])
         setEditAcceptedAnswers(mappedDetail.accepted_answers || [])
         
-        console.log('Mapped Form State:', {
-          lesson: q.lesson_title,
-          grade: q.grade_name,
-          type: q.question_type,
-          tip: q.tip,
-          explanation: q.explanation,
-          options: mappedDetail.options,
-          statements: mappedDetail.statements,
-          reportsCount: qReports?.length
-        })
       })
       .catch(err => {
         alert('Lỗi khi tải chi tiết: ' + err.message)
@@ -348,14 +337,12 @@ export default function QuestionsClient() {
         explanation: editExplanation,
         tip: editTip
       }
-      console.log('Gen Tip/Explain request payload:', reqPayload)
       const res = await fetch('/api/teacher/questions/gen-tip-explanation', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(reqPayload)
       })
       const data = await res.json()
-      console.log('Gen Tip/Explain raw response:', data)
       if (!res.ok) {
         throw new Error(data?.error || 'Gen AI failed')
       }
@@ -363,7 +350,6 @@ export default function QuestionsClient() {
       const nextExp = typeof data?.explanation === 'string' ? data.explanation : ''
       setEditTip(nextTip)
       setEditExplanation(nextExp)
-      console.log('Gen Tip/Explain setState:', { tip: nextTip, explanation: nextExp })
       setAiGenerated(true)
     } catch (err: any) {
       alert('Lỗi khi gen AI: ' + err.message)

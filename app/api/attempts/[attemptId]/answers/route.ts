@@ -33,15 +33,8 @@ export async function GET(_: Request, { params }: { params: { attemptId: string 
       .eq('id', params.attemptId)
       .maybeSingle()
     
-    if (attErr) {
-      console.error('Error fetching attempt:', attErr)
-      return NextResponse.json({ error: attErr.message }, { status: 500 })
-    }
-    
-    if (!att || att.user_id !== user.id) {
-      console.log('Attempt not found or unauthorized:', { attemptId: params.attemptId, userId: user.id })
-      return NextResponse.json({ error: 'Not found' }, { status: 404 })
-    }
+    if (attErr) return NextResponse.json({ error: attErr.message }, { status: 500 })
+    if (!att || att.user_id !== user.id) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
     // 2. Get grading report if available
     const { data: gradingReport } = await svc
@@ -94,10 +87,7 @@ export async function GET(_: Request, { params }: { params: { attemptId: string 
       .eq('attempt_id', params.attemptId)
     
     if (ansErr) throw ansErr
-    if (!answerRows || answerRows.length === 0) {
-      console.log('No answers found in quiz_attempt_answers for attempt:', params.attemptId)
-      return NextResponse.json({ attempt: finalAttempt, report: reportContent, answers: [] })
-    }
+    if (!answerRows || answerRows.length === 0) return NextResponse.json({ attempt: finalAttempt, report: reportContent, answers: [] })
 
     // 3. Get unique question IDs
     const qIds = Array.from(new Set(answerRows.map((r: any) => r.question_id).filter(Boolean)))
@@ -105,7 +95,7 @@ export async function GET(_: Request, { params }: { params: { attemptId: string 
     // 4. Get question metadata
     const { data: qs } = await svc
       .from('questions')
-      .select('id, content, question_type, order_index, topic, brief_explanation, explanation, tip, image_url, image_alt, image_caption, report_locked, review_status, resolution_type')
+      .select('id, content, question_type, order_index, created_at, topic, brief_explanation, explanation, tip, image_url, image_alt, image_caption, report_locked, review_status, resolution_type')
       .in('id', qIds)
     const qById: Record<string, any> = Object.fromEntries((qs || []).map((q: any) => [q.id, q]))
 
@@ -120,8 +110,9 @@ export async function GET(_: Request, { params }: { params: { attemptId: string 
     const typeOrder: { [key: string]: number } = {
       'single_choice': 1,
       'true_false': 2,
+      'true_false_group': 2,
       'short_answer': 3,
-    };
+    }
 
     const orderedQuestions = qIds
       .map((id) => qById[id])
@@ -130,7 +121,12 @@ export async function GET(_: Request, { params }: { params: { attemptId: string 
         const typeA = typeOrder[a.question_type as string] || 99
         const typeB = typeOrder[b.question_type as string] || 99
         if (typeA !== typeB) return typeA - typeB
-        return (a.order_index ?? 0) - (b.order_index ?? 0)
+        const ao = (a.order_index ?? Infinity)
+        const bo = (b.order_index ?? Infinity)
+        if (ao !== bo) return ao - bo
+        const at = a.created_at ? Date.parse(a.created_at) : 0
+        const bt = b.created_at ? Date.parse(b.created_at) : 0
+        return at - bt
       })
 
     const choiceIds = orderedQuestions.filter((q: any) => q.question_type === 'single_choice' || q.question_type === 'true_false').map((q: any) => q.id)

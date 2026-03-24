@@ -25,7 +25,11 @@ export async function GET(req: Request, { params }: { params: { lessonId: string
     let finalQuestions: any[] = []
 
     // Helper: sort by type, then order_index (nulls last), then created_at
-    const typeWeight = (t: string) => (t === 'single_choice' ? 1 : t === 'true_false' ? 2 : t === 'short_answer' ? 3 : 4)
+    const typeWeight = (t: string) =>
+      t === 'single_choice' ? 1
+      : (t === 'true_false' || t === 'true_false_group') ? 2
+      : t === 'short_answer' ? 3
+      : 4
     const sortQuestions = (arr: any[]) => {
       return [...arr].sort((a, b) => {
         const w = typeWeight(a.question_type) - typeWeight(b.question_type)
@@ -49,7 +53,7 @@ export async function GET(req: Request, { params }: { params: { lessonId: string
       
       finalQuestions = sortQuestions((qs || []).filter(Boolean))
     } else {
-      // 3b. No frozen questions yet, pick them now (The Old Flow)
+      // 3b. No frozen questions yet, pick them now and freeze
       const { data: allQs } = await svc
         .from('questions')
         .select('id, content, question_type, order_index, topic, lesson_id, image_url, image_alt, image_caption, created_at')
@@ -58,7 +62,6 @@ export async function GET(req: Request, { params }: { params: { lessonId: string
 
       if (!allQs) throw new Error('Could not fetch questions')
 
-      const url = new URL(req.url)
       const rawN = url.searchParams.get('n')
       const parsedN = Number(rawN)
       const desiredCount = (rawN && Number.isFinite(parsedN) && parsedN > 0) ? Math.min(50, parsedN) : null

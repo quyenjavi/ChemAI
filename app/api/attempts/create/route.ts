@@ -36,7 +36,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: error.message }, { status: 400 })
     }
 
-    console.log('Attempt created successfully:', data.id)
     return NextResponse.json({ attemptId: data.id })
   } catch (e: any) {
     return NextResponse.json({ error: e.message || 'Server error' }, { status: 500 })

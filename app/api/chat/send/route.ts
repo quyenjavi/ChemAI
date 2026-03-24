@@ -9,10 +9,6 @@ async function callDifyChat(body: any) {
   const timeout = setTimeout(() => controller.abort(), 300000)
   let res: Response
   try {
-    console.log('--- Calling Dify Chat ---')
-    console.log('Base URL:', env.difyBaseUrl)
-    console.log('Payload:', JSON.stringify(body, null, 2))
-    
     res = await fetch(`${env.difyBaseUrl}/chat-messages`, {
       method: 'POST',
       signal: controller.signal,
@@ -33,8 +29,6 @@ async function callDifyChat(body: any) {
     throw new Error(`Dify chat error: ${res.status} ${text}`)
   }
   const json = await res.json()
-  console.log('--- Dify Chat Success ---')
-  console.log('Response:', JSON.stringify(json, null, 2))
   return json
 }
 

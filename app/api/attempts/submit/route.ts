@@ -432,14 +432,6 @@ export async function POST(request: Request) {
       const timeout = setTimeout(() => controller.abort(), 300000)
       let res: Response
       try {
-        console.log('--- Calling Dify Workflow ---')
-        console.log('Base URL:', env.difyBaseUrl)
-        console.log('Payload:', JSON.stringify({
-          inputs: { attempt_text: textAttempt },
-          response_mode: 'blocking',
-          user: uid
-        }, null, 2))
-        
         res = await fetch(`${env.difyBaseUrl}/workflows/run`, {
           method: 'POST',
           signal: controller.signal,
@@ -464,8 +456,6 @@ export async function POST(request: Request) {
         throw new Error(`Dify workflow error: ${res.status} ${text}`)
       }
       const json = await res.json()
-      console.log('--- Dify Workflow Success ---')
-      console.log('Response:', JSON.stringify(json, null, 2))
       return json
     }
     const attemptText = formatAttemptTextLite()

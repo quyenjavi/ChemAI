@@ -183,6 +183,7 @@ export default function Dashboard() {
             role="tab"
             aria-selected={activeGradeId===g.id}
             variant={activeGradeId===g.id ? 'default' : 'outline'}
+            className="h-9 px-3 text-sm"
           >
             {g.name}
           </Button>
@@ -192,14 +193,18 @@ export default function Dashboard() {
           role="tab"
           aria-selected={activeGradeId==='top'}
           variant={activeGradeId==='top' ? 'default' : 'outline'}
+          className="h-9 px-3 text-sm"
         >
-          TOP
+          <span className="sm:hidden" aria-label="TOP">🏆</span>
+          <span className="hidden sm:inline">TOP</span>
         </Button>
         <Button
           onClick={() => router.push('/documents')}
           variant="outline"
+          className="h-9 px-3 text-sm"
         >
-          TÀI LIỆU
+          <span className="sm:hidden" aria-label="Tài liệu">📄</span>
+          <span className="hidden sm:inline">TÀI LIỆU</span>
         </Button>
       </div>
       {activeGradeId !== 'top' ? (

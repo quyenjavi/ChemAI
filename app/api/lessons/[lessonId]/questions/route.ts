@@ -7,23 +7,76 @@ export async function GET(req: Request, { params }: { params: { lessonId: string
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     const url = new URL(req.url)
-    const rawN = url.searchParams.get('n')
-    const parsedN = Number(rawN)
-    const desiredCount = (rawN && Number.isFinite(parsedN) && parsedN > 0) ? Math.min(50, parsedN) : null
+    const attemptId = url.searchParams.get('attemptId')
+    if (!attemptId) return NextResponse.json({ error: 'attemptId is required' }, { status: 400 })
+
     const svc = serviceRoleClient()
-    const { data: lesson } = await svc
-      .from('lessons')
-      .select('id,lesson_type')
-      .eq('id', params.lessonId)
-      .maybeSingle()
-    const lessonType = (lesson?.lesson_type === 'exam' || lesson?.lesson_type === 'practice') ? lesson.lesson_type : 'practice'
-    const { data: qs } = await svc
-      .from('questions')
-      .select('id, content, question_type, order_index, topic, lesson_id, image_url, image_alt, image_caption')
-      .eq('lesson_id', params.lessonId)
-      .order('order_index', { ascending: true })
-      .limit(200)
-    const questions = (qs || []) as Array<{ id: string, content: string, question_type: string, order_index: number, topic?: string, lesson_id?: string, image_url?: string, image_alt?: string, image_caption?: string }>
+
+    // 1. Verify attempt ownership
+    const { data: attempt } = await svc.from('quiz_attempts').select('id,user_id,lesson_id,mode').eq('id', attemptId).maybeSingle()
+    if (!attempt || attempt.user_id !== user.id) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+
+    // 2. Check for frozen questions first
+    const { data: existingAQs } = await svc
+      .from('quiz_attempt_questions')
+      .select('question_id')
+      .eq('attempt_id', attemptId)
+
+    let finalQuestions: any[] = []
+
+    // Helper: sort by type, then order_index (nulls last), then created_at
+    const typeWeight = (t: string) => (t === 'single_choice' ? 1 : t === 'true_false' ? 2 : t === 'short_answer' ? 3 : 4)
+    const sortQuestions = (arr: any[]) => {
+      return [...arr].sort((a, b) => {
+        const w = typeWeight(a.question_type) - typeWeight(b.question_type)
+        if (w !== 0) return w
+        const ao = (a.order_index ?? Infinity)
+        const bo = (b.order_index ?? Infinity)
+        if (ao !== bo) return ao - bo
+        const at = a.created_at ? Date.parse(a.created_at) : 0
+        const bt = b.created_at ? Date.parse(b.created_at) : 0
+        return at - bt
+      })
+    }
+
+    if (existingAQs && existingAQs.length > 0) {
+      // 3a. Use existing frozen questions
+      const qIds = existingAQs.map(aq => aq.question_id)
+      const { data: qs } = await svc
+        .from('questions')
+        .select('id, content, question_type, order_index, topic, lesson_id, image_url, image_alt, image_caption, created_at')
+        .in('id', qIds)
+      
+      finalQuestions = sortQuestions((qs || []).filter(Boolean))
+    } else {
+      // 3b. No frozen questions yet, pick them now (The Old Flow)
+      const { data: allQs } = await svc
+        .from('questions')
+        .select('id, content, question_type, order_index, topic, lesson_id, image_url, image_alt, image_caption, created_at')
+        .eq('lesson_id', params.lessonId)
+        .limit(500)
+
+      if (!allQs) throw new Error('Could not fetch questions')
+
+      const url = new URL(req.url)
+      const rawN = url.searchParams.get('n')
+      const parsedN = Number(rawN)
+      const desiredCount = (rawN && Number.isFinite(parsedN) && parsedN > 0) ? Math.min(50, parsedN) : null
+
+      const sorted = sortQuestions(allQs || [])
+      const pickedQs = (attempt.mode !== 'exam' && desiredCount)
+        ? sorted.slice(0, desiredCount)
+        : sorted
+
+      // Freeze them
+      const inserts = pickedQs.map(q => ({ attempt_id: attemptId, question_id: q.id }))
+      await svc.from('quiz_attempt_questions').insert(inserts)
+      
+      finalQuestions = pickedQs
+    }
+
+    const questions = finalQuestions as Array<{ id: string, content: string, question_type: string, order_index: number, topic?: string, lesson_id?: string, image_url?: string, image_alt?: string, image_caption?: string, created_at?: string }>
+
     const ids = questions
       .filter(q => q.question_type === 'single_choice' || q.question_type === 'true_false')
       .map(q => q.id)
@@ -39,17 +92,6 @@ export async function GET(req: Request, { params }: { params: { lessonId: string
         arr.push({ key: o.option_key, text: o.option_text })
         optionsByQ[o.question_id] = arr
       }
-    }
-    // Fisher–Yates shuffle utility
-    function shuffle<T>(arr: T[]): T[] {
-      const a = [...arr]
-      for (let i = a.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1))
-        const tmp = a[i]
-        a[i] = a[j]
-        a[j] = tmp
-      }
-      return a
     }
     const tfGroupIds = questions.filter(q => q.question_type === 'true_false_group').map(q => q.id)
     let statementsByQ: Record<string, Array<{ id: string, text: string, sort_order: number }>> = {}
@@ -82,14 +124,7 @@ export async function GET(req: Request, { params }: { params: { lessonId: string
         image_caption: q.image_caption || ''
       }
     })
-    if (lessonType === 'exam') {
-      return NextResponse.json({ lesson: { id: params.lessonId, lesson_type: lessonType }, questions: payload })
-    }
-    if (!desiredCount) {
-      return NextResponse.json({ lesson: { id: params.lessonId, lesson_type: lessonType }, questions: payload })
-    }
-    const picked = shuffle(payload).slice(0, Math.min(desiredCount, payload.length)).sort((a, b) => (a.order_index || 0) - (b.order_index || 0))
-    return NextResponse.json({ lesson: { id: params.lessonId, lesson_type: lessonType }, questions: picked })
+    return NextResponse.json({ lesson: { id: params.lessonId, lesson_type: attempt.mode }, questions: payload })
   } catch (e: any) {
     return NextResponse.json({ error: e.message || 'Server error' }, { status: 500 })
   }

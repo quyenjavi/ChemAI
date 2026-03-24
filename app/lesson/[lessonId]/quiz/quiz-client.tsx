@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabaseBrowser } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -55,46 +55,131 @@ export default function QuizClient({ lessonId, n }: { lessonId: string, n?: stri
     return () => clearInterval(t)
   }, [submitting, quotes.length])
 
+  const initStartedRef = useRef(false)
+  const attemptIdRef = useRef<string | null>(null)
+  const fetchCountRef = useRef(0)
+
   useEffect(() => {
-    if (!lessonId) return
-    ;(async () => {
+    initStartedRef.current = false
+    attemptIdRef.current = null
+    fetchCountRef.current = 0
+    setQuestions([])
+    setAnswers({})
+    setAttemptId(null)
+    setInitError('')
+  }, [lessonId])
+
+  useEffect(() => {
+    if (!lessonId || attemptIdRef.current || initStartedRef.current) return
+    
+    initStartedRef.current = true
+    let isMounted = true
+    
+    const initQuiz = async () => {
+      console.log('--- Initializing Quiz ---')
+      setInitError('')
       const { data } = await supabaseBrowser.auth.getUser()
       if (!data.user) {
         router.push('/login')
         return
       }
-      try {
-        const qUrl = desiredCount ? `/api/lessons/${lessonId}/questions?n=${desiredCount}` : `/api/lessons/${lessonId}/questions`
-        const qRes = await fetch(qUrl, { credentials: 'include' })
-        if (!qRes.ok) {
-          const j = await qRes.json().catch(async () => ({ error: await qRes.text().catch(()=> 'Lỗi tải câu hỏi') }))
-          throw new Error(j.error || 'Lỗi tải câu hỏi')
-        }
-        const json = await qRes.json()
-        const list: Q[] = Array.isArray(json) ? json : (json?.questions || [])
-        setLessonType(json?.lesson?.lesson_type === 'exam' ? 'exam' : 'practice')
-        setQuestions(list)
-      } catch (err: any) {
-        setInitError(err?.message || 'Lỗi tải câu hỏi')
-        return
+
+      const syncServerCookieOnce = async () => {
+        const { data: sess } = await supabaseBrowser.auth.getSession()
+        const session = sess.session
+        if (!session?.access_token || !session?.refresh_token) return false
+        const r = await fetch('/api/auth/cookie', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            access_token: session.access_token,
+            refresh_token: session.refresh_token
+          })
+        }).catch(() => null)
+        return !!(r && r.ok)
       }
+
       try {
-        const r = await fetch('/api/attempts/create', {
+        // 1. Create attempt first
+        console.log('Step 1: Creating attempt for lesson:', lessonId)
+        let createRes = await fetch('/api/attempts/create', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ lessonId }),
           credentials: 'include',
         })
-        if (!r.ok) {
-          const j = await r.json().catch(() => ({}))
-          throw new Error(j.error || 'Không thể khởi tạo bài làm. Vui lòng đăng nhập lại.')
+        
+        if (createRes.status === 401) {
+          console.log('Create attempt 401, syncing auth cookie and retrying once...')
+          const ok = await syncServerCookieOnce()
+          console.log('Cookie sync result:', ok)
+          if (ok) {
+            createRes = await fetch('/api/attempts/create', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ lessonId }),
+              credentials: 'include',
+            })
+          }
         }
-        const json = await r.json()
-        setAttemptId(json.attemptId)
+
+        const createJson = await createRes.json().catch(() => ({}))
+        console.log('Create attempt response:', { status: createRes.status, body: createJson })
+
+        if (!createRes.ok) {
+          throw new Error(createJson.error || 'Không thể khởi tạo bài làm. Vui lòng đăng nhập lại.')
+        }
+
+        const newAttemptId = createJson.attemptId
+        if (!newAttemptId) throw new Error('Không nhận được attemptId từ server')
+        
+        if (!isMounted) return
+        attemptIdRef.current = newAttemptId
+        setAttemptId(newAttemptId)
+        console.log('Received attemptId:', newAttemptId)
+
+        // 2. Fetch questions with attemptId
+        const qParams = new URLSearchParams()
+        qParams.set('attemptId', newAttemptId)
+        if (desiredCount) qParams.set('n', String(desiredCount))
+        
+        const qUrl = `/api/lessons/${lessonId}/questions?${qParams.toString()}`
+        console.log('Step 2: Fetching questions URL:', qUrl)
+        
+        fetchCountRef.current += 1
+        let qRes = await fetch(qUrl, { credentials: 'include' })
+        if (qRes.status === 401) {
+          console.log('Fetch questions 401, syncing auth cookie and retrying once...')
+          const ok = await syncServerCookieOnce()
+          console.log('Cookie sync result:', ok)
+          if (ok) {
+            qRes = await fetch(qUrl, { credentials: 'include' })
+          }
+        }
+        const qJson = await qRes.json().catch(async () => ({ error: await qRes.text().catch(()=> 'Lỗi tải câu hỏi') }))
+        
+        if (!qRes.ok) {
+          throw new Error(qJson.error || 'Lỗi tải câu hỏi')
+        }
+
+        if (!isMounted) return
+        const list: Q[] = Array.isArray(qJson) ? qJson : (qJson?.questions || [])
+        setQuestions(list)
+        setLessonType(qJson?.lesson?.lesson_type === 'exam' ? 'exam' : 'practice')
+        console.log('Fetch questions successful. Count:', fetchCountRef.current, 'Questions:', list.length)
+
       } catch (err: any) {
-        setInitError(err?.message || 'Lỗi khởi tạo bài')
+        console.error('Quiz initialization error:', err)
+        if (isMounted) setInitError(err?.message || 'Lỗi khởi tạo bài')
       }
-    })()
+    }
+
+    initQuiz()
+
+    return () => {
+      isMounted = false
+    }
   }, [lessonId, desiredCount, router])
 
   const canSubmit = useMemo(() => {

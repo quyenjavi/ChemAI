@@ -168,3 +168,14 @@ Import trace for requested module:
 <w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename '/Users/apple/Documents/AIID/TRAE/ChemAI/.next/cache/webpack/client-development/0.pack.gz_' -> '/Users/apple/Documents/AIID/TRAE/ChemAI/.next/cache/webpack/client-development/0.pack.gz'
  ✓ Compiled in 1545ms (402 modules)
 <w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename '/Users/apple/Documents/AIID/TRAE/ChemAI/.next/cache/webpack/client-development/0.pack.gz_' -> '/Users/apple/Documents/AIID/TRAE/ChemAI/.next/cache/webpack/client-development/0.pack.gz'
+ ⚠ Found a change in next.config.js. Restarting the server to apply the changes...
+ ⚠ Port 3000 is in use, trying 3001 instead.
+ ⚠ Port 3001 is in use, trying 3002 instead.
+  ▲ Next.js 14.2.7
+  - Local:        http://localhost:3002
+  - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 4.4s
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename '/Users/apple/Documents/AIID/TRAE/ChemAI/.next/cache/webpack/client-development/0.pack.gz_' -> '/Users/apple/Documents/AIID/TRAE/ChemAI/.next/cache/webpack/client-development/0.pack.gz'
+[?25h

@@ -4,9 +4,10 @@ import { createSupabaseServer, serviceRoleClient } from '@/lib/supabase/server'
 type SortKey =
   | 'total_attempts'
   | 'correct_rate'
-  | 'created_at'
   | 'grade_name'
   | 'lesson_title'
+  | 'report_count'
+  | 'last_reported_at'
 
 type SortDir = 'asc' | 'desc'
 
@@ -15,9 +16,10 @@ function safeSortKey(value: string | null): SortKey {
   if (
     v === 'total_attempts' ||
     v === 'correct_rate' ||
-    v === 'created_at' ||
     v === 'grade_name' ||
-    v === 'lesson_title'
+    v === 'lesson_title' ||
+    v === 'report_count' ||
+    v === 'last_reported_at'
   ) {
     return v
   }
@@ -44,6 +46,7 @@ export async function GET(req: Request) {
     const gradeNameFilter = (url.searchParams.get('grade_name') || '').trim()
     const lessonIdFilter = (url.searchParams.get('lesson_id') || '').trim()
     const typeFilter = (url.searchParams.get('question_type') || '').trim()
+    const statusFilter = (url.searchParams.get('review_status') || '').trim()
     const search = (url.searchParams.get('search') || '').trim()
 
     const supabase = createSupabaseServer()
@@ -59,31 +62,37 @@ export async function GET(req: Request) {
     const svc = serviceRoleClient()
 
     let query = svc
-      .from('question_stats_summary')
+      .from('question_review_summary_v')
       .select(
         `
         question_id,
-        question_content,
-        brief_content,
-        question_type,
         lesson_id,
         lesson_title,
         grade_name,
-        total_attempts,
-        correct_attempts,
-        correct_rate,
-        question_created_at,
-        difficulty,
+        question_content,
+        brief_content,
+        question_type,
         topic,
-        tags,
+        difficulty,
         order_index,
         exam_score,
-        tip,
-        explanation,
-        brief_explanation,
-        image_url,
-        image_alt,
-        image_caption
+        review_status,
+        resolution_type,
+        report_locked,
+        report_count_cached,
+        report_count,
+        student_report_count,
+        pending_report_count,
+        first_reported_at,
+        last_reported_at,
+        last_reviewed_at,
+        last_review_note,
+        last_reviewed_by,
+        active_version_no,
+        replaced_by_question_id,
+        total_attempts,
+        correct_attempts,
+        correct_rate
       `,
         { count: 'exact' }
       )
@@ -98,6 +107,14 @@ export async function GET(req: Request) {
 
     if (typeFilter) {
       query = query.eq('question_type', typeFilter)
+    }
+
+    if (statusFilter === 'reported') {
+      query = query.eq('review_status', 'reported')
+    } else if (statusFilter === 'processed') {
+      query = query.neq('review_status', 'normal').neq('review_status', 'reported')
+    } else if (statusFilter === 'not_reported') {
+      query = query.eq('report_count', 0)
     }
 
     if (search) {
@@ -119,21 +136,21 @@ export async function GET(req: Request) {
     if (sortKey === 'total_attempts') {
       query = query
         .order('total_attempts', { ascending: sortDir === 'asc' })
-        .order('question_created_at', { ascending: false })
     } else if (sortKey === 'correct_rate') {
       query = query
         .order('correct_rate', { ascending: sortDir === 'asc' })
-        .order('question_created_at', { ascending: false })
-    } else if (sortKey === 'created_at') {
-      query = query.order('question_created_at', { ascending: sortDir === 'asc' })
     } else if (sortKey === 'grade_name') {
       query = query
         .order('grade_name', { ascending: sortDir === 'asc' })
-        .order('question_created_at', { ascending: false })
     } else if (sortKey === 'lesson_title') {
       query = query
         .order('lesson_title', { ascending: sortDir === 'asc' })
-        .order('question_created_at', { ascending: false })
+    } else if (sortKey === 'report_count') {
+      query = query
+        .order('report_count', { ascending: sortDir === 'asc' })
+        .order('last_reported_at', { ascending: false })
+    } else if (sortKey === 'last_reported_at') {
+      query = query.order('last_reported_at', { ascending: sortDir === 'asc' })
     }
 
     const from = (page - 1) * pageSize
@@ -279,26 +296,32 @@ export async function GET(req: Request) {
       return {
         question_id: row.question_id,
         lesson_id: row.lesson_id || '',
+        lesson_title: row.lesson_title || '',
+        grade_name: row.grade_name || '',
         question_content: row.question_content || '',
         brief_content: row.brief_content || '',
         question_type: row.question_type || '',
-        lesson_title: row.lesson_title || '',
-        grade_name: row.grade_name || '',
+        topic: row.topic || '',
+        difficulty: row.difficulty ?? null,
+        order_index: row.order_index ?? null,
+        exam_score: row.exam_score ?? null,
+        review_status: row.review_status || 'normal',
+        resolution_type: row.resolution_type || 'none',
+        report_locked: row.report_locked === true,
+        report_count_cached: Number(row.report_count_cached || 0),
+        report_count: Number(row.report_count || 0),
+        student_report_count: Number(row.student_report_count || 0),
+        pending_report_count: Number(row.pending_report_count || 0),
+        first_reported_at: row.first_reported_at || null,
+        last_reported_at: row.last_reported_at || null,
+        last_reviewed_at: row.last_reviewed_at || null,
+        last_review_note: row.last_review_note || null,
+        last_reviewed_by: row.last_reviewed_by || null,
+        active_version_no: Number(row.active_version_no || 1),
+        replaced_by_question_id: row.replaced_by_question_id || null,
         total_attempts: Number(row.total_attempts || 0),
         correct_attempts: Number(row.correct_attempts || 0),
         correct_rate: Number(row.correct_rate || 0),
-        question_created_at: row.question_created_at || null,
-        difficulty: row.difficulty ?? null,
-        topic: row.topic || '',
-        tags: Array.isArray(row.tags) ? row.tags : [],
-        order_index: row.order_index ?? null,
-        exam_score: row.exam_score ?? null,
-        tip: row.tip || '',
-        explanation: row.explanation || '',
-        brief_explanation: row.brief_explanation || '',
-        image_url: row.image_url || '',
-        image_alt: row.image_alt || '',
-        image_caption: row.image_caption || '',
         media: [],
         options,
         correct_key: options.find((o: any) => o.is_correct)?.key || '',

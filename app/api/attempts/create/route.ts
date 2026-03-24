@@ -11,6 +11,7 @@ export async function POST(request: Request) {
     const svc = serviceRoleClient()
     const { data: lesson } = await svc.from('lessons').select('lesson_type').eq('id', lessonId).maybeSingle()
     const mode = (lesson?.lesson_type === 'exam' || lesson?.lesson_type === 'practice') ? lesson.lesson_type : 'practice'
+
     const { data, error } = await svc
       .from('quiz_attempts')
       .insert({
@@ -29,7 +30,13 @@ export async function POST(request: Request) {
       })
       .select('id')
       .single()
-    if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+
+    if (error) {
+      console.error('Create attempt error:', error)
+      return NextResponse.json({ error: error.message }, { status: 400 })
+    }
+
+    console.log('Attempt created successfully:', data.id)
     return NextResponse.json({ attemptId: data.id })
   } catch (e: any) {
     return NextResponse.json({ error: e.message || 'Server error' }, { status: 500 })

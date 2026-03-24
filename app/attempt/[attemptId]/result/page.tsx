@@ -5,6 +5,100 @@ import { useParams } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 
+function ReportDialog({ answer, onReportSuccess }: { answer: AnyAnswer, onReportSuccess: (questionId: string, reportId: string) => void }) {
+  const [isOpen, setIsOpen] = useState(false)
+  const [reason, setReason] = useState('')
+  const [detail, setDetail] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState('')
+
+  const handleSubmit = async () => {
+    if (!reason) {
+      setError('Vui lòng chọn lý do báo cáo.')
+      return
+    }
+    setIsSubmitting(true)
+    setError('')
+    try {
+      const res = await fetch(`/api/student/attempts/${(answer as any).attempt_id}/report`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          question_id: answer.question_id,
+          attempt_answer_id: (answer as any).answer_id,
+          report_reason: reason,
+          report_detail: detail,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Có lỗi xảy ra')
+      onReportSuccess(answer.question_id, data.report_id)
+      setIsOpen(false)
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  if (answer.report_locked) {
+    return <div className="text-xs text-yellow-400">Câu hỏi đã bị khóa báo cáo</div>
+  }
+
+  if (answer.report_id && answer.report_status !== 'rejected') {
+    return <div className="text-xs text-green-400">Đã báo cáo ({answer.report_status})</div>
+  }
+
+  return (
+    <>
+      <Button variant="outline" size="sm" onClick={() => setIsOpen(true)} className="text-xs">
+        Báo cáo lỗi
+      </Button>
+      {isOpen && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={() => setIsOpen(false)}>
+          <div className="bg-slate-800 p-6 rounded-lg w-full max-w-md" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold mb-4">Báo cáo lỗi câu hỏi</h3>
+            <div className="space-y-4">
+              <div className="text-sm text-slate-300">Câu hỏi: {answer.content}</div>
+              <div>
+                <label className="text-sm font-medium">Lý do báo cáo</label>
+                <select
+                  value={reason}
+                  onChange={e => setReason(e.target.value)}
+                  className="w-full mt-1 p-2 rounded bg-slate-700 border border-slate-600"
+                >
+                  <option value="">-- Chọn lý do --</option>
+                  <option value="wrong_answer">Đáp án sai</option>
+                  <option value="wrong_question">Nội dung câu hỏi sai/khó hiểu</option>
+                  <option value="wrong_explanation">Giải thích sai</option>
+                  <option value="other">Lỗi khác</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Chi tiết (nếu có)</label>
+                <textarea
+                  value={detail}
+                  onChange={e => setDetail(e.target.value)}
+                  className="w-full mt-1 p-2 rounded bg-slate-700 border border-slate-600 min-h-[100px]"
+                  placeholder="Mô tả thêm về lỗi bạn phát hiện..."
+                />
+              </div>
+              {error && <div className="text-red-400 text-sm">{error}</div>}
+              <div className="flex justify-end gap-2">
+                <Button variant="ghost" onClick={() => setIsOpen(false)} disabled={isSubmitting}>Hủy</Button>
+                <Button onClick={handleSubmit} disabled={isSubmitting}>
+                  {isSubmitting ? 'Đang gửi...' : 'Gửi báo cáo'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
+
+
 type AttemptInfo = {
   id: string
   lesson_id?: string | null
@@ -76,6 +170,11 @@ type AnswerBase = {
   image_url?: string
   image_alt?: string
   image_caption?: string
+  report_locked?: boolean
+  report_id?: string | null
+  report_status?: string | null
+  attempt_id?: string | null
+  answer_id?: string | null
 }
 
 type ChoiceAnswer = AnswerBase & {
@@ -131,6 +230,15 @@ export default function ResultPage() {
   const [loading, setLoading] = useState(true)
   const [answers, setAnswers] = useState<AnyAnswer[]>([])
 
+  const handleReportSuccess = (questionId: string, reportId: string) => {
+    setAnswers(prev => prev.map(a => {
+      if (a.question_id === questionId) {
+        return { ...a, report_id: reportId, report_status: 'pending' }
+      }
+      return a
+    }))
+  }
+
   const saById = useMemo(() => {
     const m: Record<string, any> = {}
     for (const r of shortAnswerResults || []) {
@@ -145,48 +253,34 @@ export default function ResultPage() {
     if (!attemptId) return
     ;(async () => {
       setLoading(true)
-      const [reportRes, answersRes] = await Promise.all([
-        fetch(`/api/attempts/${attemptId}/report`, { credentials: 'include' }),
-        fetch(`/api/attempts/${attemptId}/answers`, { credentials: 'include' })
-      ])
+      const res = await fetch(`/api/attempts/${attemptId}/answers`, { credentials: 'include' })
 
-      if (reportRes.ok) {
-        const j = await reportRes.json()
+      if (res.ok) {
+        const j = await res.json()
         setAttempt(j.attempt || null)
+        setAnswers(j.answers || [])
         setShortAnswerResults(Array.isArray(j?.report?.short_answer_results) ? j.report.short_answer_results : [])
-        if (j.report) {
-          if (j.report.feedback) {
-            const uv = (v: any) => (v && typeof v === 'object' && 'value' in v) ? v.value : v
-            const ua = (v: any) => {
-              const r = uv(v)
-              return Array.isArray(r) ? r : []
-            }
-            const f = j.report.feedback as any
-            const sanitized = {
-              praise: uv(f.praise) || '',
-              strengths: ua(f.strengths),
-              plan: ua(f.plan)
-            } as Feedback
-            setFeedback(sanitized)
-          } else {
-            setFeedback(null)
+        if (j.report?.feedback) {
+          const uv = (v: any) => (v && typeof v === 'object' && 'value' in v) ? v.value : v
+          const ua = (v: any) => {
+            const r = uv(v)
+            return Array.isArray(r) ? r : []
           }
+          const f = j.report.feedback as any
+          const sanitized = {
+            praise: uv(f.praise) || '',
+            strengths: ua(f.strengths),
+            plan: ua(f.plan)
+          } as Feedback
+          setFeedback(sanitized)
         } else {
           setFeedback(null)
         }
       } else {
         setAttempt(null)
         setFeedback(null)
-        setShortAnswerResults([])
-      }
-
-      if (answersRes.ok) {
-        const j = await answersRes.json()
-        const list = (j?.answers || []) as AnyAnswer[]
-        list.sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0))
-        setAnswers(list)
-      } else {
         setAnswers([])
+        setShortAnswerResults([])
       }
       setLoading(false)
     })()
@@ -310,6 +404,7 @@ export default function ResultPage() {
                   <div className="mt-1">{tip}</div>
                 </div>
               ) : null}
+              {isWrong && <div className="pt-2"><ReportDialog answer={qa} onReportSuccess={handleReportSuccess} /></div>}
             </div>
           </CardContent>
         </Card>
@@ -365,6 +460,7 @@ export default function ResultPage() {
                   <div className="mt-1">{tip}</div>
                 </div>
               ) : null}
+              {isWrong && <div className="pt-2"><ReportDialog answer={qa} onReportSuccess={handleReportSuccess} /></div>}
             </div>
           </CardContent>
         </Card>
@@ -436,6 +532,7 @@ export default function ResultPage() {
                         <div className="mt-1">{stTip}</div>
                       </div>
                     ) : null}
+                    {ok === false && <div className="pt-2"><ReportDialog answer={q} onReportSuccess={handleReportSuccess} /></div>}
                   </div>
                 )
               })}

@@ -24,6 +24,7 @@ type QuestionStatement = {
 }
 
 type ShortAnswerMeta = {
+  id?: string
   answer_text: string
   score?: number
   explanation?: string
@@ -41,10 +42,8 @@ type QuestionRow = {
   total_attempts: number
   correct_attempts?: number
   correct_rate: number
-  question_created_at: string | null
   difficulty?: string | number | null
   topic?: string
-  tags?: string[]
   order_index?: number | null
   exam_score?: number | null
   tip?: string
@@ -60,14 +59,22 @@ type QuestionRow = {
   statement_count?: number
   accepted_answers?: string[]
   short_answer_meta?: ShortAnswerMeta[]
+  report_count?: number
+  review_status?: string
+  resolution_type?: string
+  report_locked?: boolean
+  last_reported_at?: string
+  last_reviewed_at?: string
+  last_review_note?: string
 }
 
 type SortKey =
   | 'total_attempts'
   | 'correct_rate'
-  | 'created_at'
   | 'grade_name'
   | 'lesson_title'
+  | 'report_count'
+  | 'last_reported_at'
 
 type LessonMeta = {
   id: string
@@ -96,10 +103,11 @@ export default function QuestionsClient() {
   const [grade, setGrade] = useState<string>('all')
   const [lesson, setLesson] = useState<string>('all')
   const [type, setType] = useState<string>('all')
+  const [status, setStatus] = useState<string>('all')
   const [search, setSearch] = useState('')
 
-  const [sortKey, setSortKey] = useState<SortKey>('total_attempts')
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
+  const [sortKey, setSortKey] = useState<SortKey>('report_count')
+  const [sortDir, setSortDir] = useState<'desc' | 'asc'>('desc')
 
   const [page, setPage] = useState(1)
   const pageSize = 20
@@ -107,6 +115,21 @@ export default function QuestionsClient() {
 
   const [detail, setDetail] = useState<QuestionRow | null>(null)
   const [detailIndex, setDetailIndex] = useState<number | null>(null)
+  const [detailLoading, setDetailLoading] = useState(false)
+  const [reports, setReports] = useState<any[]>([])
+
+  const [editContent, setEditContent] = useState('')
+  const [editTip, setEditTip] = useState('')
+  const [editExplanation, setEditExplanation] = useState('')
+  const [editOptions, setEditOptions] = useState<QuestionOption[]>([])
+  const [editStatements, setEditStatements] = useState<QuestionStatement[]>([])
+  const [editAcceptedAnswers, setEditAcceptedAnswers] = useState<string[]>([])
+  const [reviewType, setReviewType] = useState<'keep' | 'wrong_answer' | 'wrong_question' | null>(null)
+  const [changeNote, setChangeNote] = useState('')
+  const [aiGenerated, setAiGenerated] = useState(false)
+  const [newQuestionId, setNewQuestionId] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [genLoading, setGenLoading] = useState(false)
 
   const [gradesMeta, setGradesMeta] = useState<string[]>([])
   const [lessonsMeta, setLessonsMeta] = useState<LessonMeta[]>([])
@@ -117,6 +140,16 @@ export default function QuestionsClient() {
       { value: 'single_choice', label: 'Trắc nghiệm' },
       { value: 'true_false_group', label: 'Đúng/Sai' },
       { value: 'short_answer', label: 'Tự luận' },
+    ],
+    []
+  )
+
+  const statusFilterOptions = useMemo(
+    () => [
+      { value: 'all', label: 'Tất cả' },
+      { value: 'reported', label: 'Đang bị report' },
+      { value: 'processed', label: 'Đã xử lí' },
+      { value: 'not_reported', label: 'Chưa report' },
     ],
     []
   )
@@ -168,6 +201,7 @@ export default function QuestionsClient() {
     if (grade !== 'all') qs.set('grade_name', grade)
     if (lesson !== 'all') qs.set('lesson_id', lesson)
     if (type !== 'all') qs.set('question_type', type)
+    if (status !== 'all') qs.set('review_status', status)
     if (search.trim()) qs.set('search', search.trim())
 
     fetch(`/api/teacher/questions?${qs.toString()}`, {
@@ -208,13 +242,233 @@ export default function QuestionsClient() {
   const totalPages = Math.max(1, Math.ceil(total / pageSize))
 
   const openDetail = (row: QuestionRow, idx: number) => {
-    setDetail(row)
     setDetailIndex(idx)
+    setDetailLoading(true)
+    setDetail(null) // Reset detail before loading new one
+    setReports([])
+    setEditContent('')
+    setEditTip('')
+    setEditExplanation('')
+    setEditOptions([])
+    setEditStatements([])
+    setEditAcceptedAnswers([])
+    setReviewType(null)
+    setChangeNote('')
+    setAiGenerated(false)
+    setNewQuestionId(null)
+    
+    fetch(`/api/teacher/questions/${row.question_id}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.error) throw new Error(data.error)
+        
+        console.log('Raw Question Detail:', data)
+        const { question: q, stats, options, statements, short_answers, reports: qReports } = data
+        
+        const mappedDetail: QuestionRow = {
+          ...q,
+          question_id: q.id,
+          options: options.map((o: any) => ({
+            key: o.option_key,
+            text: o.option_text,
+            is_correct: o.is_correct,
+            order: o.sort_order,
+            image_url: o.image_url,
+            image_alt: o.image_alt,
+            image_caption: o.image_caption
+          })),
+          statements: statements.map((s: any) => ({
+            id: s.id,
+            key: s.statement_key,
+            text: s.statement_text,
+            correct_answer: s.correct_answer,
+            order: s.sort_order,
+            score: s.score,
+            explanation: s.explanation,
+            tip: s.tip
+          })),
+          short_answer_meta: short_answers,
+          accepted_answers: short_answers.map((sa: any) => sa.answer_text),
+          total_attempts: stats.total_attempts,
+          correct_attempts: stats.correct_attempts,
+          correct_rate: stats.correct_rate
+        }
+
+        setDetail(mappedDetail)
+        setReports(qReports || [])
+        
+        // Map to edit state
+        setEditContent(q.content || '')
+        setEditTip(q.tip || '')
+        setEditExplanation(q.explanation || '')
+        setEditOptions(mappedDetail.options || [])
+        setEditStatements(mappedDetail.statements || [])
+        setEditAcceptedAnswers(mappedDetail.accepted_answers || [])
+        
+        console.log('Mapped Form State:', {
+          lesson: q.lesson_title,
+          grade: q.grade_name,
+          type: q.question_type,
+          tip: q.tip,
+          explanation: q.explanation,
+          options: mappedDetail.options,
+          statements: mappedDetail.statements,
+          reportsCount: qReports?.length
+        })
+      })
+      .catch(err => {
+        alert('Lỗi khi tải chi tiết: ' + err.message)
+      })
+      .finally(() => {
+        setDetailLoading(false)
+      })
   }
 
   const closeDetail = () => {
     setDetail(null)
     setDetailIndex(null)
+    setReports([])
+    setReviewType(null)
+  }
+
+  const handleGenTipExp = async () => {
+    if (!detail) return
+    setGenLoading(true)
+    try {
+      const reqPayload = {
+        question_type: detail.question_type,
+        content: editContent,
+        brief_content: detail.brief_content,
+        topic: detail.topic,
+        difficulty: detail.difficulty,
+        exam_score: detail.exam_score,
+        options: editOptions,
+        statements: editStatements,
+        short_answers: editAcceptedAnswers.map(text => ({ answer_text: text })),
+        explanation: editExplanation,
+        tip: editTip
+      }
+      console.log('Gen Tip/Explain request payload:', reqPayload)
+      const res = await fetch('/api/teacher/questions/gen-tip-explanation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(reqPayload)
+      })
+      const data = await res.json()
+      console.log('Gen Tip/Explain raw response:', data)
+      if (!res.ok) {
+        throw new Error(data?.error || 'Gen AI failed')
+      }
+      const nextTip = typeof data?.tip === 'string' ? data.tip : ''
+      const nextExp = typeof data?.explanation === 'string' ? data.explanation : ''
+      setEditTip(nextTip)
+      setEditExplanation(nextExp)
+      console.log('Gen Tip/Explain setState:', { tip: nextTip, explanation: nextExp })
+      setAiGenerated(true)
+    } catch (err: any) {
+      alert('Lỗi khi gen AI: ' + err.message)
+    } finally {
+      setGenLoading(false)
+    }
+  }
+
+  const handleSaveReview = async () => {
+    if (!detail || !reviewType) {
+      alert('Vui lòng chọn loại thay đổi')
+      return
+    }
+
+    if (reviewType !== 'keep') {
+      // Validation
+      if (detail.question_type === 'single_choice') {
+        const correctCount = editOptions.filter(o => o.is_correct).length
+        if (correctCount !== 1) {
+          alert('Câu trắc nghiệm phải có đúng 1 đáp án đúng.')
+          return
+        }
+      }
+    }
+
+    const confirmMsg =
+      reviewType === 'keep'
+        ? 'Hệ thống sẽ đánh dấu đã xem, khóa report, và không chấm lại điểm. Bạn có chắc chắn?'
+        : reviewType === 'wrong_answer'
+          ? 'Hệ thống sẽ chấm lại câu này cho toàn bộ học sinh đã làm câu hỏi này dựa trên đáp án mới. Bạn có chắc chắn?'
+          : 'Hệ thống sẽ cộng tối đa điểm câu này cho toàn bộ học sinh đã làm câu hỏi này, không phụ thuộc đáp án mà học sinh đã chọn. Bạn có chắc chắn?'
+
+    if (!confirm(confirmMsg)) return
+
+    setSaving(true)
+    try {
+      const payload = {
+        change_type: reviewType,
+        change_note: changeNote || null,
+        ai_generated_tip_explanation: aiGenerated,
+        ai_model: aiGenerated ? 'gpt-4o-mini' : null,
+        ai_prompt_version: aiGenerated ? 'tip_explain_v1' : null,
+        question: {
+          content: editContent,
+          brief_content: detail.brief_content,
+          tip: editTip,
+          explanation: editExplanation,
+          topic: detail.topic,
+          difficulty: detail.difficulty,
+          exam_score: detail.exam_score,
+          image_url: detail.image_url,
+          image_alt: detail.image_alt,
+          image_caption: detail.image_caption
+        },
+        options: detail.question_type === 'single_choice' ? editOptions.map(o => ({
+          option_key: o.key,
+          option_text: o.text,
+          is_correct: o.is_correct,
+          sort_order: o.order,
+          image_url: o.image_url,
+          image_alt: o.image_alt,
+          image_caption: o.image_caption
+        })) : [],
+        statements: (detail.question_type === 'true_false_group' || detail.question_type === 'true_false') ? editStatements.map(s => ({
+          id: s.id,
+          statement_key: s.key,
+          statement_text: s.text,
+          correct_answer: s.correct_answer,
+          score: s.score,
+          sort_order: s.order,
+          explanation: s.explanation,
+          tip: s.tip
+        })) : [],
+        short_answers: detail.question_type === 'short_answer' ? editAcceptedAnswers.map((text, i) => {
+          const meta = detail.short_answer_meta?.[i]
+          return {
+            id: meta?.id,
+            answer_text: text,
+            score: meta?.score ?? 1,
+            explanation: meta?.explanation || '',
+            tip: meta?.tip || ''
+          }
+        }) : [],
+        new_question_id: newQuestionId
+      }
+
+      const res = await fetch(`/api/teacher/questions/${detail.question_id}/review`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+      const data = await res.json()
+      if (data.success) {
+        alert(`Đã lưu thành công! Revision ID: ${data.revision_id}`)
+        // Refresh the list row
+        setRows(prev => prev.map(r => r.question_id === detail.question_id ? { ...r, review_status: data.review_status || r.review_status } : r))
+        closeDetail()
+      } else {
+        alert('Lỗi khi lưu: ' + (data.error || 'Unknown error'))
+      }
+    } catch (err: any) {
+      alert('Lỗi khi lưu: ' + err.message)
+    } finally {
+      setSaving(false)
+    }
   }
 
   const goPrevDetail = () => {
@@ -222,8 +476,7 @@ export default function QuestionsClient() {
     const prev = Math.max(0, detailIndex - 1)
     const row = rows[prev]
     if (row) {
-      setDetail(row)
-      setDetailIndex(prev)
+      openDetail(row, prev)
     }
   }
 
@@ -232,8 +485,7 @@ export default function QuestionsClient() {
     const next = Math.min(rows.length - 1, detailIndex + 1)
     const row = rows[next]
     if (row) {
-      setDetail(row)
-      setDetailIndex(next)
+      openDetail(row, next)
     }
   }
 
@@ -330,6 +582,24 @@ export default function QuestionsClient() {
         </div>
 
         <div className="flex items-center gap-2">
+          <label className="text-sm">Trạng thái</label>
+          <select
+            className="border rounded p-2 bg-transparent select-clean"
+            value={status}
+            onChange={(e) => {
+              setPage(1)
+              setStatus(e.target.value)
+            }}
+          >
+            {statusFilterOptions.map((item) => (
+              <option key={item.value} value={item.value}>
+                {item.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex items-center gap-2">
           <label className="text-sm">Sort</label>
           <select
             className="border rounded p-2 bg-transparent select-clean"
@@ -339,9 +609,10 @@ export default function QuestionsClient() {
               setSortKey(e.target.value as SortKey)
             }}
           >
+            <option value="report_count">Số report</option>
+            <option value="last_reported_at">Report gần nhất</option>
             <option value="total_attempts">Số lần làm</option>
             <option value="correct_rate">Tỉ lệ đúng</option>
-            <option value="created_at">Thời gian tạo</option>
             <option value="grade_name">Khối</option>
             <option value="lesson_title">Bài học</option>
           </select>
@@ -377,15 +648,16 @@ export default function QuestionsClient() {
       <div className="overflow-x-auto">
         <table className="w-full border rounded" style={{ borderColor: 'var(--divider)' }}>
           <colgroup>
-            <col style={{ width: '6%' }} />
-            <col style={{ width: '28%' }} />
-            <col style={{ width: '16%' }} />
+            <col style={{ width: '5%' }} />
+            <col style={{ width: '24%' }} />
+            <col style={{ width: '12%' }} />
+            <col style={{ width: '8%' }} />
+            <col style={{ width: '8%' }} />
+            <col style={{ width: '8%' }} />
+            <col style={{ width: '8%' }} />
             <col style={{ width: '10%' }} />
-            <col style={{ width: '11%' }} />
-            <col style={{ width: '10%' }} />
-            <col style={{ width: '10%' }} />
+            <col style={{ width: '8%' }} />
             <col style={{ width: '9%' }} />
-            <col style={{ width: '10%' }} />
           </colgroup>
           <thead>
             <tr>
@@ -396,7 +668,8 @@ export default function QuestionsClient() {
               <th className="text-left p-2">Loại</th>
               <th className="text-left p-2">Số lần làm</th>
               <th className="text-left p-2">Tỉ lệ đúng</th>
-              <th className="text-left p-2">Thời gian tạo</th>
+              <th className="text-left p-2">Report</th>
+              <th className="text-left p-2">Status</th>
               <th className="text-left p-2">Hành động</th>
             </tr>
           </thead>
@@ -404,13 +677,13 @@ export default function QuestionsClient() {
           <tbody>
             {loading ? (
               <tr>
-                <td className="p-3 text-sm" colSpan={9}>
+                <td className="p-3 text-sm" colSpan={10}>
                   Đang tải...
                 </td>
               </tr>
             ) : rows.length === 0 ? (
               <tr>
-                <td className="p-3 text-sm" style={{ color: 'var(--text-muted)' }} colSpan={9}>
+                <td className="p-3 text-sm" style={{ color: 'var(--text-muted)' }} colSpan={10}>
                   Chưa có dữ liệu câu hỏi
                 </td>
               </tr>
@@ -424,13 +697,8 @@ export default function QuestionsClient() {
                 else if (rate < 70) rateColor = '#f59e0b'
                 else rateColor = '#22c55e'
 
-                const createdLabel = q.question_created_at
-                  ? new Date(q.question_created_at).toLocaleDateString('vi-VN', {
-                      day: '2-digit',
-                      month: '2-digit',
-                      year: 'numeric',
-                    })
-                  : '—'
+                const reportCount = Number(q.report_count || 0)
+                const reviewStatus = q.review_status || 'normal'
 
                 return (
                   <tr key={q.question_id || `${idx}`}>
@@ -451,7 +719,40 @@ export default function QuestionsClient() {
                     <td className="p-2" style={{ color: rateColor }}>
                       {rate.toFixed(2)}%
                     </td>
-                    <td className="p-2">{createdLabel}</td>
+                    <td className="p-2">
+                      {reportCount > 0 ? (
+                        <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-red-600 text-white">
+                          {reportCount}
+                        </span>
+                      ) : (
+                        '—'
+                      )}
+                    </td>
+                    <td className="p-2">
+                      {reviewStatus === 'reported' && (
+                        <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-yellow-500 text-black">
+                          reported
+                        </span>
+                      )}
+                      {reviewStatus === 'reviewed_keep' && (
+                        <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-gray-500 text-white">
+                          kept
+                        </span>
+                      )}
+                      {reviewStatus === 'reviewed_answer_fixed' && (
+                        <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-green-600 text-white">
+                          fixed
+                        </span>
+                      )}
+                      {reviewStatus === 'reviewed_question_replaced' && (
+                        <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-blue-600 text-white">
+                          replaced
+                        </span>
+                      )}
+                      {reviewStatus === 'normal' && (
+                        <span className="text-xs text-gray-500">—</span>
+                      )}
+                    </td>
                     <td className="p-2">
                       <button
                         className="border rounded px-2 py-1 text-sm"
@@ -491,21 +792,21 @@ export default function QuestionsClient() {
         </div>
       </div>
 
-      {detail ? (
+      {detail || detailLoading ? (
         <div
           className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
           onClick={closeDetail}
         >
           <div
-            className="rounded shadow w-[900px] max-w-[92%] max-h-[90vh] overflow-y-auto"
+            className="rounded shadow w-[1000px] max-w-[95%] max-h-[90vh] overflow-y-auto flex flex-col"
             onClick={(e) => e.stopPropagation()}
             style={{ background: '#1e293b', color: '#ffffff' }}
           >
             <div
-              className="flex items-center justify-between px-4 py-3"
+              className="flex items-center justify-between px-4 py-3 sticky top-0 z-10"
               style={{ background: '#2563eb' }}
             >
-              <h3 className="text-lg font-semibold">Chi tiết câu hỏi</h3>
+              <h3 className="text-lg font-semibold">Xử lí review câu hỏi</h3>
               <button
                 aria-label="Đóng"
                 className="rounded p-1 text-sm"
@@ -516,162 +817,258 @@ export default function QuestionsClient() {
               </button>
             </div>
 
-            <div className="px-4 py-4 text-sm">
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <span className="font-medium">Bài học:</span>{' '}
-                  <span className="inline-block px-2 py-1 rounded" style={{ background: '#0f172a' }}>
-                    {detail.lesson_title || '—'}
-                  </span>
-                </div>
-                <div>
-                  <span className="font-medium">Khối:</span>{' '}
-                  <span className="inline-block px-2 py-1 rounded" style={{ background: '#0f172a' }}>
-                    {detail.grade_name || '—'}
-                  </span>
-                </div>
-                <div>
-                  <span className="font-medium">Loại:</span>{' '}
-                  <span className="inline-block px-2 py-1 rounded" style={{ background: '#0f172a' }}>
-                    {typeLabel(detail.question_type)}
-                  </span>
-                </div>
-                <div>
-                  <span className="font-medium">Độ khó:</span>{' '}
-                  <span className="inline-block px-2 py-1 rounded" style={{ background: '#0f172a' }}>
-                    {detail.difficulty ?? '—'}
-                  </span>
-                </div>
-                <div>
-                  <span className="font-medium">Chủ đề:</span>{' '}
-                  <span className="inline-block px-2 py-1 rounded" style={{ background: '#0f172a' }}>
-                    {detail.topic || '—'}
-                  </span>
-                </div>
-                <div>
-                  <span className="font-medium">Attempts:</span>{' '}
-                  <span className="inline-block px-2 py-1 rounded" style={{ background: '#0f172a' }}>
-                    {detail.total_attempts || 0}
-                  </span>
-                </div>
-                <div className="col-span-2">
-                  <div className="font-medium mb-1">Correct rate</div>
-                  <div className="w-full h-2 rounded" style={{ background: '#0f172a' }}>
-                    <div
-                      className="h-2 rounded"
-                      style={{
-                        width: `${Math.min(100, Math.max(0, Number(detail.correct_rate || 0)))}%`,
-                        background: '#22c55e',
-                      }}
-                    />
+            {detailLoading ? (
+              <div className="flex-1 p-20 text-center text-slate-400">
+                <div className="animate-spin text-3xl mb-4">⌛</div>
+                Đang tải chi tiết câu hỏi...
+              </div>
+            ) : detail ? (
+              <>
+                <div className="flex-1 p-4 space-y-6">
+                  {/* Metadata */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 rounded" style={{ background: '#0f172a' }}>
+                    <div>
+                      <div className="text-xs text-slate-400">Bài học</div>
+                      <div className="font-medium text-blue-400">{detail.lesson_title}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-slate-400">Khối</div>
+                      <div className="font-medium text-blue-400">{detail.grade_name}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-slate-400">Loại</div>
+                      <div className="font-medium">{typeLabel(detail.question_type)}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-slate-400">Attempts / Rate</div>
+                      <div className="font-medium">{detail.total_attempts} / {Number(detail.correct_rate || 0).toFixed(1)}%</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-slate-400">Số report</div>
+                      <div className="font-medium text-red-400">{reports.length > 0 ? reports.length : (detail.report_count || 0)}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-slate-400">Trạng thái review</div>
+                      <div className="font-medium">{detail.review_status || 'normal'}</div>
+                    </div>
                   </div>
-                  <div className="mt-1">{Number(detail.correct_rate || 0).toFixed(2)}%</div>
-                </div>
-              </div>
-            </div>
 
-            <div className="px-4">
-              <div className="font-medium mb-1">Nội dung câu hỏi</div>
-              <div className="whitespace-pre-wrap rounded p-4" style={{ background: '#0f172a' }}>
-                {detail.question_content || '—'}
-              </div>
-            </div>
+                  {/* List of Reports */}
+                  {reports.length > 0 && (
+                    <div className="space-y-2">
+                      <h4 className="font-semibold text-red-400">Danh sách báo cáo từ học sinh</h4>
+                      <div className="max-h-40 overflow-y-auto space-y-2">
+                        {reports.map((r, i) => (
+                          <div key={r.id || i} className="p-2 border rounded border-red-900/50 bg-red-900/10 text-xs">
+                            <div className="flex justify-between font-medium">
+                              <span>{r.report_reason}</span>
+                              <span className="text-slate-400">{new Date(r.created_at).toLocaleString()}</span>
+                            </div>
+                            {r.report_detail && <div className="mt-1 italic">&ldquo;{r.report_detail}&rdquo;</div>}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
-            {detail.image_url ? (
-              <div className="px-4 mt-3">
-                <div className="font-medium mb-1">Hình ảnh</div>
-                <img
-                  src={detail.image_url}
-                  alt={detail.image_alt || 'question image'}
-                  className="max-h-80 rounded border"
-                />
-                {detail.image_caption ? (
-                  <div className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-                    {detail.image_caption}
+                  {/* Editing Area */}
+                  <div className="space-y-4">
+                    <h4 className="font-semibold border-b pb-1 border-slate-700">Nội dung chỉnh sửa</h4>
+                    
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Nội dung câu hỏi</label>
+                      <textarea
+                        className="w-full border rounded p-3 bg-slate-900 border-slate-700 min-h-[100px]"
+                        value={editContent}
+                        onChange={(e) => setEditContent(e.target.value)}
+                      />
+                    </div>
+
+                    {/* Options / Statements / Short Answers */}
+                    {detail.question_type === 'single_choice' && (
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Các lựa chọn (Tích chọn đáp án đúng)</label>
+                        <div className="space-y-2">
+                          {editOptions.map((opt, i) => (
+                            <div key={opt.key || i} className="flex items-center gap-2">
+                              <input
+                                type="radio"
+                                name="correct_choice"
+                                checked={opt.is_correct}
+                                onChange={() => {
+                                  const next = editOptions.map((o, idx) => ({ ...o, is_correct: i === idx }))
+                                  setEditOptions(next)
+                                }}
+                              />
+                              <span className="w-6 font-bold">{opt.key || String.fromCharCode(65 + i)}.</span>
+                              <input
+                                className="flex-1 border rounded p-2 bg-slate-900 border-slate-700"
+                                value={opt.text}
+                                onChange={(e) => {
+                                  const next = [...editOptions]
+                                  next[i].text = e.target.value
+                                  setEditOptions(next)
+                                }}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {(detail.question_type === 'true_false_group' || detail.question_type === 'true_false') && (
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Các mệnh đề (Tích chọn nếu mệnh đề là ĐÚNG)</label>
+                        <div className="space-y-2">
+                          {editStatements.map((st, i) => (
+                            <div key={st.id || i} className="flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                checked={st.correct_answer}
+                                onChange={(e) => {
+                                  const next = [...editStatements]
+                                  next[i].correct_answer = e.target.checked
+                                  setEditStatements(next)
+                                }}
+                              />
+                              <span className="w-6 font-bold">{st.key || String.fromCharCode(97 + i)}.</span>
+                              <input
+                                className="flex-1 border rounded p-2 bg-slate-900 border-slate-700"
+                                value={st.text}
+                                onChange={(e) => {
+                                  const next = [...editStatements]
+                                  next[i].text = e.target.value
+                                  setEditStatements(next)
+                                }}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {detail.question_type === 'short_answer' && (
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Đáp án chấp nhận (cách nhau bởi dấu chấm phẩy ;)</label>
+                        <input
+                          className="w-full border rounded p-2 bg-slate-900 border-slate-700"
+                          value={editAcceptedAnswers.join(' ; ')}
+                          onChange={(e) => setEditAcceptedAnswers(e.target.value.split(';').map(s => s.trim()))}
+                        />
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <label className="text-sm font-medium">💡 Mẹo (Tip)</label>
+                        </div>
+                        <textarea
+                          className="w-full border rounded p-3 bg-slate-900 border-slate-700 min-h-[80px]"
+                          value={editTip}
+                          onChange={(e) => setEditTip(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <label className="text-sm font-medium">📖 Giải thích (Explanation)</label>
+                        </div>
+                        <textarea
+                          className="w-full border rounded p-3 bg-slate-900 border-slate-700 min-h-[80px]"
+                          value={editExplanation}
+                          onChange={(e) => setEditExplanation(e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex justify-center">
+                      <button
+                        className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded font-medium transition-colors"
+                        onClick={handleGenTipExp}
+                        disabled={genLoading}
+                      >
+                        {genLoading ? '⌛ Đang gen...' : '✨ Gen lại tip + explanation bằng AI'}
+                      </button>
+                    </div>
                   </div>
-                ) : null}
-              </div>
-            ) : null}
 
-            {detail.question_type === 'true_false_group' ? (
-              <div className="px-4 mt-3">
-                <div className="font-medium mb-1">Các mệnh đề</div>
-                <ul className="space-y-2 text-sm">
-                  {safeArray<QuestionStatement>(detail.statements)
-                    .slice()
-                    .sort((a, b) => (a.order || 0) - (b.order || 0))
-                    .map((st) => (
-                      <li key={st.id || st.key}>
-                        <span className="font-medium">{st.key || '•'}.</span> {st.text}{' '}
-                        <span style={{ color: st.correct_answer ? '#22c55e' : '#ef4444' }}>
-                          {st.correct_answer ? '✔ Đúng' : '✘ Sai'}
-                        </span>
-                      </li>
-                    ))}
-                  {safeArray<QuestionStatement>(detail.statements).length === 0 ? (
-                    <li style={{ color: 'var(--text-muted)' }}>Không có mệnh đề</li>
-                  ) : null}
-                </ul>
-              </div>
-            ) : null}
+                  {/* Review Processing */}
+                  <div className="p-4 rounded border border-blue-900/50 bg-blue-900/10 space-y-4">
+                    <h4 className="font-semibold text-blue-400">Hoàn tất xử lí</h4>
+                    
+                    <div className="space-y-2">
+                      <div className="text-sm font-medium">Loại thay đổi <span className="text-red-400">*</span></div>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <label className={`flex items-center gap-2 cursor-pointer border rounded p-3 ${reviewType === 'keep' ? 'border-blue-500 bg-blue-900/20' : 'border-slate-700 bg-slate-900/30'}`}>
+                          <input
+                            type="radio"
+                            name="review_type"
+                            value="keep"
+                            checked={reviewType === 'keep'}
+                            onChange={() => setReviewType('keep')}
+                          />
+                          <span>Không sai (Giữ nguyên)</span>
+                        </label>
+                        <label className={`flex items-center gap-2 cursor-pointer border rounded p-3 ${reviewType === 'wrong_answer' ? 'border-blue-500 bg-blue-900/20' : 'border-slate-700 bg-slate-900/30'}`}>
+                          <input
+                            type="radio"
+                            name="review_type"
+                            value="wrong_answer"
+                            checked={reviewType === 'wrong_answer'}
+                            onChange={() => setReviewType('wrong_answer')}
+                          />
+                          <span>Sai đáp án (Sẽ chấm lại bài)</span>
+                        </label>
+                        <label className={`flex items-center gap-2 cursor-pointer border rounded p-3 ${reviewType === 'wrong_question' ? 'border-blue-500 bg-blue-900/20' : 'border-slate-700 bg-slate-900/30'}`}>
+                          <input
+                            type="radio"
+                            name="review_type"
+                            value="wrong_question"
+                            checked={reviewType === 'wrong_question'}
+                            onChange={() => setReviewType('wrong_question')}
+                          />
+                          <span>Sai đề (Sẽ cộng full điểm)</span>
+                        </label>
+                      </div>
+                    </div>
 
-            {detail.question_type === 'single_choice' ? (
-              <div className="px-4 mt-3">
-                <div className="font-medium mb-1">Các lựa chọn</div>
-                <ul className="space-y-1 text-sm">
-                  {safeArray<QuestionOption>(detail.options)
-                    .slice()
-                    .sort((a, b) => (a.order || 0) - (b.order || 0))
-                    .map((op) => (
-                      <li key={op.key}>
-                        <span className="font-medium">{op.key}.</span> {op.text}{' '}
-                        {op.is_correct ? <span style={{ color: '#22c55e' }}>✔</span> : null}
-                      </li>
-                    ))}
-                  {safeArray<QuestionOption>(detail.options).length === 0 ? (
-                    <li style={{ color: 'var(--text-muted)' }}>Không có lựa chọn</li>
-                  ) : null}
-                </ul>
-              </div>
-            ) : null}
+                    <div className="space-y-2">
+                      <div className="text-sm font-medium">Ghi chú xử lí (nếu có)</div>
+                      <textarea
+                        className="w-full border rounded p-2 bg-slate-900 border-slate-700 text-sm"
+                        placeholder="Lý do thay đổi, nội dung đã sửa..."
+                        value={changeNote}
+                        onChange={(e) => setChangeNote(e.target.value)}
+                      />
+                    </div>
 
-            {detail.question_type === 'short_answer' ? (
-              <div className="px-4 mt-3">
-                <div className="font-medium mb-1">Đáp án chấp nhận</div>
-                <div className="whitespace-pre-wrap rounded p-4" style={{ background: '#0f172a' }}>
-                  {safeArray<string>(detail.accepted_answers).length
-                    ? safeArray<string>(detail.accepted_answers).join(' ; ')
-                    : '—'}
+                    <div className="flex justify-end pt-2">
+                      <button
+                        className="bg-green-600 hover:bg-green-700 px-6 py-2 rounded font-bold transition-colors disabled:opacity-50"
+                        onClick={handleSaveReview}
+                        disabled={saving || !reviewType}
+                      >
+                        {saving ? '⌛ Đang lưu...' : (reviewType === 'keep' ? 'Đánh dấu đã xem' : 'Lưu và cập nhật điểm')}
+                      </button>
+                    </div>
+                  </div>
                 </div>
-              </div>
+
+                <div className="px-4 py-3 border-t border-slate-700 flex items-center justify-between bg-slate-800">
+                  <div className="text-sm text-slate-400">
+                    Question ID: {detail.question_id}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button className="border border-slate-600 rounded px-3 py-1 text-sm hover:bg-slate-700" onClick={goPrevDetail}>
+                      ← Câu trước
+                    </button>
+                    <button className="border border-slate-600 rounded px-3 py-1 text-sm hover:bg-slate-700" onClick={goNextDetail}>
+                      Câu tiếp →
+                    </button>
+                  </div>
+                </div>
+              </>
             ) : null}
-
-            <div className="px-4 mt-3">
-              <div className="font-medium mb-1">💡 Lời giải</div>
-              <div className="whitespace-pre-wrap rounded p-4" style={{ background: '#0f172a' }}>
-                {detail.explanation || detail.brief_explanation || detail.tip || '—'}
-              </div>
-            </div>
-
-            <div className="px-4 py-3 flex items-center justify-between">
-              <div className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                {(() => {
-                  const r = Number(detail.correct_rate || 0)
-                  if (r < 30) return 'Độ khó thực tế: 🔴 Hard'
-                  if (r < 60) return 'Độ khó thực tế: 🟡 Medium'
-                  return 'Độ khó thực tế: 🟢 Easy'
-                })()}
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button className="border rounded px-2 py-1 text-sm" onClick={goPrevDetail}>
-                  ← Câu trước
-                </button>
-                <button className="border rounded px-2 py-1 text-sm" onClick={goNextDetail}>
-                  Câu tiếp →
-                </button>
-              </div>
-            </div>
           </div>
         </div>
       ) : null}

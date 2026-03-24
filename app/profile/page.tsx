@@ -21,7 +21,29 @@ export default function ProfilePage() {
   const [birthDate, setBirthDate] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const [attempts, setAttempts] = useState<Array<{ id: string, lesson_id: string, lesson_title: string, total: number, correct: number, percent: number, created_at: string }>>([])
+  const [attempts, setAttempts] = useState<Array<{ 
+    id: string, 
+    lesson_id: string, 
+    lesson_title: string, 
+    total: number, 
+    correct: number, 
+    percent: number, 
+    created_at: string,
+    report_status?: string,
+    reviewed_at?: string,
+    review_adjustment_type?: string,
+    review_adjustment_note?: string
+  }>>([])
+  const [selectedAttemptId, setSelectedAttemptId] = useState<string | null>(null)
+  const [selectedAttemptMeta, setSelectedAttemptMeta] = useState<any | null>(null)
+  const [selectedAttemptFeedback, setSelectedAttemptFeedback] = useState<any | null>(null)
+  const [attemptDetail, setAttemptDetail] = useState<any[] | null>(null)
+  const [detailLoading, setDetailLoading] = useState(false)
+  const [reportModal, setReportModal] = useState<{qid: string, aid: string, answer_id?: string} | null>(null)
+  const [reportReason, setReportReason] = useState('')
+  const [reportDetail, setReportDetail] = useState('')
+  const [reporting, setReporting] = useState(false)
+
   const router = useRouter()
 
   useEffect(() => {
@@ -67,20 +89,37 @@ export default function ProfilePage() {
         setAcademicYearId(ay?.id || null)
         setAcademicYear(ay?.name || '')
       }
-      // load attempts + lesson titles
+      // load attempts
       const { data: atts } = await supabaseBrowser
         .from('quiz_attempts')
-        .select('id, lesson_id, total_questions, correct_answers, score_percent, created_at')
+        .select('id, lesson_id, total_questions, correct_answers, score_percent, created_at, score_adjustment_status')
         .eq('user_id', data.user.id)
         .order('created_at', { ascending: false })
         .limit(50)
-      const list = (atts || []) as any as Array<{ id: string, lesson_id: string, total_questions: number, correct_answers: number, score_percent: number, created_at: string }>
+      
+      const list = (atts || [])
       const lessonIds = Array.from(new Set(list.map(a => a.lesson_id).filter(Boolean)))
       let titleById: Record<string, string> = {}
       if (lessonIds.length) {
         const { data: ls } = await supabaseBrowser.from('lessons').select('id,title').in('id', lessonIds)
         titleById = Object.fromEntries((ls || []).map((x: any) => [x.id, x.title || '']))
       }
+
+      // Check for reports for these attempts to show badges
+      const { data: reportsData } = await supabaseBrowser
+        .from('question_reports')
+        .select('attempt_id, status, reviewed_at')
+        .in('attempt_id', list.map(a => a.id))
+
+      const reportStatusByAttempt: Record<string, { has_report: boolean, is_reviewed: boolean }> = {}
+      for (const r of (reportsData || [])) {
+        const prev = reportStatusByAttempt[r.attempt_id] || { has_report: false, is_reviewed: false }
+        reportStatusByAttempt[r.attempt_id] = {
+          has_report: true,
+          is_reviewed: prev.is_reviewed || !!r.reviewed_at || r.status !== 'pending'
+        }
+      }
+
       setAttempts(list.map(a => ({
         id: a.id,
         lesson_id: a.lesson_id,
@@ -88,10 +127,75 @@ export default function ProfilePage() {
         total: a.total_questions || 0,
         correct: a.correct_answers || 0,
         percent: a.score_percent || 0,
-        created_at: a.created_at
+        created_at: a.created_at,
+        report_status: reportStatusByAttempt[a.id]?.has_report ? 'reported' : undefined,
+        reviewed_at: reportStatusByAttempt[a.id]?.is_reviewed ? 'reviewed' : undefined,
+        review_adjustment_type: (a.score_adjustment_status && a.score_adjustment_status !== 'none') ? a.score_adjustment_status : undefined
       })))
     })
   }, [router])
+
+  const openAttemptDetail = async (id: string) => {
+    setSelectedAttemptId(id)
+    setDetailLoading(true)
+    setAttemptDetail(null)
+    setSelectedAttemptMeta(null)
+    setSelectedAttemptFeedback(null)
+    
+    try {
+      // Fetch answers and report in parallel
+      const [resAnswers, resReport] = await Promise.all([
+        fetch(`/api/attempts/${id}/answers`),
+        fetch(`/api/attempts/${id}/report`)
+      ])
+      
+      const dataAnswers = await resAnswers.json()
+      const dataReport = await resReport.json()
+      
+      setAttemptDetail(dataAnswers.answers || [])
+      setSelectedAttemptMeta(dataReport.attempt || null)
+      setSelectedAttemptFeedback({
+        feedback: dataReport.feedback,
+        short_answer_results: dataReport.short_answer_results
+      })
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setDetailLoading(false)
+    }
+  }
+
+  const handleReport = async () => {
+    if (!reportModal || !reportReason) return
+    setReporting(true)
+    try {
+      const res = await fetch(`/api/student/attempts/${reportModal.aid}/report`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          question_id: reportModal.qid,
+          attempt_answer_id: reportModal.answer_id,
+          report_reason: reportReason,
+          report_detail: reportDetail
+        })
+      })
+      const data = await res.json()
+      if (data.success) {
+        alert('Báo cáo của bạn đã được gửi thành công và đang chờ giáo viên xem xét.')
+        setReportModal(null)
+        setReportReason('')
+        setReportDetail('')
+        // Refresh detail to show reported status
+        if (selectedAttemptId) openAttemptDetail(selectedAttemptId)
+      } else {
+        alert(data.error || 'Lỗi khi gửi báo cáo')
+      }
+    } catch (err: any) {
+      alert('Lỗi: ' + err.message)
+    } finally {
+      setReporting(false)
+    }
+  }
 
   useEffect(() => {
     if (!schoolId || !gradeId || !academicYearId) {
@@ -197,8 +301,15 @@ export default function ProfilePage() {
             {attempts.length === 0 ? (
               <div className="text-sm" style={{color:'var(--text-muted)'}}>Chưa có bài đã làm.</div>
             ) : attempts.map(a => (
-              <div key={a.id} className="border rounded p-3">
-                <div className="text-sm font-medium">{a.lesson_title}</div>
+              <div key={a.id} className="border rounded p-3 cursor-pointer hover:bg-slate-50 transition-colors" onClick={() => openAttemptDetail(a.id)}>
+                <div className="flex justify-between items-start">
+                  <div className="text-sm font-medium">{a.lesson_title}</div>
+                  <div className="flex gap-1">
+                    {a.report_status && <span className="text-[10px] bg-red-100 text-red-600 px-1 rounded">Có báo cáo</span>}
+                    {a.reviewed_at && <span className="text-[10px] bg-blue-100 text-blue-600 px-1 rounded">Đã xem</span>}
+                    {a.review_adjustment_type && <span className="text-[10px] bg-green-100 text-green-600 px-1 rounded">Điểm đã cập nhật</span>}
+                  </div>
+                </div>
                 <div className="text-xs text-slate-600 mt-1">
                   Điểm: {a.correct}/{a.total} ({a.percent}%)
                 </div>
@@ -210,6 +321,254 @@ export default function ProfilePage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Attempt Detail Modal */}
+      {selectedAttemptId && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setSelectedAttemptId(null)}>
+          <div className="bg-white rounded-lg shadow-xl w-[800px] max-w-[95%] max-h-[90vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="px-4 py-3 bg-slate-100 border-b flex justify-between items-center">
+              <h3 className="font-semibold">Chi tiết bài làm</h3>
+              <button onClick={() => setSelectedAttemptId(null)}>✕</button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 space-y-6">
+              {detailLoading ? (
+                <div className="text-center py-10">Đang tải...</div>
+              ) : (
+                <>
+                  {/* Summary Section */}
+                  {selectedAttemptMeta && (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-slate-50 rounded-lg border border-slate-200">
+                      <div>
+                        <div className="text-xs text-slate-500 uppercase font-bold">Tổng câu hỏi</div>
+                        <div className="text-xl font-bold">{selectedAttemptMeta.total_questions || selectedAttemptMeta.accuracy_total_units}</div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-slate-500 uppercase font-bold text-green-600">Câu đúng</div>
+                        <div className="text-xl font-bold text-green-600">{selectedAttemptMeta.correct_answers || selectedAttemptMeta.accuracy_correct_units}</div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-slate-500 uppercase font-bold text-red-600">Câu sai</div>
+                        <div className="text-xl font-bold text-red-600">
+                          {(selectedAttemptMeta.total_questions || selectedAttemptMeta.accuracy_total_units) - (selectedAttemptMeta.correct_answers || selectedAttemptMeta.accuracy_correct_units)}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-slate-500 uppercase font-bold text-blue-600">Tỉ lệ</div>
+                        <div className="text-xl font-bold text-blue-600">{selectedAttemptMeta.score_percent || selectedAttemptMeta.accuracy_percent}%</div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* AI Feedback Section */}
+                  {selectedAttemptFeedback?.feedback && (selectedAttemptFeedback.feedback.praise || selectedAttemptFeedback.feedback.strengths?.length > 0) && (
+                    <div className="space-y-3 p-4 bg-blue-50 rounded-lg border border-blue-100">
+                      <h4 className="font-bold text-blue-800 flex items-center gap-2">
+                        ✨ Nhận xét từ AI
+                      </h4>
+                      {selectedAttemptFeedback.feedback.praise && (
+                        <p className="text-sm text-blue-900 italic">&ldquo;{selectedAttemptFeedback.feedback.praise}&rdquo;</p>
+                      )}
+                      {selectedAttemptFeedback.feedback.strengths?.length > 0 && (
+                        <div>
+                          <div className="text-xs font-bold text-blue-700 uppercase mt-2">Điểm mạnh:</div>
+                          <ul className="list-disc list-inside text-sm text-blue-800 space-y-1">
+                            {selectedAttemptFeedback.feedback.strengths.map((s: string, i: number) => <li key={i}>{s}</li>)}
+                          </ul>
+                        </div>
+                      )}
+                      {selectedAttemptFeedback.feedback.plan?.length > 0 && (
+                        <div>
+                          <div className="text-xs font-bold text-blue-700 uppercase mt-2">Kế hoạch học tập:</div>
+                          <ul className="list-disc list-inside text-sm text-blue-800 space-y-1">
+                            {selectedAttemptFeedback.feedback.plan.map((p: string, i: number) => <li key={i}>{p}</li>)}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Wrong Answers Detail (Short Answer AI Results) */}
+                  {selectedAttemptFeedback?.short_answer_results?.length > 0 && (
+                    <div className="space-y-3">
+                      <h4 className="font-bold text-red-600 flex items-center gap-2">
+                        ❌ Chi tiết các câu sai
+                      </h4>
+                      <div className="space-y-3">
+                        {selectedAttemptFeedback.short_answer_results.map((res: any, i: number) => (
+                          <div key={i} className="p-3 border border-red-100 bg-red-50 rounded text-sm space-y-2">
+                            <div className="flex justify-between font-bold text-red-800">
+                              <span>Câu hỏi {i + 1} (AI nhận xét)</span>
+                              {!res.is_correct && <span className="text-xs bg-red-200 px-2 py-0.5 rounded">Chưa chính xác</span>}
+                            </div>
+                            <div>
+                              <span className="font-bold">Bạn chọn:</span> <span className="text-red-700">{res.chosen || '—'}</span>
+                            </div>
+                            <div>
+                              <span className="font-bold">Đáp án đúng:</span> <span className="text-green-700">{res.correct || '—'}</span>
+                            </div>
+                            {res.comment && (
+                              <div className="italic text-slate-600 mt-1">&ldquo;{res.comment}&rdquo;</div>
+                            )}
+                            {res.explain && (
+                              <div className="bg-white/50 p-2 rounded mt-1 text-xs">
+                                <span className="font-bold">Giải thích:</span> {res.explain}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Detailed Answers List */}
+                  <div className="space-y-4 pt-4 border-t border-slate-100">
+                    <h4 className="font-bold text-slate-700">📋 Danh sách câu hỏi chi tiết</h4>
+                    {attemptDetail?.map((item, idx) => {
+                      const isWrong = item.is_correct === false || (Number(item.score_awarded ?? 0) < Number(item.max_score ?? 1))
+                      const canReport = 
+                        item.report_locked !== true && 
+                        !item.report_id && 
+                        !item.review_adjustment_type && 
+                        isWrong
+                      
+                      const hasReported = !!item.report_id || !!item.report_status
+                      const isReviewedKeep = item.review_status === 'reviewed_keep'
+                      const isAdjusted = !!item.review_adjustment_type
+
+                      return (
+                        <div key={idx} className="border rounded p-4 space-y-2 relative bg-white">
+                          <div className="flex justify-between items-start">
+                            <div className="text-sm font-bold text-slate-700">Câu {idx + 1}</div>
+                            {canReport && (
+                              <button 
+                                className="text-xs bg-red-50 text-red-600 hover:bg-red-100 px-2 py-1 rounded border border-red-200 transition-colors flex items-center gap-1"
+                                onClick={() => setReportModal({ 
+                                  qid: item.question_id, 
+                                  aid: selectedAttemptId!, 
+                                  answer_id: item.answer_id 
+                                })}
+                              >
+                                🚩 Báo cáo sai sót
+                              </button>
+                            )}
+                          </div>
+                          <div className="text-sm whitespace-pre-wrap">{item.content}</div>
+                          
+                          {/* Render Statements for True/False */}
+                          {item.statements && item.statements.length > 0 && (
+                            <div className="mt-2 space-y-1 border-l-2 border-slate-200 pl-3">
+                              {item.statements.map((st: any, i: number) => (
+                                <div key={i} className="text-xs flex items-center gap-2">
+                                  <span className="font-bold w-4">{st.statement_key || String.fromCharCode(97 + i)}.</span>
+                                  <span className="flex-1">{st.text}</span>
+                                  <span className={st.is_correct ? 'text-green-600' : 'text-red-600'}>
+                                    Bạn chọn: {st.selected_answer === true ? 'Đúng' : st.selected_answer === false ? 'Sai' : '—'}
+                                    {st.is_correct ? ' (Đúng)' : ' (Sai)'}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          <div className="text-xs space-y-1 mt-2">
+                            {(!item.statements || item.statements.length === 0) && (
+                              <div className="font-medium">Đáp án của bạn: 
+                                <span className={item.is_correct ? 'text-green-600 ml-1' : 'text-red-600 ml-1'}>
+                                  {item.question_type === 'short_answer' ? (item.answer_text || '—') : (item.selected_answer || '—')}
+                                  {item.is_correct ? ' (Đúng)' : ' (Sai)'}
+                                </span>
+                              </div>
+                            )}
+
+                            {hasReported && !isReviewedKeep && !isAdjusted && (
+                              <div className="flex items-center gap-1 text-amber-600 font-medium">
+                                <span className="text-[10px] bg-amber-100 px-1.5 py-0.5 rounded">Đã gửi báo cáo - đang chờ giáo viên xem</span>
+                              </div>
+                            )}
+
+                            {isReviewedKeep && (
+                              <div className="flex items-center gap-1 text-slate-600 font-medium">
+                                <span className="text-[10px] bg-slate-100 px-1.5 py-0.5 rounded">Giáo viên đã xem và giữ nguyên đáp án</span>
+                              </div>
+                            )}
+
+                            {item.review_adjustment_type === 'wrong_answer_regrade' && (
+                              <div className="text-green-700 font-medium bg-green-50 p-2 rounded mt-2 border border-green-100">
+                                <span className="font-bold">✨ Giáo viên đã sửa đáp án:</span> Điểm của bạn đã được cập nhật.
+                                {item.review_adjustment_note && <div className="mt-1 text-slate-600 font-normal">&ldquo;{item.review_adjustment_note}&rdquo;</div>}
+                              </div>
+                            )}
+
+                            {item.review_adjustment_type === 'wrong_question_full_credit' && (
+                              <div className="text-blue-700 font-medium bg-blue-50 p-2 rounded mt-2 border border-blue-100">
+                                <span className="font-bold">✨ Câu hỏi có lỗi:</span> Bạn đã được cộng tối đa điểm câu này.
+                                {item.review_adjustment_note && <div className="mt-1 text-slate-600 font-normal">&ldquo;{item.review_adjustment_note}&rdquo;</div>}
+                              </div>
+                            )}
+                          </div>
+
+                          {(item.tip || item.explanation) && (
+                            <div className="mt-2 p-2 bg-slate-50 rounded text-xs space-y-1">
+                              {item.tip && <div><span className="font-bold">Mẹo:</span> {item.tip}</div>}
+                              {item.explanation && <div><span className="font-bold">Giải thích:</span> {item.explanation}</div>}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Report Modal */}
+      {reportModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60]" onClick={() => setReportModal(null)}>
+          <div className="bg-white rounded shadow-xl w-[400px] max-w-[90%] p-4 space-y-4" onClick={e => e.stopPropagation()}>
+            <h3 className="font-semibold text-lg border-b pb-2">Báo cáo câu hỏi</h3>
+            <div className="space-y-3">
+              <div>
+                <label className="text-sm block mb-1">Lý do báo cáo <span className="text-red-500">*</span></label>
+                <select 
+                  className="w-full border rounded p-2 text-sm"
+                  value={reportReason}
+                  onChange={e => setReportReason(e.target.value)}
+                >
+                  <option value="">-- Chọn lý do --</option>
+                  <option value="Em nghĩ đáp án đúng phải là lựa chọn khác">Em nghĩ đáp án đúng phải là lựa chọn khác</option>
+                  <option value="Giải thích hiện tại chưa hợp lí">Giải thích hiện tại chưa hợp lí</option>
+                  <option value="Câu hỏi mơ hồ / thiếu dữ kiện">Câu hỏi mơ hồ / thiếu dữ kiện</option>
+                  <option value="Hình ảnh hoặc dữ kiện bị lỗi">Hình ảnh hoặc dữ kiện bị lỗi</option>
+                  <option value="Khác">Khác</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-sm block mb-1">Chi tiết thêm (không bắt buộc)</label>
+                <textarea 
+                  className="w-full border rounded p-2 text-sm min-h-[100px]"
+                  placeholder="Mô tả cụ thể lỗi bạn phát hiện (tối đa 500 ký tự)..."
+                  maxLength={500}
+                  value={reportDetail}
+                  onChange={e => setReportDetail(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <button className="px-4 py-2 text-sm border rounded" onClick={() => setReportModal(null)}>Hủy</button>
+              <button 
+                className="px-4 py-2 text-sm bg-red-600 text-white rounded disabled:opacity-50"
+                disabled={!reportReason || reporting}
+                onClick={handleReport}
+              >
+                {reporting ? 'Đang gửi...' : 'Gửi báo cáo'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

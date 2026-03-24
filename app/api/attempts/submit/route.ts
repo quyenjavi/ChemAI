@@ -36,8 +36,16 @@ export async function POST(request: Request) {
       answerMap[qid] = a
     }
 
+    // 1. Get frozen question IDs for the attempt
+    const { data: frozenQs } = await svc
+      .from('quiz_attempt_questions')
+      .select('question_id')
+      .eq('attempt_id', attemptId)
+    
     let qIds: string[] = []
-    if (lessonType === 'exam') {
+    if (frozenQs && frozenQs.length > 0) {
+      qIds = frozenQs.map(f => f.question_id)
+    } else if (lessonType === 'exam') {
       const { data: allQs } = await svc.from('questions').select('id').eq('lesson_id', attempt.lesson_id).order('order_index', { ascending: true }).limit(1000)
       qIds = (allQs || []).map((q: any) => q.id).filter(Boolean)
     } else {
@@ -171,6 +179,25 @@ export async function POST(request: Request) {
             created_at: now
           })
         }
+        continue
+      }
+
+      if (typ === 'true_false') {
+        const payload = answerMap[qid]
+        const chosen = (payload?.selected_answer || '').trim()
+        const correctKey = correctById[qid] || ''
+        const isCorrect = !!(chosen && correctKey && correctKey === chosen)
+        const maxScore = maxScoreByQ[qid] ?? 0
+        inserts.push({
+          attempt_id: attemptId,
+          question_id: qid,
+          selected_answer: chosen || null,
+          is_correct: isCorrect,
+          score_awarded: isCorrect ? maxScore : 0,
+          max_score: maxScore,
+          grading_method: 'option_match',
+          created_at: now
+        })
         continue
       }
 
@@ -405,6 +432,14 @@ export async function POST(request: Request) {
       const timeout = setTimeout(() => controller.abort(), 300000)
       let res: Response
       try {
+        console.log('--- Calling Dify Workflow ---')
+        console.log('Base URL:', env.difyBaseUrl)
+        console.log('Payload:', JSON.stringify({
+          inputs: { attempt_text: textAttempt },
+          response_mode: 'blocking',
+          user: uid
+        }, null, 2))
+        
         res = await fetch(`${env.difyBaseUrl}/workflows/run`, {
           method: 'POST',
           signal: controller.signal,
@@ -423,9 +458,15 @@ export async function POST(request: Request) {
       }
       if (!res.ok) {
         const text = await res.text()
+        console.error('--- Dify Workflow Error ---')
+        console.error('Status:', res.status)
+        console.error('Response:', text)
         throw new Error(`Dify workflow error: ${res.status} ${text}`)
       }
-      return res.json()
+      const json = await res.json()
+      console.log('--- Dify Workflow Success ---')
+      console.log('Response:', JSON.stringify(json, null, 2))
+      return json
     }
     const attemptText = formatAttemptTextLite()
     let report_json: any = null
@@ -524,11 +565,19 @@ export async function POST(request: Request) {
           })
           .eq('id', attemptId)
       } catch (err) {
-        report_json = { error: (err as any)?.message || 'workflow_failed', attempt_text: attemptText }
+        console.error('Dify workflow failed, will not save report', err)
+        // Do not save a report if Dify fails, let the client know
+        throw new Error(`Dify workflow failed: ${(err as any)?.message}`);
       }
     }
+    // This part is now only reached if Dify succeeds or was skipped
     await svc.from('attempt_reports')
-      .upsert({ attempt_id: attemptId, user_id: uid, report_content: JSON.stringify(report_json) }, { onConflict: 'attempt_id' })
+      .upsert({ 
+        attempt_id: attemptId, 
+        user_id: uid, 
+        report_content: JSON.stringify(report_json) 
+      }, { onConflict: 'attempt_id' })
+
     return NextResponse.json({ attemptId, mode: lessonType })
   } catch (e: any) {
     return NextResponse.json({ error: e.message || 'Server error' }, { status: 500 })

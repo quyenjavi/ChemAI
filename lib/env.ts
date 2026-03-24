@@ -5,6 +5,9 @@ export const env = {
   difyBaseUrl: process.env.DIFY_BASE_URL || 'https://api.dify.ai/v1',
   difyWorkflowKey: process.env.DIFY_WORKFLOW_API_KEY as string,
   difyChatKey: process.env.DIFY_CHAT_API_KEY as string,
+  openaiApiKey: process.env.OPENAI_API_KEY as string,
+  openaiBaseUrl: process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1',
+  openaiModel: process.env.OPENAI_MODEL || 'gpt-4o-mini',
 }
 
 export function assertEnv() {

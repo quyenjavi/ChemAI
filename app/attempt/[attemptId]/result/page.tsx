@@ -308,14 +308,30 @@ export default function ResultPage() {
 
   const StatusBadge = ({ status }: { status: 'correct' | 'wrong' | 'partial' | 'pending' }) => {
     const cls = status === 'correct'
-      ? 'text-green-400 bg-green-900/20 border-green-500'
+      ? 'text-emerald-200 bg-emerald-500/10 border-emerald-500/20'
       : status === 'wrong'
-        ? 'text-red-400 bg-red-900/20 border-red-500'
+        ? 'text-rose-200 bg-rose-500/10 border-rose-500/20'
         : status === 'partial'
-          ? 'text-yellow-300 bg-yellow-900/20 border-yellow-400'
-          : 'text-gray-200 bg-slate-800/40 border-slate-600'
+          ? 'text-amber-200 bg-amber-500/10 border-amber-500/20'
+          : 'text-slate-200 bg-slate-800/40 border-slate-600'
     const label = status === 'correct' ? '✅ Đúng' : status === 'wrong' ? '❌ Sai' : status === 'partial' ? '⚠️ Một phần đúng' : 'Chưa chấm'
     return <span className={`text-xs px-2 py-1 rounded-md border ${cls}`}>{label}</span>
+  }
+
+  const SummaryStat = ({ label, value, tone }: { label: string, value: string, tone: 'neutral' | 'primary' | 'success' | 'error' }) => {
+    const cls = tone === 'primary'
+      ? 'border-blue-500/20 bg-blue-500/10 text-blue-100'
+      : tone === 'success'
+        ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-100'
+        : tone === 'error'
+          ? 'border-rose-500/20 bg-rose-500/10 text-rose-100'
+          : 'border-slate-700/60 bg-slate-900/30 text-slate-100'
+    return (
+      <div className={`rounded-lg border p-4 ${cls}`}>
+        <div className="text-xs text-slate-200/70">{label}</div>
+        <div className="mt-1 text-2xl font-semibold leading-none">{value}</div>
+      </div>
+    )
   }
 
   const renderQuestionCard = (q: AnyAnswer, idx: number) => {
@@ -378,7 +394,7 @@ export default function ResultPage() {
       const correct = qa.correct_text || qa.correct_key || '—'
       const tip = (qa as any).tip ? String((qa as any).tip) : ''
       return (
-        <Card key={q.question_id} id={`q-${idx + 1}`} className="border" style={{borderColor:'var(--divider)'}}>
+        <Card key={q.question_id} id={`q-${idx + 1}`} className="border border-slate-700/60 bg-slate-900/30">
           <CardContent className="p-5 space-y-3">
             {baseHeader}
             {imageBlock}
@@ -393,13 +409,13 @@ export default function ResultPage() {
                 Điểm: <span className="font-semibold">{formatScore(scoreAw)} / {formatScore(maxSc)}</span>
               </div>
               {isWrong && qa.explanation ? (
-                <div className="p-3 rounded-md border bg-blue-900/20 border-blue-400 text-blue-300 text-sm whitespace-pre-line">
+                <div className="p-3 rounded-md border border-blue-500/30 bg-blue-500/10 text-blue-100 text-sm whitespace-pre-line">
                   <div className="font-semibold">Giải thích</div>
                   <div className="mt-1">{qa.explanation}</div>
                 </div>
               ) : null}
               {tip ? (
-                <div className="p-3 rounded-md border bg-yellow-900/20 border-yellow-400 text-yellow-300 text-sm italic whitespace-pre-line">
+                <div className="p-3 rounded-md border border-yellow-500/30 bg-yellow-500/10 text-yellow-100 text-sm italic whitespace-pre-line">
                   <div className="not-italic font-semibold">Mẹo học nhanh</div>
                   <div className="mt-1">{tip}</div>
                 </div>
@@ -425,7 +441,7 @@ export default function ResultPage() {
       const explain = sa?.explain ? String(sa.explain) : ''
       const tip = (qa as any).tip ? String((qa as any).tip) : (sa?.tip ? String(sa.tip) : '')
       return (
-        <Card key={q.question_id} id={`q-${idx + 1}`} className="border" style={{borderColor:'var(--divider)'}}>
+        <Card key={q.question_id} id={`q-${idx + 1}`} className="border border-slate-700/60 bg-slate-900/30">
           <CardContent className="p-5 space-y-3">
             {baseHeader}
             {imageBlock}
@@ -449,13 +465,13 @@ export default function ResultPage() {
                 <div className="text-sm text-gray-200/70 whitespace-pre-line">{qa.explanation}</div>
               ) : null}
               {isWrong && explain ? (
-                <div className="p-3 rounded-md border bg-blue-900/20 border-blue-400 text-blue-300 text-sm whitespace-pre-line">
+                <div className="p-3 rounded-md border border-blue-500/30 bg-blue-500/10 text-blue-100 text-sm whitespace-pre-line">
                   <div className="font-semibold">Giải thích</div>
                   <div className="mt-1">{explain}</div>
                 </div>
               ) : null}
               {tip ? (
-                <div className="p-3 rounded-md border bg-yellow-900/20 border-yellow-400 text-yellow-300 text-sm italic whitespace-pre-line">
+                <div className="p-3 rounded-md border border-yellow-500/30 bg-yellow-500/10 text-yellow-100 text-sm italic whitespace-pre-line">
                   <div className="not-italic font-semibold">Mẹo học nhanh</div>
                   <div className="mt-1">{tip}</div>
                 </div>
@@ -473,7 +489,7 @@ export default function ResultPage() {
       const sumScore = st.reduce((acc, s) => acc + (Number(s.score_awarded) || 0), 0)
       const sumMax = st.reduce((acc, s) => acc + (Number(s.max_score) || 0), 0)
       return (
-        <Card key={q.question_id} id={`q-${idx + 1}`} className="border" style={{borderColor:'var(--divider)'}}>
+        <Card key={q.question_id} id={`q-${idx + 1}`} className="border border-slate-700/60 bg-slate-900/30">
           <CardContent className="p-5 space-y-3">
             {baseHeader}
             {imageBlock}
@@ -495,7 +511,7 @@ export default function ResultPage() {
                 const stExplain = (s as any).explanation ? String((s as any).explanation) : ''
                 const stTip = (s as any).tip ? String((s as any).tip) : ''
                 return (
-                  <div key={s.statement_id} className="border rounded-md p-4 space-y-2" style={{borderColor:'var(--divider)'}}>
+                  <div key={s.statement_id} className="border border-slate-700/60 bg-slate-950/20 rounded-md p-4 space-y-2">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex-1">
                         <div className="text-base leading-relaxed text-gray-200">
@@ -521,13 +537,13 @@ export default function ResultPage() {
                       </div>
                     </div>
                     {stExplain ? (
-                      <div className="p-3 rounded-md border bg-blue-900/20 border-blue-400 text-blue-300 text-sm whitespace-pre-line">
+                      <div className="p-3 rounded-md border border-blue-500/30 bg-blue-500/10 text-blue-100 text-sm whitespace-pre-line">
                         <div className="font-semibold">Giải thích</div>
                         <div className="mt-1">{stExplain}</div>
                       </div>
                     ) : null}
                     {stTip ? (
-                      <div className="p-3 rounded-md border bg-yellow-900/20 border-yellow-400 text-yellow-300 text-sm italic whitespace-pre-line">
+                      <div className="p-3 rounded-md border border-yellow-500/30 bg-yellow-500/10 text-yellow-100 text-sm italic whitespace-pre-line">
                         <div className="not-italic font-semibold">Mẹo học nhanh</div>
                         <div className="mt-1">{stTip}</div>
                       </div>
@@ -543,7 +559,7 @@ export default function ResultPage() {
     }
 
     return (
-      <Card key={q.question_id || idx} className="border" style={{borderColor:'var(--divider)'}}>
+      <Card key={q.question_id || idx} className="border border-slate-700/60 bg-slate-900/30">
         <CardContent className="py-4 space-y-3">
           {baseHeader}
           {imageBlock}
@@ -580,7 +596,7 @@ export default function ResultPage() {
       <h1 className="text-[28px] sm:text-[32px] font-semibold">Kết quả</h1>
       {attempt ? (
         <div className="space-y-4">
-          <Card>
+          <Card className="border border-slate-700/60 bg-slate-900/30">
             <CardHeader>
               <CardTitle className="flex flex-wrap items-center justify-between gap-2">
                 <span>{attempt.lesson_title || 'Bài làm'}</span>
@@ -591,33 +607,22 @@ export default function ResultPage() {
             </CardHeader>
             <CardContent className="space-y-3 p-5">
               {getMode() === 'exam' ? (
-                <div className="text-2xl font-semibold text-blue-300">
-                  Điểm: {formatScore((attempt.raw_score ?? 0) as any)} / 10
+                <div className="flex flex-wrap items-end gap-x-3 gap-y-1">
+                  <div className="text-sm text-slate-200/70">Điểm</div>
+                  <div className="text-3xl font-semibold text-blue-200">
+                    {formatScore((attempt.raw_score ?? 0) as any)}<span className="text-base text-slate-200/70"> / 10</span>
+                  </div>
                 </div>
-              ) : (
-                (() => {
-                  const correctUnits = typeof attempt.accuracy_correct_units === 'number' ? attempt.accuracy_correct_units : 0
-                  const totalUnits = typeof attempt.accuracy_total_units === 'number' ? attempt.accuracy_total_units : 0
-                  const acc = typeof attempt.accuracy_percent === 'number'
-                    ? attempt.accuracy_percent
-                    : (totalUnits ? Math.round((correctUnits / totalUnits) * 100) : 0)
-                  return (
-                    <>
-                      <div className="text-2xl font-semibold text-blue-300">Đúng {correctUnits}/{totalUnits} câu</div>
-                      <div className="text-sm text-blue-300/90">Accuracy: {acc}%</div>
-                    </>
-                  )
-                })()
-              )}
+              ) : null}
               {!loading && !hasResult ? (
-                <div className="p-4 rounded-md border bg-red-900/20 border-red-500 text-red-400">
+                <div className="p-4 rounded-md border border-rose-500/20 bg-rose-500/10 text-rose-100">
                   <div className="font-semibold">Đang có vấn đề hệ thống</div>
-                  <div className="mt-1 text-sm text-red-400/90">
+                  <div className="mt-1 text-sm text-rose-100/80">
                     Không thể lấy kết quả từ AI. Vui lòng bấm nộp lại. Bài làm của em vẫn được giữ nguyên.
                   </div>
                   <div className="mt-3">
                     <Button
-                      className="bg-red-600 hover:bg-red-700 rounded-lg"
+                      className="bg-rose-600 hover:bg-rose-700 rounded-lg"
                       onClick={() => window.location.reload()}
                     >
                       Tải lại kết quả
@@ -625,24 +630,21 @@ export default function ResultPage() {
                   </div>
                 </div>
               ) : null}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <div className="rounded-md border p-3" style={{borderColor:'var(--divider)'}}>
-                  <div className="text-xs text-gray-200/70">Đúng</div>
-                  <div className="text-lg font-semibold text-green-400">{stats.correct}</div>
-                </div>
-                <div className="rounded-md border p-3" style={{borderColor:'var(--divider)'}}>
-                  <div className="text-xs text-gray-200/70">Sai</div>
-                  <div className="text-lg font-semibold text-red-400">{stats.wrong}</div>
-                </div>
-                <div className="rounded-md border p-3" style={{borderColor:'var(--divider)'}}>
-                  <div className="text-xs text-gray-200/70">Tổng câu</div>
-                  <div className="text-lg font-semibold text-gray-200">{stats.total || (attempt.total_questions ?? 0)}</div>
-                </div>
-                <div className="rounded-md border p-3" style={{borderColor:'var(--divider)'}}>
-                  <div className="text-xs text-gray-200/70">Trạng thái</div>
-                  <div className="text-lg font-semibold text-gray-200">{attempt.status || '—'}</div>
-                </div>
-              </div>
+              {(() => {
+                const correctUnits = typeof attempt.accuracy_correct_units === 'number' ? attempt.accuracy_correct_units : stats.correct
+                const totalUnits = typeof attempt.accuracy_total_units === 'number' ? attempt.accuracy_total_units : (stats.total || (attempt.total_questions ?? 0))
+                const acc = typeof attempt.accuracy_percent === 'number'
+                  ? attempt.accuracy_percent
+                  : (totalUnits ? Math.round((correctUnits / totalUnits) * 100) : 0)
+                return (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <SummaryStat label="Tổng câu" value={String(totalUnits || 0)} tone="neutral" />
+                    <SummaryStat label="Đúng" value={String(correctUnits || 0)} tone="success" />
+                    <SummaryStat label="Sai" value={String(Math.max(0, (totalUnits || 0) - (correctUnits || 0)))} tone="error" />
+                    <SummaryStat label="Tỉ lệ đúng" value={`${acc}%`} tone="primary" />
+                  </div>
+                )
+              })()}
               {attempt.created_at ? (
                 <div className="text-sm" style={{color:'var(--text-muted)'}}>
                   Thời gian nộp bài: {formatDateTime(attempt.created_at)}
@@ -652,32 +654,35 @@ export default function ResultPage() {
           </Card>
 
           <div className="space-y-4">
-            <h2 className="text-xl font-semibold">Nhận xét từ AI</h2>
             {loading ? (
               <div className="text-slate-600">Uyển Sensei đang viết nhận xét…</div>
             ) : feedback ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Card className="md:col-span-2">
-                  <CardHeader><CardTitle>Nhận xét chung</CardTitle></CardHeader>
-                  <CardContent><p className="whitespace-pre-line" style={{color:'var(--text)'}}>{feedback.praise}</p></CardContent>
-                </Card>
-                <Card>
-                  <CardHeader><CardTitle>Điểm mạnh</CardTitle></CardHeader>
-                  <CardContent>
-                    <ul className="list-disc pl-5" style={{color:'var(--text)'}}>
+              <Card className="border border-slate-700/60 bg-slate-900/30">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <span aria-hidden="true">🤖</span>
+                    <span>Nhận xét AI</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-6 space-y-5">
+                  <div className="space-y-2">
+                    <div className="text-sm font-semibold text-slate-100">Khen</div>
+                    <div className="text-sm text-slate-100 whitespace-pre-line">{feedback.praise}</div>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="text-sm font-semibold text-slate-100">Điểm mạnh</div>
+                    <ul className="list-disc pl-5 text-sm text-slate-100 space-y-1">
                       {feedback.strengths.map((s, i) => <li key={i}>{s}</li>)}
                     </ul>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader><CardTitle>Kế hoạch ôn tập</CardTitle></CardHeader>
-                  <CardContent>
-                    <ul className="list-disc pl-5" style={{color:'var(--text)'}}>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="text-sm font-semibold text-slate-100">Kế hoạch học tập</div>
+                    <ul className="list-disc pl-5 text-sm text-slate-100 space-y-1">
                       {feedback.plan.map((p, i) => <li key={i}>{p}</li>)}
                     </ul>
-                  </CardContent>
-                </Card>
-              </div>
+                  </div>
+                </CardContent>
+              </Card>
             ) : (
               <div className="text-slate-600">Chưa có nhận xét.</div>
             )}
@@ -704,12 +709,12 @@ export default function ResultPage() {
                     return 'pending'
                   })() as 'correct' | 'wrong' | 'partial' | 'pending'
                   const cls = status === 'correct'
-                    ? 'text-green-400 bg-green-900/20 border-green-500'
+                    ? 'text-emerald-200 bg-emerald-500/10 border-emerald-500/20'
                     : status === 'wrong'
-                      ? 'text-red-400 bg-red-900/20 border-red-500'
+                      ? 'text-rose-200 bg-rose-500/10 border-rose-500/20'
                       : status === 'partial'
-                        ? 'text-yellow-300 bg-yellow-900/20 border-yellow-400'
-                        : 'text-gray-200 bg-slate-800/40 border-slate-600'
+                        ? 'text-amber-200 bg-amber-500/10 border-amber-500/20'
+                        : 'text-slate-200 bg-slate-800/40 border-slate-600'
                   return (
                     <a
                       key={q.question_id || i}

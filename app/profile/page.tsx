@@ -301,7 +301,11 @@ export default function ProfilePage() {
             {attempts.length === 0 ? (
               <div className="text-sm" style={{color:'var(--text-muted)'}}>Chưa có bài đã làm.</div>
             ) : attempts.map(a => (
-              <div key={a.id} className="border rounded p-3 cursor-pointer hover:bg-slate-50 transition-colors" onClick={() => openAttemptDetail(a.id)}>
+              <div
+                key={a.id}
+                className="border rounded p-3 cursor-pointer hover:bg-slate-900/10 transition-colors"
+                onClick={() => openAttemptDetail(a.id)}
+              >
                 <div className="flex justify-between items-start">
                   <div className="text-sm font-medium">{a.lesson_title}</div>
                   <div className="flex gap-1">
@@ -325,61 +329,69 @@ export default function ProfilePage() {
       {/* Attempt Detail Modal */}
       {selectedAttemptId && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setSelectedAttemptId(null)}>
-          <div className="bg-white rounded-lg shadow-xl w-[800px] max-w-[95%] max-h-[90vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
-            <div className="px-4 py-3 bg-slate-100 border-b flex justify-between items-center">
-              <h3 className="font-semibold">Chi tiết bài làm</h3>
-              <button onClick={() => setSelectedAttemptId(null)}>✕</button>
+          <div className="bg-slate-950/90 border border-slate-700/60 rounded-lg shadow-xl w-[800px] max-w-[95%] max-h-[90vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="px-4 py-3 bg-slate-900/60 border-b border-slate-700/60 flex justify-between items-center">
+              <h3 className="font-semibold text-slate-100">Chi tiết bài làm</h3>
+              <button className="text-slate-200/80 hover:text-slate-100" onClick={() => setSelectedAttemptId(null)}>✕</button>
             </div>
             <div className="flex-1 overflow-y-auto p-4 space-y-6">
               {detailLoading ? (
-                <div className="text-center py-10">Đang tải...</div>
+                <div className="text-center py-10 text-slate-200/70">Đang tải...</div>
               ) : (
                 <>
                   {/* Summary Section */}
                   {selectedAttemptMeta && (
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-slate-50 rounded-lg border border-slate-200">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                       <div>
-                        <div className="text-xs text-slate-500 uppercase font-bold">Tổng câu hỏi</div>
-                        <div className="text-xl font-bold">{selectedAttemptMeta.total_questions || selectedAttemptMeta.accuracy_total_units}</div>
-                      </div>
-                      <div>
-                        <div className="text-xs text-slate-500 uppercase font-bold text-green-600">Câu đúng</div>
-                        <div className="text-xl font-bold text-green-600">{selectedAttemptMeta.correct_answers || selectedAttemptMeta.accuracy_correct_units}</div>
-                      </div>
-                      <div>
-                        <div className="text-xs text-slate-500 uppercase font-bold text-red-600">Câu sai</div>
-                        <div className="text-xl font-bold text-red-600">
-                          {(selectedAttemptMeta.total_questions || selectedAttemptMeta.accuracy_total_units) - (selectedAttemptMeta.correct_answers || selectedAttemptMeta.accuracy_correct_units)}
+                        <div className="rounded-lg border border-slate-700/60 bg-slate-900/30 p-4">
+                          <div className="text-xs text-slate-200/70">Tổng câu</div>
+                          <div className="mt-1 text-2xl font-semibold text-slate-100">{selectedAttemptMeta.total_questions || selectedAttemptMeta.accuracy_total_units}</div>
                         </div>
                       </div>
                       <div>
-                        <div className="text-xs text-slate-500 uppercase font-bold text-blue-600">Tỉ lệ</div>
-                        <div className="text-xl font-bold text-blue-600">{selectedAttemptMeta.score_percent || selectedAttemptMeta.accuracy_percent}%</div>
+                        <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 p-4">
+                          <div className="text-xs text-slate-200/70">Đúng</div>
+                          <div className="mt-1 text-2xl font-semibold text-emerald-100">{selectedAttemptMeta.correct_answers || selectedAttemptMeta.accuracy_correct_units}</div>
+                        </div>
+                      </div>
+                      <div>
+                        <div className="rounded-lg border border-rose-500/20 bg-rose-500/10 p-4">
+                          <div className="text-xs text-slate-200/70">Sai</div>
+                          <div className="mt-1 text-2xl font-semibold text-rose-100">
+                            {(selectedAttemptMeta.total_questions || selectedAttemptMeta.accuracy_total_units) - (selectedAttemptMeta.correct_answers || selectedAttemptMeta.accuracy_correct_units)}
+                          </div>
+                        </div>
+                      </div>
+                      <div>
+                        <div className="rounded-lg border border-blue-500/20 bg-blue-500/10 p-4">
+                          <div className="text-xs text-slate-200/70">Tỉ lệ đúng</div>
+                          <div className="mt-1 text-2xl font-semibold text-blue-100">{selectedAttemptMeta.score_percent || selectedAttemptMeta.accuracy_percent}%</div>
+                        </div>
                       </div>
                     </div>
                   )}
 
                   {/* AI Feedback Section */}
                   {selectedAttemptFeedback?.feedback && (selectedAttemptFeedback.feedback.praise || selectedAttemptFeedback.feedback.strengths?.length > 0) && (
-                    <div className="space-y-3 p-4 bg-blue-50 rounded-lg border border-blue-100">
-                      <h4 className="font-bold text-blue-800 flex items-center gap-2">
+                    <div className="space-y-4 p-5 rounded-lg border border-blue-500/20 bg-blue-500/10">
+                      <h4 className="font-bold text-slate-100 flex items-center gap-2">
                         ✨ Nhận xét từ AI
                       </h4>
                       {selectedAttemptFeedback.feedback.praise && (
-                        <p className="text-sm text-blue-900 italic">&ldquo;{selectedAttemptFeedback.feedback.praise}&rdquo;</p>
+                        <p className="text-sm text-slate-100 italic">&ldquo;{selectedAttemptFeedback.feedback.praise}&rdquo;</p>
                       )}
                       {selectedAttemptFeedback.feedback.strengths?.length > 0 && (
                         <div>
-                          <div className="text-xs font-bold text-blue-700 uppercase mt-2">Điểm mạnh:</div>
-                          <ul className="list-disc list-inside text-sm text-blue-800 space-y-1">
+                          <div className="text-xs font-bold text-slate-200/80 uppercase mt-2">Điểm mạnh:</div>
+                          <ul className="list-disc list-inside text-sm text-slate-100 space-y-1">
                             {selectedAttemptFeedback.feedback.strengths.map((s: string, i: number) => <li key={i}>{s}</li>)}
                           </ul>
                         </div>
                       )}
                       {selectedAttemptFeedback.feedback.plan?.length > 0 && (
                         <div>
-                          <div className="text-xs font-bold text-blue-700 uppercase mt-2">Kế hoạch học tập:</div>
-                          <ul className="list-disc list-inside text-sm text-blue-800 space-y-1">
+                          <div className="text-xs font-bold text-slate-200/80 uppercase mt-2">Kế hoạch học tập:</div>
+                          <ul className="list-disc list-inside text-sm text-slate-100 space-y-1">
                             {selectedAttemptFeedback.feedback.plan.map((p: string, i: number) => <li key={i}>{p}</li>)}
                           </ul>
                         </div>
@@ -390,27 +402,27 @@ export default function ProfilePage() {
                   {/* Wrong Answers Detail (Short Answer AI Results) */}
                   {selectedAttemptFeedback?.short_answer_results?.length > 0 && (
                     <div className="space-y-3">
-                      <h4 className="font-bold text-red-600 flex items-center gap-2">
+                      <h4 className="font-bold text-rose-100 flex items-center gap-2">
                         ❌ Chi tiết các câu sai
                       </h4>
                       <div className="space-y-3">
                         {selectedAttemptFeedback.short_answer_results.map((res: any, i: number) => (
-                          <div key={i} className="p-3 border border-red-100 bg-red-50 rounded text-sm space-y-2">
-                            <div className="flex justify-between font-bold text-red-800">
+                          <div key={i} className="p-4 border border-rose-500/20 bg-rose-500/10 rounded text-sm space-y-2 text-slate-100">
+                            <div className="flex justify-between font-bold text-slate-100">
                               <span>Câu hỏi {i + 1} (AI nhận xét)</span>
-                              {!res.is_correct && <span className="text-xs bg-red-200 px-2 py-0.5 rounded">Chưa chính xác</span>}
+                              {!res.is_correct && <span className="text-xs bg-rose-500/20 border border-rose-500/20 px-2 py-0.5 rounded">Chưa chính xác</span>}
                             </div>
                             <div>
-                              <span className="font-bold">Bạn chọn:</span> <span className="text-red-700">{res.chosen || '—'}</span>
+                              <span className="font-bold">Bạn chọn:</span> <span className="text-rose-100">{res.chosen || '—'}</span>
                             </div>
                             <div>
-                              <span className="font-bold">Đáp án đúng:</span> <span className="text-green-700">{res.correct || '—'}</span>
+                              <span className="font-bold">Đáp án đúng:</span> <span className="text-emerald-100">{res.correct || '—'}</span>
                             </div>
                             {res.comment && (
-                              <div className="italic text-slate-600 mt-1">&ldquo;{res.comment}&rdquo;</div>
+                              <div className="italic text-slate-100/90 mt-1">&ldquo;{res.comment}&rdquo;</div>
                             )}
                             {res.explain && (
-                              <div className="bg-white/50 p-2 rounded mt-1 text-xs">
+                              <div className="bg-slate-950/30 p-3 rounded mt-1 text-xs border border-slate-700/60">
                                 <span className="font-bold">Giải thích:</span> {res.explain}
                               </div>
                             )}
@@ -421,8 +433,8 @@ export default function ProfilePage() {
                   )}
 
                   {/* Detailed Answers List */}
-                  <div className="space-y-4 pt-4 border-t border-slate-100">
-                    <h4 className="font-bold text-slate-700">📋 Danh sách câu hỏi chi tiết</h4>
+                  <div className="space-y-4 pt-4 border-t border-slate-700/60">
+                    <h4 className="font-bold text-slate-100">📋 Danh sách câu hỏi chi tiết</h4>
                     {attemptDetail?.map((item, idx) => {
                       const isWrong = item.is_correct === false || (Number(item.score_awarded ?? 0) < Number(item.max_score ?? 1))
                       const canReport = 
@@ -436,12 +448,12 @@ export default function ProfilePage() {
                       const isAdjusted = !!item.review_adjustment_type
 
                       return (
-                        <div key={idx} className="border rounded p-4 space-y-2 relative bg-white">
+                        <div key={idx} className="border border-slate-700/60 rounded p-5 space-y-2 relative bg-slate-900/30 text-slate-100">
                           <div className="flex justify-between items-start">
-                            <div className="text-sm font-bold text-slate-700">Câu {idx + 1}</div>
+                            <div className="text-sm font-bold text-slate-100">Câu {idx + 1}</div>
                             {canReport && (
                               <button 
-                                className="text-xs bg-red-50 text-red-600 hover:bg-red-100 px-2 py-1 rounded border border-red-200 transition-colors flex items-center gap-1"
+                                className="text-xs bg-rose-500/10 text-rose-100 hover:bg-rose-500/15 px-2 py-1 rounded border border-rose-500/20 transition-colors flex items-center gap-1"
                                 onClick={() => setReportModal({ 
                                   qid: item.question_id, 
                                   aid: selectedAttemptId!, 
@@ -452,16 +464,16 @@ export default function ProfilePage() {
                               </button>
                             )}
                           </div>
-                          <div className="text-sm whitespace-pre-wrap">{item.content}</div>
+                          <div className="text-sm whitespace-pre-wrap text-slate-100">{item.content}</div>
                           
                           {/* Render Statements for True/False */}
                           {item.statements && item.statements.length > 0 && (
-                            <div className="mt-2 space-y-1 border-l-2 border-slate-200 pl-3">
+                            <div className="mt-2 space-y-1 border-l-2 border-slate-700 pl-3">
                               {item.statements.map((st: any, i: number) => (
                                 <div key={i} className="text-xs flex items-center gap-2">
                                   <span className="font-bold w-4">{st.statement_key || String.fromCharCode(97 + i)}.</span>
-                                  <span className="flex-1">{st.text}</span>
-                                  <span className={st.is_correct ? 'text-green-600' : 'text-red-600'}>
+                                  <span className="flex-1 text-slate-100">{st.text}</span>
+                                  <span className={st.is_correct ? 'text-emerald-200' : 'text-rose-200'}>
                                     Bạn chọn: {st.selected_answer === true ? 'Đúng' : st.selected_answer === false ? 'Sai' : '—'}
                                     {st.is_correct ? ' (Đúng)' : ' (Sai)'}
                                   </span>
@@ -473,7 +485,7 @@ export default function ProfilePage() {
                           <div className="text-xs space-y-1 mt-2">
                             {(!item.statements || item.statements.length === 0) && (
                               <div className="font-medium">Đáp án của bạn: 
-                                <span className={item.is_correct ? 'text-green-600 ml-1' : 'text-red-600 ml-1'}>
+                                <span className={item.is_correct ? 'text-emerald-200 ml-1' : 'text-rose-200 ml-1'}>
                                   {item.question_type === 'short_answer' ? (item.answer_text || '—') : (item.selected_answer || '—')}
                                   {item.is_correct ? ' (Đúng)' : ' (Sai)'}
                                 </span>
@@ -481,34 +493,34 @@ export default function ProfilePage() {
                             )}
 
                             {hasReported && !isReviewedKeep && !isAdjusted && (
-                              <div className="flex items-center gap-1 text-amber-600 font-medium">
-                                <span className="text-[10px] bg-amber-100 px-1.5 py-0.5 rounded">Đã gửi báo cáo - đang chờ giáo viên xem</span>
+                              <div className="flex items-center gap-1 text-amber-200 font-medium">
+                                <span className="text-[10px] bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded">Đã gửi báo cáo - đang chờ giáo viên xem</span>
                               </div>
                             )}
 
                             {isReviewedKeep && (
-                              <div className="flex items-center gap-1 text-slate-600 font-medium">
-                                <span className="text-[10px] bg-slate-100 px-1.5 py-0.5 rounded">Giáo viên đã xem và giữ nguyên đáp án</span>
+                              <div className="flex items-center gap-1 text-slate-200/80 font-medium">
+                                <span className="text-[10px] bg-slate-900/40 border border-slate-700/60 px-1.5 py-0.5 rounded">Giáo viên đã xem và giữ nguyên đáp án</span>
                               </div>
                             )}
 
                             {item.review_adjustment_type === 'wrong_answer_regrade' && (
-                              <div className="text-green-700 font-medium bg-green-50 p-2 rounded mt-2 border border-green-100">
+                              <div className="text-emerald-100 font-medium bg-emerald-500/10 p-3 rounded mt-2 border border-emerald-500/20">
                                 <span className="font-bold">✨ Giáo viên đã sửa đáp án:</span> Điểm của bạn đã được cập nhật.
-                                {item.review_adjustment_note && <div className="mt-1 text-slate-600 font-normal">&ldquo;{item.review_adjustment_note}&rdquo;</div>}
+                                {item.review_adjustment_note && <div className="mt-1 text-slate-100/80 font-normal">&ldquo;{item.review_adjustment_note}&rdquo;</div>}
                               </div>
                             )}
 
                             {item.review_adjustment_type === 'wrong_question_full_credit' && (
-                              <div className="text-blue-700 font-medium bg-blue-50 p-2 rounded mt-2 border border-blue-100">
+                              <div className="text-blue-100 font-medium bg-blue-500/10 p-3 rounded mt-2 border border-blue-500/20">
                                 <span className="font-bold">✨ Câu hỏi có lỗi:</span> Bạn đã được cộng tối đa điểm câu này.
-                                {item.review_adjustment_note && <div className="mt-1 text-slate-600 font-normal">&ldquo;{item.review_adjustment_note}&rdquo;</div>}
+                                {item.review_adjustment_note && <div className="mt-1 text-slate-100/80 font-normal">&ldquo;{item.review_adjustment_note}&rdquo;</div>}
                               </div>
                             )}
                           </div>
 
                           {(item.tip || item.explanation) && (
-                            <div className="mt-2 p-2 bg-slate-50 rounded text-xs space-y-1">
+                            <div className="mt-2 p-3 bg-slate-950/20 border border-slate-700/60 rounded text-xs space-y-1 text-slate-100">
                               {item.tip && <div><span className="font-bold">Mẹo:</span> {item.tip}</div>}
                               {item.explanation && <div><span className="font-bold">Giải thích:</span> {item.explanation}</div>}
                             </div>

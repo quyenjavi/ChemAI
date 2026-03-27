@@ -89,11 +89,12 @@ export default function ProfilePage() {
         setAcademicYearId(ay?.id || null)
         setAcademicYear(ay?.name || '')
       }
-      // load attempts
+      // load attempts (only submitted)
       const { data: atts } = await supabaseBrowser
         .from('quiz_attempts')
-        .select('id, lesson_id, total_questions, correct_answers, score_percent, created_at, score_adjustment_status')
+        .select('id, lesson_id, total_questions, correct_answers, score_percent, created_at, score_adjustment_status, status')
         .eq('user_id', data.user.id)
+        .eq('status', 'submitted')
         .order('created_at', { ascending: false })
         .limit(50)
       

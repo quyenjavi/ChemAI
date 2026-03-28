@@ -6,11 +6,19 @@ export async function middleware(req: NextRequest) {
   const res = NextResponse.next()
   const maintenanceEnabled = String(process.env.NEXT_PUBLIC_MAINTENANCE_MODE || '').toLowerCase() === 'true'
   const { pathname } = req.nextUrl
+
+  if (pathname === '/about') {
+    const url = req.nextUrl.clone()
+    url.pathname = '/introduce.html'
+    return NextResponse.rewrite(url)
+  }
+
   const isPublic =
     pathname.startsWith('/login') ||
     pathname.startsWith('/forgot-password') ||
     pathname.startsWith('/reset-password') ||
     pathname.startsWith('/signup') ||
+    pathname.startsWith('/about') ||
     pathname.startsWith('/verify') ||
     pathname.startsWith('/maintenance') ||
     pathname.startsWith('/api') ||
@@ -40,6 +48,7 @@ export async function middleware(req: NextRequest) {
       pathname.startsWith('/forgot-password') ||
       pathname.startsWith('/reset-password') ||
       pathname.startsWith('/signup') ||
+      pathname.startsWith('/about') ||
       pathname.startsWith('/verify') ||
       pathname.startsWith('/api') ||
       pathname.startsWith('/_next') ||

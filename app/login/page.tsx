@@ -65,6 +65,14 @@ export default function LoginPage() {
           <p className="mt-2 text-[15px]" style={{color:'var(--text-secondary)'}}>
             Không ai trượt vì sai một câu khó – họ trượt vì sai nhiều câu nhỏ ...
           </p>
+          <div className="mt-4">
+            <a
+              href="/about"
+              className="inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-semibold gradient-btn"
+            >
+              Giới thiệu ChemAI
+            </a>
+          </div>
         </div>
         <Card className="max-w-md w-full mx-auto md:ml-auto">
           <CardContent>

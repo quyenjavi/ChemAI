@@ -18,6 +18,7 @@ export async function middleware(req: NextRequest) {
     pathname.startsWith('/forgot-password') ||
     pathname.startsWith('/reset-password') ||
     pathname.startsWith('/signup') ||
+    pathname.startsWith('/contact') ||
     pathname.startsWith('/about') ||
     pathname.startsWith('/verify') ||
     pathname.startsWith('/maintenance') ||
@@ -48,6 +49,7 @@ export async function middleware(req: NextRequest) {
       pathname.startsWith('/forgot-password') ||
       pathname.startsWith('/reset-password') ||
       pathname.startsWith('/signup') ||
+      pathname.startsWith('/contact') ||
       pathname.startsWith('/about') ||
       pathname.startsWith('/verify') ||
       pathname.startsWith('/api') ||

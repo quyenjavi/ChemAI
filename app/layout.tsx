@@ -20,6 +20,13 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   const cookieStore = cookies()
   const supabase = createServerComponentClient({ cookies: () => cookieStore } as any)
   const { data: { session } } = await supabase.auth.getSession()
+  let fullName = ''
+  let isTeacher = false
+  if (session?.user?.id) {
+    fullName = (session.user.user_metadata?.full_name || '') as string
+    const { data: t } = await supabase.from('teacher_profiles').select('user_id').eq('user_id', session.user.id).maybeSingle()
+    isTeacher = !!t
+  }
   return (
     <html lang="vi">
       <body className="min-h-screen">
@@ -37,8 +44,10 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
             {session ? (
               <>
                 <div className="hidden sm:flex items-center gap-2">
-                  <Link href="/teacher_dashboard" prefetch={false} className="text-sm underline" style={{color:'var(--gold)'}}>Giáo viên</Link>
+                  <span className="text-sm font-semibold" style={{color:'var(--text)'}}>Xin chào, {fullName || 'bạn'}</span>
+                  {isTeacher ? <Link href="/teacher_dashboard" prefetch={false} className="text-sm underline" style={{color:'var(--gold)'}}>Giáo viên</Link> : null}
                   <Link href="/profile" prefetch={false} className="text-sm underline" style={{color:'var(--gold)'}}>Hồ sơ</Link>
+                  <Link href="/contact" prefetch={false} className="text-sm underline font-semibold" style={{color:'var(--gold)'}}>💬 Hỗ trợ</Link>
                   <SignOutButton />
                 </div>
                 <div className="sm:hidden">
@@ -53,9 +62,11 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
                         <path d="M4 17h16" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
                       </svg>
                     </summary>
-                    <div className="absolute right-0 mt-2 w-44 rounded-md border border-[var(--divider)] bg-slate-950/95 backdrop-blur p-2 shadow-lg">
-                      <Link href="/teacher_dashboard" prefetch={false} className="block px-3 py-2 text-sm rounded hover:bg-slate-800/60" style={{color:'var(--gold)'}}>Giáo viên</Link>
+                    <div className="absolute right-0 mt-2 w-56 rounded-md border border-[var(--divider)] bg-slate-950/95 backdrop-blur p-2 shadow-lg">
+                      <div className="px-3 py-2 text-sm font-semibold" style={{color:'var(--text)'}}>Xin chào, {fullName || 'bạn'}</div>
+                      {isTeacher ? <Link href="/teacher_dashboard" prefetch={false} className="block px-3 py-2 text-sm rounded hover:bg-slate-800/60" style={{color:'var(--gold)'}}>Giáo viên dashboard</Link> : null}
                       <Link href="/profile" prefetch={false} className="block px-3 py-2 text-sm rounded hover:bg-slate-800/60" style={{color:'var(--gold)'}}>Hồ sơ</Link>
+                      <Link href="/contact" prefetch={false} className="block px-3 py-2 text-sm rounded hover:bg-slate-800/60 font-semibold" style={{color:'var(--gold)'}}>💬 Hỗ trợ</Link>
                       <div className="px-3 py-2">
                         <SignOutButton />
                       </div>
@@ -71,7 +82,10 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         </main>
         <footer className="border-t border-[var(--divider)]">
           <div className="mx-auto max-w-6xl px-4 py-6 text-xs" style={{color:'var(--text-muted)'}}>
-            © 2026 ChemAI Uyển Sensei
+            <div className="flex items-center justify-between">
+              <span>© 2026 ChemAI Uyển Sensei</span>
+              {!session ? <a href="/contact" className="underline" style={{color:'var(--gold)'}}>Liên hệ</a> : null}
+            </div>
           </div>
         </footer>
       </body>

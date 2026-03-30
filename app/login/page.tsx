@@ -65,12 +65,18 @@ export default function LoginPage() {
           <p className="mt-2 text-[15px]" style={{color:'var(--text-secondary)'}}>
             Không ai trượt vì sai một câu khó – họ trượt vì sai nhiều câu nhỏ ...
           </p>
-          <div className="mt-4">
+          <div className="mt-4 flex flex-wrap gap-3">
             <a
               href="/about"
               className="inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-semibold gradient-btn"
             >
               Giới thiệu ChemAI
+            </a>
+            <a
+              href="/contact"
+              className="inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-semibold gradient-btn"
+            >
+              💬 Liên hệ
             </a>
           </div>
         </div>

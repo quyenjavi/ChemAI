@@ -258,7 +258,7 @@ export default function ProfilePage() {
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <Card>
         <CardHeader>
-          <CardTitle>Hồ sơ học sinh</CardTitle>
+          <CardTitle>Hồ sơ</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={onSubmit} className="space-y-3">

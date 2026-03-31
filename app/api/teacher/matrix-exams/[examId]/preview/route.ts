@@ -33,7 +33,7 @@ export async function GET(_: Request, { params }: { params: { examId: string } }
     const qIds = (gq || []).map((r: any) => r.question_id).filter(Boolean)
     const { data: qs, error: qErr } = await svc
       .from('questions')
-      .select('id,content,question_type,lesson_id,topic_unit,difficulty_academic,tip,explanation')
+      .select('id,content,question_type,lesson_id,topic_unit,difficulty_academic,tip,explanation,image_url,image_alt,image_caption')
       .in('id', qIds)
     if (qErr) return NextResponse.json({ error: qErr.message }, { status: 500 })
     const qMap = new Map((qs || []).map((q: any) => [q.id, q]))
@@ -113,6 +113,9 @@ export async function GET(_: Request, { params }: { params: { examId: string } }
         topic_unit: q?.topic_unit || null,
         difficulty_academic: q?.difficulty_academic || null,
         content: q?.content || '',
+        image_url: q?.image_url || null,
+        image_alt: q?.image_alt || null,
+        image_caption: q?.image_caption || null,
         tip: q?.tip || '',
         explanation: q?.explanation || '',
         options: optionsByQuestion.get(r.question_id) || [],

@@ -20,6 +20,9 @@ type PreviewItem = {
   difficulty_academic?: string | null
   difficulty: string | null
   content: string
+  image_url?: string | null
+  image_alt?: string | null
+  image_caption?: string | null
   tip?: string
   explanation?: string
   options?: Array<{ key: string, text: string, is_correct: boolean, order: number }>
@@ -177,6 +180,12 @@ export default function ExamDetailClient({ examId }: { examId: string }) {
                 </div>
               </div>
               <div className="text-sm whitespace-pre-line" style={{color:'var(--text)'}}>{it.content}</div>
+              {it.image_url ? (
+                <div className="rounded-md border border-slate-700/60 bg-slate-950/20 p-3">
+                  <img src={it.image_url} alt={it.image_alt || 'question image'} className="max-w-full h-auto rounded" />
+                  {it.image_caption ? <div className="text-xs mt-2 opacity-80">{it.image_caption}</div> : null}
+                </div>
+              ) : null}
 
               {it.question_type === 'single_choice' ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">

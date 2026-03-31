@@ -173,6 +173,12 @@ export default function MatrixExamDetailClient({ examId }: { examId: string }) {
                 </div>
               </div>
               <div className="text-sm whitespace-pre-line" style={{color:'var(--text)'}}>{it.content}</div>
+              {it.image_url ? (
+                <div className="rounded-md border border-slate-700/60 bg-slate-950/20 p-3">
+                  <img src={it.image_url} alt={it.image_alt || 'question image'} className="max-w-full h-auto rounded" />
+                  {it.image_caption ? <div className="text-xs mt-2 opacity-80">{it.image_caption}</div> : null}
+                </div>
+              ) : null}
               {it.question_type === 'single_choice' ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
                   {(it.options || []).slice().sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0)).map((o: any) => (

@@ -17,7 +17,7 @@ export default async function TeacherDashboard() {
     redirect('/login')
   }
   const uid = session.user.id
-  const { data: t } = await supabase.from('teacher_profiles').select('id,full_name,school_id').eq('user_id', uid).maybeSingle()
+  const { data: t } = await supabase.from('teacher_profiles').select('id,full_name,school_id,can_create_exam').eq('user_id', uid).maybeSingle()
   if (!t) {
     redirect('/dashboard')
   }
@@ -53,6 +53,9 @@ export default async function TeacherDashboard() {
         <div className="flex items-center gap-2">
           <Link href="/teacher_dashboard/questions" prefetch={false} className="underline">Quản lí câu hỏi</Link>
           <Link href="/teacher_dashboard/analytics" prefetch={false} className="underline">Quản lí bài học</Link>
+          {t.can_create_exam ? <Link href="/teacher_dashboard/exams/create" prefetch={false} className="underline">Tạo đề</Link> : null}
+          {t.can_create_exam ? <Link href="/teacher_dashboard/exams/review" prefetch={false} className="underline">Xử lí đề mới tạo</Link> : null}
+          {t.can_create_exam ? <Link href="/teacher_dashboard/matrix_exams/create" prefetch={false} className="underline">Tạo đề theo ma trận</Link> : null}
         </div>
       </div>
 

@@ -1,0 +1,2520 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2761
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;}
+{\*\expandedcolortbl;;}
+\paperw11900\paperh16840\margl1440\margr1440\vieww11520\viewh8400\viewkind0
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 [\
+  \{\
+    "table_name": "academic_years",\
+    "ordinal_position": 1,\
+    "column_name": "id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "NO",\
+    "column_default": "gen_random_uuid()"\
+  \},\
+  \{\
+    "table_name": "academic_years",\
+    "ordinal_position": 2,\
+    "column_name": "name",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "NO",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "academic_years",\
+    "ordinal_position": 3,\
+    "column_name": "start_date",\
+    "data_type": "date",\
+    "udt_name": "date",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "academic_years",\
+    "ordinal_position": 4,\
+    "column_name": "end_date",\
+    "data_type": "date",\
+    "udt_name": "date",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "academic_years",\
+    "ordinal_position": 5,\
+    "column_name": "created_at",\
+    "data_type": "timestamp without time zone",\
+    "udt_name": "timestamp",\
+    "is_nullable": "YES",\
+    "column_default": "now()"\
+  \},\
+  \{\
+    "table_name": "cities",\
+    "ordinal_position": 1,\
+    "column_name": "id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "NO",\
+    "column_default": "gen_random_uuid()"\
+  \},\
+  \{\
+    "table_name": "cities",\
+    "ordinal_position": 2,\
+    "column_name": "code",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "NO",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "cities",\
+    "ordinal_position": 3,\
+    "column_name": "name",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "NO",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "cities",\
+    "ordinal_position": 4,\
+    "column_name": "unit_type",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "NO",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "cities",\
+    "ordinal_position": 5,\
+    "column_name": "country_code",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "NO",\
+    "column_default": "'VN'::text"\
+  \},\
+  \{\
+    "table_name": "cities",\
+    "ordinal_position": 6,\
+    "column_name": "is_active",\
+    "data_type": "boolean",\
+    "udt_name": "bool",\
+    "is_nullable": "NO",\
+    "column_default": "true"\
+  \},\
+  \{\
+    "table_name": "cities",\
+    "ordinal_position": 7,\
+    "column_name": "created_at",\
+    "data_type": "timestamp without time zone",\
+    "udt_name": "timestamp",\
+    "is_nullable": "NO",\
+    "column_default": "now()"\
+  \},\
+  \{\
+    "table_name": "classes",\
+    "ordinal_position": 1,\
+    "column_name": "id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "NO",\
+    "column_default": "gen_random_uuid()"\
+  \},\
+  \{\
+    "table_name": "classes",\
+    "ordinal_position": 2,\
+    "column_name": "school_id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "NO",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "classes",\
+    "ordinal_position": 3,\
+    "column_name": "name",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "NO",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "classes",\
+    "ordinal_position": 4,\
+    "column_name": "academic_year",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "classes",\
+    "ordinal_position": 5,\
+    "column_name": "created_at",\
+    "data_type": "timestamp without time zone",\
+    "udt_name": "timestamp",\
+    "is_nullable": "YES",\
+    "column_default": "now()"\
+  \},\
+  \{\
+    "table_name": "classes",\
+    "ordinal_position": 6,\
+    "column_name": "academic_year_id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "classes",\
+    "ordinal_position": 7,\
+    "column_name": "grade_id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "grades",\
+    "ordinal_position": 1,\
+    "column_name": "id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "NO",\
+    "column_default": "gen_random_uuid()"\
+  \},\
+  \{\
+    "table_name": "grades",\
+    "ordinal_position": 2,\
+    "column_name": "name",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "NO",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "grades",\
+    "ordinal_position": 3,\
+    "column_name": "created_at",\
+    "data_type": "timestamp without time zone",\
+    "udt_name": "timestamp",\
+    "is_nullable": "YES",\
+    "column_default": "now()"\
+  \},\
+  \{\
+    "table_name": "official_exam_attempt_answers",\
+    "ordinal_position": 1,\
+    "column_name": "id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "NO",\
+    "column_default": "gen_random_uuid()"\
+  \},\
+  \{\
+    "table_name": "official_exam_attempt_answers",\
+    "ordinal_position": 2,\
+    "column_name": "attempt_id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "NO",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_attempt_answers",\
+    "ordinal_position": 3,\
+    "column_name": "official_exam_id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "NO",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_attempt_answers",\
+    "ordinal_position": 4,\
+    "column_name": "paper_id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_attempt_answers",\
+    "ordinal_position": 5,\
+    "column_name": "student_id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_attempt_answers",\
+    "ordinal_position": 6,\
+    "column_name": "sheet_id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_attempt_answers",\
+    "ordinal_position": 7,\
+    "column_name": "paper_question_no",\
+    "data_type": "integer",\
+    "udt_name": "int4",\
+    "is_nullable": "NO",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_attempt_answers",\
+    "ordinal_position": 8,\
+    "column_name": "master_question_no",\
+    "data_type": "integer",\
+    "udt_name": "int4",\
+    "is_nullable": "NO",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_attempt_answers",\
+    "ordinal_position": 9,\
+    "column_name": "master_question_id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_attempt_answers",\
+    "ordinal_position": 10,\
+    "column_name": "question_id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "NO",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_attempt_answers",\
+    "ordinal_position": 11,\
+    "column_name": "selected_answer",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_attempt_answers",\
+    "ordinal_position": 12,\
+    "column_name": "normalized_answer",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_attempt_answers",\
+    "ordinal_position": 13,\
+    "column_name": "correct_answer",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_attempt_answers",\
+    "ordinal_position": 14,\
+    "column_name": "is_correct",\
+    "data_type": "boolean",\
+    "udt_name": "bool",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_attempt_answers",\
+    "ordinal_position": 15,\
+    "column_name": "score_awarded",\
+    "data_type": "numeric",\
+    "udt_name": "numeric",\
+    "is_nullable": "NO",\
+    "column_default": "0"\
+  \},\
+  \{\
+    "table_name": "official_exam_attempt_answers",\
+    "ordinal_position": 16,\
+    "column_name": "max_score",\
+    "data_type": "numeric",\
+    "udt_name": "numeric",\
+    "is_nullable": "NO",\
+    "column_default": "0"\
+  \},\
+  \{\
+    "table_name": "official_exam_attempt_answers",\
+    "ordinal_position": 17,\
+    "column_name": "answer_source",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "NO",\
+    "column_default": "'ocr'::text"\
+  \},\
+  \{\
+    "table_name": "official_exam_attempt_answers",\
+    "ordinal_position": 18,\
+    "column_name": "confidence",\
+    "data_type": "numeric",\
+    "udt_name": "numeric",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_attempt_answers",\
+    "ordinal_position": 19,\
+    "column_name": "review_status",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "NO",\
+    "column_default": "'none'::text"\
+  \},\
+  \{\
+    "table_name": "official_exam_attempt_answers",\
+    "ordinal_position": 20,\
+    "column_name": "raw_ocr_text",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_attempt_answers",\
+    "ordinal_position": 21,\
+    "column_name": "metadata",\
+    "data_type": "jsonb",\
+    "udt_name": "jsonb",\
+    "is_nullable": "NO",\
+    "column_default": "'\{\}'::jsonb"\
+  \},\
+  \{\
+    "table_name": "official_exam_attempt_answers",\
+    "ordinal_position": 22,\
+    "column_name": "created_at",\
+    "data_type": "timestamp with time zone",\
+    "udt_name": "timestamptz",\
+    "is_nullable": "NO",\
+    "column_default": "now()"\
+  \},\
+  \{\
+    "table_name": "official_exam_attempt_answers",\
+    "ordinal_position": 23,\
+    "column_name": "updated_at",\
+    "data_type": "timestamp with time zone",\
+    "udt_name": "timestamptz",\
+    "is_nullable": "NO",\
+    "column_default": "now()"\
+  \},\
+  \{\
+    "table_name": "official_exam_attempts",\
+    "ordinal_position": 1,\
+    "column_name": "id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "NO",\
+    "column_default": "gen_random_uuid()"\
+  \},\
+  \{\
+    "table_name": "official_exam_attempts",\
+    "ordinal_position": 2,\
+    "column_name": "official_exam_id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "NO",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_attempts",\
+    "ordinal_position": 3,\
+    "column_name": "student_id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "NO",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_attempts",\
+    "ordinal_position": 4,\
+    "column_name": "paper_id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_attempts",\
+    "ordinal_position": 5,\
+    "column_name": "sheet_id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_attempts",\
+    "ordinal_position": 6,\
+    "column_name": "status",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "NO",\
+    "column_default": "'pending'::text"\
+  \},\
+  \{\
+    "table_name": "official_exam_attempts",\
+    "ordinal_position": 7,\
+    "column_name": "detected_student_code",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_attempts",\
+    "ordinal_position": 8,\
+    "column_name": "detected_paper_code",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_attempts",\
+    "ordinal_position": 9,\
+    "column_name": "total_score",\
+    "data_type": "numeric",\
+    "udt_name": "numeric",\
+    "is_nullable": "NO",\
+    "column_default": "0"\
+  \},\
+  \{\
+    "table_name": "official_exam_attempts",\
+    "ordinal_position": 10,\
+    "column_name": "max_score",\
+    "data_type": "numeric",\
+    "udt_name": "numeric",\
+    "is_nullable": "NO",\
+    "column_default": "0"\
+  \},\
+  \{\
+    "table_name": "official_exam_attempts",\
+    "ordinal_position": 11,\
+    "column_name": "correct_count",\
+    "data_type": "integer",\
+    "udt_name": "int4",\
+    "is_nullable": "NO",\
+    "column_default": "0"\
+  \},\
+  \{\
+    "table_name": "official_exam_attempts",\
+    "ordinal_position": 12,\
+    "column_name": "incorrect_count",\
+    "data_type": "integer",\
+    "udt_name": "int4",\
+    "is_nullable": "NO",\
+    "column_default": "0"\
+  \},\
+  \{\
+    "table_name": "official_exam_attempts",\
+    "ordinal_position": 13,\
+    "column_name": "blank_count",\
+    "data_type": "integer",\
+    "udt_name": "int4",\
+    "is_nullable": "NO",\
+    "column_default": "0"\
+  \},\
+  \{\
+    "table_name": "official_exam_attempts",\
+    "ordinal_position": 14,\
+    "column_name": "grading_source",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "NO",\
+    "column_default": "'ocr'::text"\
+  \},\
+  \{\
+    "table_name": "official_exam_attempts",\
+    "ordinal_position": 15,\
+    "column_name": "graded_at",\
+    "data_type": "timestamp with time zone",\
+    "udt_name": "timestamptz",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_attempts",\
+    "ordinal_position": 16,\
+    "column_name": "published_at",\
+    "data_type": "timestamp with time zone",\
+    "udt_name": "timestamptz",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_attempts",\
+    "ordinal_position": 17,\
+    "column_name": "summary_json",\
+    "data_type": "jsonb",\
+    "udt_name": "jsonb",\
+    "is_nullable": "NO",\
+    "column_default": "'\{\}'::jsonb"\
+  \},\
+  \{\
+    "table_name": "official_exam_attempts",\
+    "ordinal_position": 18,\
+    "column_name": "metadata",\
+    "data_type": "jsonb",\
+    "udt_name": "jsonb",\
+    "is_nullable": "NO",\
+    "column_default": "'\{\}'::jsonb"\
+  \},\
+  \{\
+    "table_name": "official_exam_attempts",\
+    "ordinal_position": 19,\
+    "column_name": "created_at",\
+    "data_type": "timestamp with time zone",\
+    "udt_name": "timestamptz",\
+    "is_nullable": "NO",\
+    "column_default": "now()"\
+  \},\
+  \{\
+    "table_name": "official_exam_attempts",\
+    "ordinal_position": 20,\
+    "column_name": "updated_at",\
+    "data_type": "timestamp with time zone",\
+    "udt_name": "timestamptz",\
+    "is_nullable": "NO",\
+    "column_default": "now()"\
+  \},\
+  \{\
+    "table_name": "official_exam_files",\
+    "ordinal_position": 1,\
+    "column_name": "id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "NO",\
+    "column_default": "gen_random_uuid()"\
+  \},\
+  \{\
+    "table_name": "official_exam_files",\
+    "ordinal_position": 2,\
+    "column_name": "official_exam_id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "NO",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_files",\
+    "ordinal_position": 3,\
+    "column_name": "file_kind",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "NO",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_files",\
+    "ordinal_position": 4,\
+    "column_name": "original_name",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_files",\
+    "ordinal_position": 5,\
+    "column_name": "storage_bucket",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_files",\
+    "ordinal_position": 6,\
+    "column_name": "storage_path",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "NO",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_files",\
+    "ordinal_position": 7,\
+    "column_name": "public_url",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_files",\
+    "ordinal_position": 8,\
+    "column_name": "mime_type",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_files",\
+    "ordinal_position": 9,\
+    "column_name": "file_size",\
+    "data_type": "bigint",\
+    "udt_name": "int8",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_files",\
+    "ordinal_position": 10,\
+    "column_name": "page_count",\
+    "data_type": "integer",\
+    "udt_name": "int4",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_files",\
+    "ordinal_position": 11,\
+    "column_name": "uploaded_by",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_files",\
+    "ordinal_position": 12,\
+    "column_name": "parsed_text",\
+    "data_type": "jsonb",\
+    "udt_name": "jsonb",\
+    "is_nullable": "NO",\
+    "column_default": "'\{\}'::jsonb"\
+  \},\
+  \{\
+    "table_name": "official_exam_files",\
+    "ordinal_position": 13,\
+    "column_name": "metadata",\
+    "data_type": "jsonb",\
+    "udt_name": "jsonb",\
+    "is_nullable": "NO",\
+    "column_default": "'\{\}'::jsonb"\
+  \},\
+  \{\
+    "table_name": "official_exam_files",\
+    "ordinal_position": 14,\
+    "column_name": "created_at",\
+    "data_type": "timestamp with time zone",\
+    "udt_name": "timestamptz",\
+    "is_nullable": "NO",\
+    "column_default": "now()"\
+  \},\
+  \{\
+    "table_name": "official_exam_master_questions",\
+    "ordinal_position": 1,\
+    "column_name": "id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "NO",\
+    "column_default": "gen_random_uuid()"\
+  \},\
+  \{\
+    "table_name": "official_exam_master_questions",\
+    "ordinal_position": 2,\
+    "column_name": "official_exam_id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "NO",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_master_questions",\
+    "ordinal_position": 3,\
+    "column_name": "question_id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "NO",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_master_questions",\
+    "ordinal_position": 4,\
+    "column_name": "master_question_no",\
+    "data_type": "integer",\
+    "udt_name": "int4",\
+    "is_nullable": "NO",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_master_questions",\
+    "ordinal_position": 5,\
+    "column_name": "score",\
+    "data_type": "numeric",\
+    "udt_name": "numeric",\
+    "is_nullable": "NO",\
+    "column_default": "1"\
+  \},\
+  \{\
+    "table_name": "official_exam_master_questions",\
+    "ordinal_position": 6,\
+    "column_name": "max_score",\
+    "data_type": "numeric",\
+    "udt_name": "numeric",\
+    "is_nullable": "NO",\
+    "column_default": "1"\
+  \},\
+  \{\
+    "table_name": "official_exam_master_questions",\
+    "ordinal_position": 7,\
+    "column_name": "answer_key",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_master_questions",\
+    "ordinal_position": 8,\
+    "column_name": "question_type",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_master_questions",\
+    "ordinal_position": 9,\
+    "column_name": "topic",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_master_questions",\
+    "ordinal_position": 10,\
+    "column_name": "difficulty",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_master_questions",\
+    "ordinal_position": 11,\
+    "column_name": "metadata",\
+    "data_type": "jsonb",\
+    "udt_name": "jsonb",\
+    "is_nullable": "NO",\
+    "column_default": "'\{\}'::jsonb"\
+  \},\
+  \{\
+    "table_name": "official_exam_master_questions",\
+    "ordinal_position": 12,\
+    "column_name": "created_at",\
+    "data_type": "timestamp with time zone",\
+    "udt_name": "timestamptz",\
+    "is_nullable": "NO",\
+    "column_default": "now()"\
+  \},\
+  \{\
+    "table_name": "official_exam_paper_question_map",\
+    "ordinal_position": 1,\
+    "column_name": "id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "NO",\
+    "column_default": "gen_random_uuid()"\
+  \},\
+  \{\
+    "table_name": "official_exam_paper_question_map",\
+    "ordinal_position": 2,\
+    "column_name": "official_exam_id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "NO",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_paper_question_map",\
+    "ordinal_position": 3,\
+    "column_name": "paper_id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "NO",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_paper_question_map",\
+    "ordinal_position": 4,\
+    "column_name": "master_question_id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "NO",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_paper_question_map",\
+    "ordinal_position": 5,\
+    "column_name": "question_id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "NO",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_paper_question_map",\
+    "ordinal_position": 6,\
+    "column_name": "paper_question_no",\
+    "data_type": "integer",\
+    "udt_name": "int4",\
+    "is_nullable": "NO",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_paper_question_map",\
+    "ordinal_position": 7,\
+    "column_name": "master_question_no",\
+    "data_type": "integer",\
+    "udt_name": "int4",\
+    "is_nullable": "NO",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_paper_question_map",\
+    "ordinal_position": 8,\
+    "column_name": "mapped_by",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "NO",\
+    "column_default": "'ai'::text"\
+  \},\
+  \{\
+    "table_name": "official_exam_paper_question_map",\
+    "ordinal_position": 9,\
+    "column_name": "confidence",\
+    "data_type": "numeric",\
+    "udt_name": "numeric",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_paper_question_map",\
+    "ordinal_position": 10,\
+    "column_name": "metadata",\
+    "data_type": "jsonb",\
+    "udt_name": "jsonb",\
+    "is_nullable": "NO",\
+    "column_default": "'\{\}'::jsonb"\
+  \},\
+  \{\
+    "table_name": "official_exam_paper_question_map",\
+    "ordinal_position": 11,\
+    "column_name": "created_at",\
+    "data_type": "timestamp with time zone",\
+    "udt_name": "timestamptz",\
+    "is_nullable": "NO",\
+    "column_default": "now()"\
+  \},\
+  \{\
+    "table_name": "official_exam_papers",\
+    "ordinal_position": 1,\
+    "column_name": "id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "NO",\
+    "column_default": "gen_random_uuid()"\
+  \},\
+  \{\
+    "table_name": "official_exam_papers",\
+    "ordinal_position": 2,\
+    "column_name": "official_exam_id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "NO",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_papers",\
+    "ordinal_position": 3,\
+    "column_name": "source_file_id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_papers",\
+    "ordinal_position": 4,\
+    "column_name": "paper_code",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "NO",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_papers",\
+    "ordinal_position": 5,\
+    "column_name": "paper_name",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_papers",\
+    "ordinal_position": 6,\
+    "column_name": "is_master_source",\
+    "data_type": "boolean",\
+    "udt_name": "bool",\
+    "is_nullable": "NO",\
+    "column_default": "false"\
+  \},\
+  \{\
+    "table_name": "official_exam_papers",\
+    "ordinal_position": 7,\
+    "column_name": "upload_order",\
+    "data_type": "integer",\
+    "udt_name": "int4",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_papers",\
+    "ordinal_position": 8,\
+    "column_name": "process_status",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "NO",\
+    "column_default": "'uploaded'::text"\
+  \},\
+  \{\
+    "table_name": "official_exam_papers",\
+    "ordinal_position": 9,\
+    "column_name": "verification_note",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_papers",\
+    "ordinal_position": 10,\
+    "column_name": "total_questions",\
+    "data_type": "integer",\
+    "udt_name": "int4",\
+    "is_nullable": "NO",\
+    "column_default": "0"\
+  \},\
+  \{\
+    "table_name": "official_exam_papers",\
+    "ordinal_position": 11,\
+    "column_name": "answer_key_json",\
+    "data_type": "jsonb",\
+    "udt_name": "jsonb",\
+    "is_nullable": "NO",\
+    "column_default": "'\{\}'::jsonb"\
+  \},\
+  \{\
+    "table_name": "official_exam_papers",\
+    "ordinal_position": 12,\
+    "column_name": "parsed_structure_json",\
+    "data_type": "jsonb",\
+    "udt_name": "jsonb",\
+    "is_nullable": "NO",\
+    "column_default": "'\{\}'::jsonb"\
+  \},\
+  \{\
+    "table_name": "official_exam_papers",\
+    "ordinal_position": 13,\
+    "column_name": "metadata",\
+    "data_type": "jsonb",\
+    "udt_name": "jsonb",\
+    "is_nullable": "NO",\
+    "column_default": "'\{\}'::jsonb"\
+  \},\
+  \{\
+    "table_name": "official_exam_papers",\
+    "ordinal_position": 14,\
+    "column_name": "created_at",\
+    "data_type": "timestamp with time zone",\
+    "udt_name": "timestamptz",\
+    "is_nullable": "NO",\
+    "column_default": "now()"\
+  \},\
+  \{\
+    "table_name": "official_exam_papers",\
+    "ordinal_position": 15,\
+    "column_name": "updated_at",\
+    "data_type": "timestamp with time zone",\
+    "udt_name": "timestamptz",\
+    "is_nullable": "NO",\
+    "column_default": "now()"\
+  \},\
+  \{\
+    "table_name": "official_exam_processing_logs",\
+    "ordinal_position": 1,\
+    "column_name": "id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "NO",\
+    "column_default": "gen_random_uuid()"\
+  \},\
+  \{\
+    "table_name": "official_exam_processing_logs",\
+    "ordinal_position": 2,\
+    "column_name": "official_exam_id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "NO",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_processing_logs",\
+    "ordinal_position": 3,\
+    "column_name": "paper_id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_processing_logs",\
+    "ordinal_position": 4,\
+    "column_name": "batch_id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_processing_logs",\
+    "ordinal_position": 5,\
+    "column_name": "sheet_id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_processing_logs",\
+    "ordinal_position": 6,\
+    "column_name": "attempt_id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_processing_logs",\
+    "ordinal_position": 7,\
+    "column_name": "step_name",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "NO",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_processing_logs",\
+    "ordinal_position": 8,\
+    "column_name": "status",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "NO",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_processing_logs",\
+    "ordinal_position": 9,\
+    "column_name": "message",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_processing_logs",\
+    "ordinal_position": 10,\
+    "column_name": "payload",\
+    "data_type": "jsonb",\
+    "udt_name": "jsonb",\
+    "is_nullable": "NO",\
+    "column_default": "'\{\}'::jsonb"\
+  \},\
+  \{\
+    "table_name": "official_exam_processing_logs",\
+    "ordinal_position": 11,\
+    "column_name": "created_at",\
+    "data_type": "timestamp with time zone",\
+    "udt_name": "timestamptz",\
+    "is_nullable": "NO",\
+    "column_default": "now()"\
+  \},\
+  \{\
+    "table_name": "official_exam_reviews",\
+    "ordinal_position": 1,\
+    "column_name": "id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "NO",\
+    "column_default": "gen_random_uuid()"\
+  \},\
+  \{\
+    "table_name": "official_exam_reviews",\
+    "ordinal_position": 2,\
+    "column_name": "official_exam_id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "NO",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_reviews",\
+    "ordinal_position": 3,\
+    "column_name": "attempt_id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "NO",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_reviews",\
+    "ordinal_position": 4,\
+    "column_name": "attempt_answer_id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_reviews",\
+    "ordinal_position": 5,\
+    "column_name": "review_type",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "NO",\
+    "column_default": "'question'::text"\
+  \},\
+  \{\
+    "table_name": "official_exam_reviews",\
+    "ordinal_position": 6,\
+    "column_name": "requested_by",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_reviews",\
+    "ordinal_position": 7,\
+    "column_name": "reviewed_by",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_reviews",\
+    "ordinal_position": 8,\
+    "column_name": "status",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "NO",\
+    "column_default": "'pending'::text"\
+  \},\
+  \{\
+    "table_name": "official_exam_reviews",\
+    "ordinal_position": 9,\
+    "column_name": "reason",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_reviews",\
+    "ordinal_position": 10,\
+    "column_name": "note",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_reviews",\
+    "ordinal_position": 11,\
+    "column_name": "old_score",\
+    "data_type": "numeric",\
+    "udt_name": "numeric",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_reviews",\
+    "ordinal_position": 12,\
+    "column_name": "new_score",\
+    "data_type": "numeric",\
+    "udt_name": "numeric",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_reviews",\
+    "ordinal_position": 13,\
+    "column_name": "created_at",\
+    "data_type": "timestamp with time zone",\
+    "udt_name": "timestamptz",\
+    "is_nullable": "NO",\
+    "column_default": "now()"\
+  \},\
+  \{\
+    "table_name": "official_exam_reviews",\
+    "ordinal_position": 14,\
+    "column_name": "reviewed_at",\
+    "data_type": "timestamp with time zone",\
+    "udt_name": "timestamptz",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_sheet_batches",\
+    "ordinal_position": 1,\
+    "column_name": "id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "NO",\
+    "column_default": "gen_random_uuid()"\
+  \},\
+  \{\
+    "table_name": "official_exam_sheet_batches",\
+    "ordinal_position": 2,\
+    "column_name": "official_exam_id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "NO",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_sheet_batches",\
+    "ordinal_position": 3,\
+    "column_name": "source_file_id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_sheet_batches",\
+    "ordinal_position": 4,\
+    "column_name": "batch_name",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_sheet_batches",\
+    "ordinal_position": 5,\
+    "column_name": "upload_type",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "NO",\
+    "column_default": "'file'::text"\
+  \},\
+  \{\
+    "table_name": "official_exam_sheet_batches",\
+    "ordinal_position": 6,\
+    "column_name": "status",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "NO",\
+    "column_default": "'uploaded'::text"\
+  \},\
+  \{\
+    "table_name": "official_exam_sheet_batches",\
+    "ordinal_position": 7,\
+    "column_name": "total_pages",\
+    "data_type": "integer",\
+    "udt_name": "int4",\
+    "is_nullable": "NO",\
+    "column_default": "0"\
+  \},\
+  \{\
+    "table_name": "official_exam_sheet_batches",\
+    "ordinal_position": 8,\
+    "column_name": "total_sheets",\
+    "data_type": "integer",\
+    "udt_name": "int4",\
+    "is_nullable": "NO",\
+    "column_default": "0"\
+  \},\
+  \{\
+    "table_name": "official_exam_sheet_batches",\
+    "ordinal_position": 9,\
+    "column_name": "processed_sheets",\
+    "data_type": "integer",\
+    "udt_name": "int4",\
+    "is_nullable": "NO",\
+    "column_default": "0"\
+  \},\
+  \{\
+    "table_name": "official_exam_sheet_batches",\
+    "ordinal_position": 10,\
+    "column_name": "uploaded_by",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_sheet_batches",\
+    "ordinal_position": 11,\
+    "column_name": "metadata",\
+    "data_type": "jsonb",\
+    "udt_name": "jsonb",\
+    "is_nullable": "NO",\
+    "column_default": "'\{\}'::jsonb"\
+  \},\
+  \{\
+    "table_name": "official_exam_sheet_batches",\
+    "ordinal_position": 12,\
+    "column_name": "created_at",\
+    "data_type": "timestamp with time zone",\
+    "udt_name": "timestamptz",\
+    "is_nullable": "NO",\
+    "column_default": "now()"\
+  \},\
+  \{\
+    "table_name": "official_exam_sheet_batches",\
+    "ordinal_position": 13,\
+    "column_name": "updated_at",\
+    "data_type": "timestamp with time zone",\
+    "udt_name": "timestamptz",\
+    "is_nullable": "NO",\
+    "column_default": "now()"\
+  \},\
+  \{\
+    "table_name": "official_exam_sheets",\
+    "ordinal_position": 1,\
+    "column_name": "id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "NO",\
+    "column_default": "gen_random_uuid()"\
+  \},\
+  \{\
+    "table_name": "official_exam_sheets",\
+    "ordinal_position": 2,\
+    "column_name": "official_exam_id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "NO",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_sheets",\
+    "ordinal_position": 3,\
+    "column_name": "batch_id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_sheets",\
+    "ordinal_position": 4,\
+    "column_name": "sheet_no",\
+    "data_type": "integer",\
+    "udt_name": "int4",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_sheets",\
+    "ordinal_position": 5,\
+    "column_name": "page_from",\
+    "data_type": "integer",\
+    "udt_name": "int4",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_sheets",\
+    "ordinal_position": 6,\
+    "column_name": "page_to",\
+    "data_type": "integer",\
+    "udt_name": "int4",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_sheets",\
+    "ordinal_position": 7,\
+    "column_name": "image_url",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_sheets",\
+    "ordinal_position": 8,\
+    "column_name": "storage_bucket",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_sheets",\
+    "ordinal_position": 9,\
+    "column_name": "storage_path",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_sheets",\
+    "ordinal_position": 10,\
+    "column_name": "detected_student_code",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_sheets",\
+    "ordinal_position": 11,\
+    "column_name": "detected_paper_code",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_sheets",\
+    "ordinal_position": 12,\
+    "column_name": "student_id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_sheets",\
+    "ordinal_position": 13,\
+    "column_name": "paper_id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_sheets",\
+    "ordinal_position": 14,\
+    "column_name": "match_status",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "NO",\
+    "column_default": "'unmatched'::text"\
+  \},\
+  \{\
+    "table_name": "official_exam_sheets",\
+    "ordinal_position": 15,\
+    "column_name": "process_status",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "NO",\
+    "column_default": "'uploaded'::text"\
+  \},\
+  \{\
+    "table_name": "official_exam_sheets",\
+    "ordinal_position": 16,\
+    "column_name": "ocr_json",\
+    "data_type": "jsonb",\
+    "udt_name": "jsonb",\
+    "is_nullable": "NO",\
+    "column_default": "'\{\}'::jsonb"\
+  \},\
+  \{\
+    "table_name": "official_exam_sheets",\
+    "ordinal_position": 17,\
+    "column_name": "metadata",\
+    "data_type": "jsonb",\
+    "udt_name": "jsonb",\
+    "is_nullable": "NO",\
+    "column_default": "'\{\}'::jsonb"\
+  \},\
+  \{\
+    "table_name": "official_exam_sheets",\
+    "ordinal_position": 18,\
+    "column_name": "created_at",\
+    "data_type": "timestamp with time zone",\
+    "udt_name": "timestamptz",\
+    "is_nullable": "NO",\
+    "column_default": "now()"\
+  \},\
+  \{\
+    "table_name": "official_exam_sheets",\
+    "ordinal_position": 19,\
+    "column_name": "updated_at",\
+    "data_type": "timestamp with time zone",\
+    "udt_name": "timestamptz",\
+    "is_nullable": "NO",\
+    "column_default": "now()"\
+  \},\
+  \{\
+    "table_name": "official_exam_students",\
+    "ordinal_position": 1,\
+    "column_name": "id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "NO",\
+    "column_default": "gen_random_uuid()"\
+  \},\
+  \{\
+    "table_name": "official_exam_students",\
+    "ordinal_position": 2,\
+    "column_name": "official_exam_id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "NO",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_students",\
+    "ordinal_position": 3,\
+    "column_name": "student_user_id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_students",\
+    "ordinal_position": 4,\
+    "column_name": "student_code",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "NO",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_students",\
+    "ordinal_position": 5,\
+    "column_name": "full_name",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "NO",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_students",\
+    "ordinal_position": 6,\
+    "column_name": "class_name",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_students",\
+    "ordinal_position": 7,\
+    "column_name": "seat_no",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exam_students",\
+    "ordinal_position": 8,\
+    "column_name": "status",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "NO",\
+    "column_default": "'active'::text"\
+  \},\
+  \{\
+    "table_name": "official_exam_students",\
+    "ordinal_position": 9,\
+    "column_name": "metadata",\
+    "data_type": "jsonb",\
+    "udt_name": "jsonb",\
+    "is_nullable": "NO",\
+    "column_default": "'\{\}'::jsonb"\
+  \},\
+  \{\
+    "table_name": "official_exam_students",\
+    "ordinal_position": 10,\
+    "column_name": "created_at",\
+    "data_type": "timestamp with time zone",\
+    "udt_name": "timestamptz",\
+    "is_nullable": "NO",\
+    "column_default": "now()"\
+  \},\
+  \{\
+    "table_name": "official_exam_students",\
+    "ordinal_position": 11,\
+    "column_name": "updated_at",\
+    "data_type": "timestamp with time zone",\
+    "udt_name": "timestamptz",\
+    "is_nullable": "NO",\
+    "column_default": "now()"\
+  \},\
+  \{\
+    "table_name": "official_exams",\
+    "ordinal_position": 1,\
+    "column_name": "id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "NO",\
+    "column_default": "gen_random_uuid()"\
+  \},\
+  \{\
+    "table_name": "official_exams",\
+    "ordinal_position": 2,\
+    "column_name": "created_by",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "NO",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exams",\
+    "ordinal_position": 3,\
+    "column_name": "teacher_user_id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exams",\
+    "ordinal_position": 4,\
+    "column_name": "title",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "NO",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exams",\
+    "ordinal_position": 5,\
+    "column_name": "subject",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "NO",\
+    "column_default": "'H\'f3a h\uc0\u7885 c'::text"\
+  \},\
+  \{\
+    "table_name": "official_exams",\
+    "ordinal_position": 6,\
+    "column_name": "description",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exams",\
+    "ordinal_position": 7,\
+    "column_name": "city_id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exams",\
+    "ordinal_position": 8,\
+    "column_name": "school_id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exams",\
+    "ordinal_position": 9,\
+    "column_name": "class_id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exams",\
+    "ordinal_position": 10,\
+    "column_name": "grade_id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exams",\
+    "ordinal_position": 11,\
+    "column_name": "academic_year_id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exams",\
+    "ordinal_position": 12,\
+    "column_name": "exam_date",\
+    "data_type": "date",\
+    "udt_name": "date",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exams",\
+    "ordinal_position": 13,\
+    "column_name": "semester",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exams",\
+    "ordinal_position": 14,\
+    "column_name": "duration_minutes",\
+    "data_type": "integer",\
+    "udt_name": "int4",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exams",\
+    "ordinal_position": 15,\
+    "column_name": "status",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "NO",\
+    "column_default": "'draft'::text"\
+  \},\
+  \{\
+    "table_name": "official_exams",\
+    "ordinal_position": 16,\
+    "column_name": "master_paper_id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exams",\
+    "ordinal_position": 17,\
+    "column_name": "total_papers",\
+    "data_type": "integer",\
+    "udt_name": "int4",\
+    "is_nullable": "NO",\
+    "column_default": "0"\
+  \},\
+  \{\
+    "table_name": "official_exams",\
+    "ordinal_position": 18,\
+    "column_name": "total_questions",\
+    "data_type": "integer",\
+    "udt_name": "int4",\
+    "is_nullable": "NO",\
+    "column_default": "0"\
+  \},\
+  \{\
+    "table_name": "official_exams",\
+    "ordinal_position": 19,\
+    "column_name": "total_students",\
+    "data_type": "integer",\
+    "udt_name": "int4",\
+    "is_nullable": "NO",\
+    "column_default": "0"\
+  \},\
+  \{\
+    "table_name": "official_exams",\
+    "ordinal_position": 20,\
+    "column_name": "total_sheets",\
+    "data_type": "integer",\
+    "udt_name": "int4",\
+    "is_nullable": "NO",\
+    "column_default": "0"\
+  \},\
+  \{\
+    "table_name": "official_exams",\
+    "ordinal_position": 21,\
+    "column_name": "total_graded",\
+    "data_type": "integer",\
+    "udt_name": "int4",\
+    "is_nullable": "NO",\
+    "column_default": "0"\
+  \},\
+  \{\
+    "table_name": "official_exams",\
+    "ordinal_position": 22,\
+    "column_name": "grading_started_at",\
+    "data_type": "timestamp with time zone",\
+    "udt_name": "timestamptz",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exams",\
+    "ordinal_position": 23,\
+    "column_name": "grading_completed_at",\
+    "data_type": "timestamp with time zone",\
+    "udt_name": "timestamptz",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exams",\
+    "ordinal_position": 24,\
+    "column_name": "published_at",\
+    "data_type": "timestamp with time zone",\
+    "udt_name": "timestamptz",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "official_exams",\
+    "ordinal_position": 25,\
+    "column_name": "settings_json",\
+    "data_type": "jsonb",\
+    "udt_name": "jsonb",\
+    "is_nullable": "NO",\
+    "column_default": "'\{\}'::jsonb"\
+  \},\
+  \{\
+    "table_name": "official_exams",\
+    "ordinal_position": 26,\
+    "column_name": "metadata",\
+    "data_type": "jsonb",\
+    "udt_name": "jsonb",\
+    "is_nullable": "NO",\
+    "column_default": "'\{\}'::jsonb"\
+  \},\
+  \{\
+    "table_name": "official_exams",\
+    "ordinal_position": 27,\
+    "column_name": "created_at",\
+    "data_type": "timestamp with time zone",\
+    "udt_name": "timestamptz",\
+    "is_nullable": "NO",\
+    "column_default": "now()"\
+  \},\
+  \{\
+    "table_name": "official_exams",\
+    "ordinal_position": 28,\
+    "column_name": "updated_at",\
+    "data_type": "timestamp with time zone",\
+    "udt_name": "timestamptz",\
+    "is_nullable": "NO",\
+    "column_default": "now()"\
+  \},\
+  \{\
+    "table_name": "questions",\
+    "ordinal_position": 1,\
+    "column_name": "id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "NO",\
+    "column_default": "gen_random_uuid()"\
+  \},\
+  \{\
+    "table_name": "questions",\
+    "ordinal_position": 2,\
+    "column_name": "lesson_id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "questions",\
+    "ordinal_position": 3,\
+    "column_name": "content",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "NO",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "questions",\
+    "ordinal_position": 4,\
+    "column_name": "brief_content",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "questions",\
+    "ordinal_position": 5,\
+    "column_name": "legacy_choice_a",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "questions",\
+    "ordinal_position": 6,\
+    "column_name": "legacy_choice_b",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "questions",\
+    "ordinal_position": 7,\
+    "column_name": "legacy_choice_c",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "questions",\
+    "ordinal_position": 8,\
+    "column_name": "legacy_choice_d",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "questions",\
+    "ordinal_position": 9,\
+    "column_name": "legacy_correct_answer",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "questions",\
+    "ordinal_position": 10,\
+    "column_name": "explanation",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "questions",\
+    "ordinal_position": 11,\
+    "column_name": "brief_explanation",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "questions",\
+    "ordinal_position": 12,\
+    "column_name": "difficulty",\
+    "data_type": "integer",\
+    "udt_name": "int4",\
+    "is_nullable": "YES",\
+    "column_default": "1"\
+  \},\
+  \{\
+    "table_name": "questions",\
+    "ordinal_position": 13,\
+    "column_name": "topic",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "questions",\
+    "ordinal_position": 14,\
+    "column_name": "created_at",\
+    "data_type": "timestamp without time zone",\
+    "udt_name": "timestamp",\
+    "is_nullable": "YES",\
+    "column_default": "now()"\
+  \},\
+  \{\
+    "table_name": "questions",\
+    "ordinal_position": 15,\
+    "column_name": "tags",\
+    "data_type": "ARRAY",\
+    "udt_name": "_text",\
+    "is_nullable": "YES",\
+    "column_default": "'\{\}'::text[]"\
+  \},\
+  \{\
+    "table_name": "questions",\
+    "ordinal_position": 16,\
+    "column_name": "question_type",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "YES",\
+    "column_default": "'single_choice'::text"\
+  \},\
+  \{\
+    "table_name": "questions",\
+    "ordinal_position": 17,\
+    "column_name": "order_index",\
+    "data_type": "integer",\
+    "udt_name": "int4",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "questions",\
+    "ordinal_position": 18,\
+    "column_name": "exam_score",\
+    "data_type": "numeric",\
+    "udt_name": "numeric",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "questions",\
+    "ordinal_position": 19,\
+    "column_name": "image_url",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "questions",\
+    "ordinal_position": 20,\
+    "column_name": "image_alt",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "questions",\
+    "ordinal_position": 21,\
+    "column_name": "image_caption",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "questions",\
+    "ordinal_position": 22,\
+    "column_name": "tip",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "questions",\
+    "ordinal_position": 23,\
+    "column_name": "review_status",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "YES",\
+    "column_default": "'normal'::text"\
+  \},\
+  \{\
+    "table_name": "questions",\
+    "ordinal_position": 24,\
+    "column_name": "resolution_type",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "YES",\
+    "column_default": "'none'::text"\
+  \},\
+  \{\
+    "table_name": "questions",\
+    "ordinal_position": 25,\
+    "column_name": "report_count",\
+    "data_type": "integer",\
+    "udt_name": "int4",\
+    "is_nullable": "NO",\
+    "column_default": "0"\
+  \},\
+  \{\
+    "table_name": "questions",\
+    "ordinal_position": 26,\
+    "column_name": "report_locked",\
+    "data_type": "boolean",\
+    "udt_name": "bool",\
+    "is_nullable": "NO",\
+    "column_default": "false"\
+  \},\
+  \{\
+    "table_name": "questions",\
+    "ordinal_position": 27,\
+    "column_name": "first_reported_at",\
+    "data_type": "timestamp without time zone",\
+    "udt_name": "timestamp",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "questions",\
+    "ordinal_position": 28,\
+    "column_name": "last_reported_at",\
+    "data_type": "timestamp without time zone",\
+    "udt_name": "timestamp",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "questions",\
+    "ordinal_position": 29,\
+    "column_name": "last_reviewed_at",\
+    "data_type": "timestamp without time zone",\
+    "udt_name": "timestamp",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "questions",\
+    "ordinal_position": 30,\
+    "column_name": "last_review_note",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "questions",\
+    "ordinal_position": 31,\
+    "column_name": "last_reviewed_by",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "questions",\
+    "ordinal_position": 32,\
+    "column_name": "active_version_no",\
+    "data_type": "integer",\
+    "udt_name": "int4",\
+    "is_nullable": "NO",\
+    "column_default": "1"\
+  \},\
+  \{\
+    "table_name": "questions",\
+    "ordinal_position": 33,\
+    "column_name": "replaced_by_question_id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "questions",\
+    "ordinal_position": 34,\
+    "column_name": "topic_unit",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "questions",\
+    "ordinal_position": 35,\
+    "column_name": "difficulty_academic",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "schools",\
+    "ordinal_position": 1,\
+    "column_name": "id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "NO",\
+    "column_default": "gen_random_uuid()"\
+  \},\
+  \{\
+    "table_name": "schools",\
+    "ordinal_position": 2,\
+    "column_name": "name",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "NO",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "schools",\
+    "ordinal_position": 3,\
+    "column_name": "created_at",\
+    "data_type": "timestamp without time zone",\
+    "udt_name": "timestamp",\
+    "is_nullable": "YES",\
+    "column_default": "now()"\
+  \},\
+  \{\
+    "table_name": "schools",\
+    "ordinal_position": 4,\
+    "column_name": "city_id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "schools",\
+    "ordinal_position": 5,\
+    "column_name": "code",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "schools",\
+    "ordinal_position": 6,\
+    "column_name": "school_type",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "schools",\
+    "ordinal_position": 7,\
+    "column_name": "ownership_type",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "schools",\
+    "ordinal_position": 8,\
+    "column_name": "is_active",\
+    "data_type": "boolean",\
+    "udt_name": "bool",\
+    "is_nullable": "NO",\
+    "column_default": "true"\
+  \},\
+  \{\
+    "table_name": "schools",\
+    "ordinal_position": 9,\
+    "column_name": "normalized_name",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "schools",\
+    "ordinal_position": 10,\
+    "column_name": "status",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "YES",\
+    "column_default": "'active'::text"\
+  \},\
+  \{\
+    "table_name": "schools",\
+    "ordinal_position": 11,\
+    "column_name": "merged_into_school_id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "student_profiles",\
+    "ordinal_position": 1,\
+    "column_name": "user_id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "NO",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "student_profiles",\
+    "ordinal_position": 2,\
+    "column_name": "full_name",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "NO",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "student_profiles",\
+    "ordinal_position": 3,\
+    "column_name": "school",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "student_profiles",\
+    "ordinal_position": 4,\
+    "column_name": "class_name",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "student_profiles",\
+    "ordinal_position": 5,\
+    "column_name": "academic_year",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "student_profiles",\
+    "ordinal_position": 6,\
+    "column_name": "birth_date",\
+    "data_type": "date",\
+    "udt_name": "date",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "student_profiles",\
+    "ordinal_position": 7,\
+    "column_name": "created_at",\
+    "data_type": "timestamp without time zone",\
+    "udt_name": "timestamp",\
+    "is_nullable": "YES",\
+    "column_default": "now()"\
+  \},\
+  \{\
+    "table_name": "student_profiles",\
+    "ordinal_position": 8,\
+    "column_name": "school_id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "student_profiles",\
+    "ordinal_position": 9,\
+    "column_name": "class_id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "student_profiles",\
+    "ordinal_position": 10,\
+    "column_name": "academic_year_id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "student_profiles",\
+    "ordinal_position": 11,\
+    "column_name": "grade_id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "student_profiles",\
+    "ordinal_position": 12,\
+    "column_name": "class_name_normalized",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "teacher_profiles",\
+    "ordinal_position": 1,\
+    "column_name": "id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "NO",\
+    "column_default": "gen_random_uuid()"\
+  \},\
+  \{\
+    "table_name": "teacher_profiles",\
+    "ordinal_position": 2,\
+    "column_name": "user_id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "NO",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "teacher_profiles",\
+    "ordinal_position": 3,\
+    "column_name": "full_name",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "NO",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "teacher_profiles",\
+    "ordinal_position": 4,\
+    "column_name": "school_id",\
+    "data_type": "uuid",\
+    "udt_name": "uuid",\
+    "is_nullable": "YES",\
+    "column_default": null\
+  \},\
+  \{\
+    "table_name": "teacher_profiles",\
+    "ordinal_position": 5,\
+    "column_name": "subject",\
+    "data_type": "text",\
+    "udt_name": "text",\
+    "is_nullable": "YES",\
+    "column_default": "'H\'f3a h\uc0\u7885 c'::text"\
+  \},\
+  \{\
+    "table_name": "teacher_profiles",\
+    "ordinal_position": 6,\
+    "column_name": "is_active",\
+    "data_type": "boolean",\
+    "udt_name": "bool",\
+    "is_nullable": "YES",\
+    "column_default": "true"\
+  \},\
+  \{\
+    "table_name": "teacher_profiles",\
+    "ordinal_position": 7,\
+    "column_name": "created_at",\
+    "data_type": "timestamp without time zone",\
+    "udt_name": "timestamp",\
+    "is_nullable": "YES",\
+    "column_default": "now()"\
+  \},\
+  \{\
+    "table_name": "teacher_profiles",\
+    "ordinal_position": 8,\
+    "column_name": "can_create_exam",\
+    "data_type": "boolean",\
+    "udt_name": "bool",\
+    "is_nullable": "NO",\
+    "column_default": "false"\
+  \}\
+]}

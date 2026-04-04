@@ -95,7 +95,7 @@ export async function GET(_: Request, { params }: { params: { attemptId: string 
     // 4. Get question metadata
     const { data: qs } = await svc
       .from('questions')
-      .select('id, content, question_type, order_index, created_at, topic, brief_explanation, explanation, tip, image_url, image_alt, image_caption, report_locked, review_status, resolution_type')
+      .select('id, content, question_type, order_index, created_at, topic, topic_unit, difficulty, difficulty_academic, brief_explanation, explanation, tip, image_url, image_alt, image_caption, report_locked, review_status, resolution_type')
       .in('id', qIds)
     const qById: Record<string, any> = Object.fromEntries((qs || []).map((q: any) => [q.id, q]))
 
@@ -192,6 +192,9 @@ export async function GET(_: Request, { params }: { params: { attemptId: string 
         question_type: typ,
         order_index: q.order_index ?? 0,
         topic: q.topic || '',
+        topic_unit: q.topic_unit || '',
+        difficulty: q.difficulty ?? null,
+        difficulty_academic: q.difficulty_academic ?? null,
         explanation: q.brief_explanation || q.explanation || '',
         tip: q.tip || '',
         image_url: q.image_url || '',

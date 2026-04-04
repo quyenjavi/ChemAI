@@ -1,9 +1,10 @@
 'use client'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 
 function ReportDialog({ answer, onReportSuccess }: { answer: AnyAnswer, onReportSuccess: (questionId: string, reportId: string) => void }) {
   const [isOpen, setIsOpen] = useState(false)
@@ -165,6 +166,9 @@ type AnswerBase = {
   content: string
   order_index: number
   topic?: string
+  topic_unit?: string
+  difficulty?: string | null
+  difficulty_academic?: string | null
   explanation?: string
   tip?: string
   image_url?: string
@@ -221,6 +225,27 @@ type TrueFalseGroupAnswer = AnswerBase & {
 
 type AnyAnswer = ChoiceAnswer | ShortAnswer | TrueFalseGroupAnswer | (AnswerBase & Record<string, any>)
 
+type PracticeOption = { key: string, text: string, is_correct: boolean }
+type PracticeStatement = { statement_id: string, key: string | null, text: string, correct_answer: boolean | null, explanation: string | null, tip: string | null, sort_order: number }
+type PracticeShortAnswer = { text: string, explanation: string | null, tip: string | null }
+type PracticeQuestion = {
+  question_id: string
+  content: string
+  question_type: 'single_choice' | 'true_false' | 'true_false_group' | 'short_answer' | string
+  topic: string | null
+  topic_unit: string | null
+  difficulty: string | null
+  difficulty_academic: string | null
+  tip: string | null
+  explanation: string | null
+  image_url: string | null
+  image_alt: string | null
+  image_caption: string | null
+  options?: PracticeOption[]
+  statements?: PracticeStatement[]
+  accepted_answers?: PracticeShortAnswer[]
+}
+
 export default function ResultPage() {
   const params = useParams()
   const attemptId = (params as any)?.attemptId as string | undefined
@@ -229,6 +254,12 @@ export default function ResultPage() {
   const [shortAnswerResults, setShortAnswerResults] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [answers, setAnswers] = useState<AnyAnswer[]>([])
+  const [practiceOpen, setPracticeOpen] = useState(false)
+  const [practiceTitle, setPracticeTitle] = useState('')
+  const [practiceItems, setPracticeItems] = useState<PracticeQuestion[]>([])
+  const [practiceLoading, setPracticeLoading] = useState(false)
+  const [practiceError, setPracticeError] = useState('')
+  const [practiceStateByQ, setPracticeStateByQ] = useState<Record<string, any>>({})
 
   const handleReportSuccess = (questionId: string, reportId: string) => {
     setAnswers(prev => prev.map(a => {
@@ -248,6 +279,65 @@ export default function ResultPage() {
     }
     return m
   }, [shortAnswerResults])
+
+  const getTopicLabel = useCallback((q: AnyAnswer) => {
+    const tu = String((q as any).topic_unit || '').trim()
+    if (tu) return tu
+    const t = String((q as any).topic || '').trim()
+    return t || 'Chưa phân loại'
+  }, [])
+
+  const getFinalIsCorrect = useCallback((q: AnyAnswer): boolean | null => {
+    if (q.question_type === 'true_false_group') {
+      const v = (q as any).is_correct
+      return typeof v === 'boolean' ? v : null
+    }
+    if (q.question_type === 'short_answer') {
+      const qa = q as ShortAnswer
+      const sa = saById[q.question_id]
+      if (typeof qa.is_correct === 'boolean') return qa.is_correct
+      if (typeof sa?.is_correct === 'boolean') return sa.is_correct
+      return null
+    }
+    const v = (q as any).is_correct
+    return typeof v === 'boolean' ? v : null
+  }, [saById])
+
+  const openPractice = async (payload: any, title: string) => {
+    setPracticeOpen(true)
+    setPracticeTitle(title)
+    setPracticeItems([])
+    setPracticeError('')
+    setPracticeStateByQ({})
+    setPracticeLoading(true)
+    try {
+      const excludeIds = answers.map(a => a.question_id).filter(Boolean)
+      const res = await fetch('/api/questions/similar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ limit: 3, exclude_question_ids: excludeIds, ...payload }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Không thể lấy câu luyện tập')
+      const items = Array.isArray(data?.items) ? (data.items as PracticeQuestion[]) : []
+      setPracticeItems(items)
+      if (!items.length) setPracticeError('Không tìm thấy câu hỏi phù hợp để luyện tập.')
+    } catch (e: any) {
+      setPracticeError(e.message || 'Có lỗi xảy ra')
+    } finally {
+      setPracticeLoading(false)
+    }
+  }
+
+  const practiceButtonClass =
+    'border border-fuchsia-400/90 text-fuchsia-50 bg-fuchsia-500/20 hover:bg-fuchsia-500/30 hover:border-fuchsia-300 font-semibold ring-1 ring-fuchsia-400/30 shadow-[0_0_0_1px_rgba(236,72,153,0.25),0_0_18px_rgba(236,72,153,0.20)]'
+
+  const patchPracticeState = (questionId: string, patch: Record<string, any>) => {
+    setPracticeStateByQ(prev => {
+      const cur = prev[questionId] || {}
+      return { ...prev, [questionId]: { ...cur, ...patch } }
+    })
+  }
 
   useEffect(() => {
     if (!attemptId) return
@@ -363,9 +453,11 @@ export default function ResultPage() {
             <span>Câu {idx + 1}. </span>
             <span className="font-semibold">{q.content || ''}</span>
           </div>
-          {q.topic ? (
-            <div className="mt-1 text-sm text-gray-200/70">{q.topic}</div>
-          ) : null}
+          {(() => {
+            const raw = String((q as any).topic_unit || (q as any).topic || '').trim()
+            if (!raw) return null
+            return <div className="mt-1 text-sm text-gray-200/70">{getTopicLabel(q)}</div>
+          })()}
         </div>
         {headerBadge ? <div className="shrink-0">{headerBadge}</div> : null}
       </div>
@@ -420,7 +512,19 @@ export default function ResultPage() {
                   <div className="mt-1">{tip}</div>
                 </div>
               ) : null}
-              {isWrong && <div className="pt-2"><ReportDialog answer={qa} onReportSuccess={handleReportSuccess} /></div>}
+              {isWrong ? (
+                <div className="pt-2 flex flex-wrap gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => openPractice({ base_question_id: qa.question_id, strict: true }, `Luyện với câu tương tự • ${getTopicLabel(qa)}`)}
+                    className={`text-xs ${practiceButtonClass}`}
+                  >
+                    Luyện với câu tương tự
+                  </Button>
+                  <ReportDialog answer={qa} onReportSuccess={handleReportSuccess} />
+                </div>
+              ) : null}
             </div>
           </CardContent>
         </Card>
@@ -476,7 +580,19 @@ export default function ResultPage() {
                   <div className="mt-1">{tip}</div>
                 </div>
               ) : null}
-              {isWrong && <div className="pt-2"><ReportDialog answer={qa} onReportSuccess={handleReportSuccess} /></div>}
+              {isWrong ? (
+                <div className="pt-2 flex flex-wrap gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => openPractice({ base_question_id: qa.question_id, strict: true }, `Luyện với câu tương tự • ${getTopicLabel(qa)}`)}
+                    className={`text-xs ${practiceButtonClass}`}
+                  >
+                    Luyện với câu tương tự
+                  </Button>
+                  <ReportDialog answer={qa} onReportSuccess={handleReportSuccess} />
+                </div>
+              ) : null}
             </div>
           </CardContent>
         </Card>
@@ -488,6 +604,7 @@ export default function ResultPage() {
       const st = qa.statements || []
       const sumScore = st.reduce((acc, s) => acc + (Number(s.score_awarded) || 0), 0)
       const sumMax = st.reduce((acc, s) => acc + (Number(s.max_score) || 0), 0)
+      const hasWrong = st.some(s => s.is_correct === false)
       return (
         <Card key={q.question_id} id={`q-${idx + 1}`} className="border border-slate-700/60 bg-slate-900/30">
           <CardContent className="p-5 space-y-3">
@@ -553,6 +670,18 @@ export default function ResultPage() {
                 )
               })}
             </div>
+            {hasWrong ? (
+              <div className="pt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => openPractice({ base_question_id: qa.question_id, strict: true }, `Luyện với câu tương tự • ${getTopicLabel(qa)}`)}
+                  className={`text-xs ${practiceButtonClass}`}
+                >
+                  Luyện với câu tương tự
+                </Button>
+              </div>
+            ) : null}
           </CardContent>
         </Card>
       )
@@ -575,25 +704,324 @@ export default function ResultPage() {
     let correct = 0
     let wrong = 0
     for (const q of answers) {
-      if (q.question_type === 'true_false_group') {
-        const st = (q as TrueFalseGroupAnswer).statements || []
-        if (!st.length) continue
-        const wrongCount = st.filter(s => s.is_correct === false).length
-        if (wrongCount === 0) correct += 1
-        else wrong += 1
-        continue
-      }
-      if ((q as any).is_correct === true) correct += 1
-      else if ((q as any).is_correct === false) wrong += 1
+      const v = getFinalIsCorrect(q)
+      if (v === true) correct += 1
+      else wrong += 1
     }
     return { correct, wrong, total: answers.length }
   })()
+
+  const topicUnitStats = useMemo(() => {
+    const m: Record<string, { topic_label: string, correct: number, wrong: number, topic_unit: string, topic: string }> = {}
+    for (const q of answers) {
+      const label = getTopicLabel(q)
+      const key = label
+      const tu = String((q as any).topic_unit || '').trim()
+      const t = String((q as any).topic || '').trim()
+      if (!m[key]) m[key] = { topic_label: label, correct: 0, wrong: 0, topic_unit: tu, topic: t }
+      const ok = getFinalIsCorrect(q)
+      if (ok === true) m[key].correct += 1
+      else m[key].wrong += 1
+      if (!m[key].topic_unit && tu) m[key].topic_unit = tu
+      if (!m[key].topic && t) m[key].topic = t
+    }
+    return Object.values(m).sort((a, b) => (b.wrong - a.wrong) || (b.correct - a.correct) || a.topic_label.localeCompare(b.topic_label))
+  }, [answers, getFinalIsCorrect, getTopicLabel])
 
   const hasResult = answers.length > 0
  
   return (
     <div className="space-y-8">
       <h1 className="text-[28px] sm:text-[32px] font-semibold">Kết quả</h1>
+      {practiceOpen ? (
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => setPracticeOpen(false)}>
+          <div className="w-full max-w-4xl max-h-[90vh] overflow-auto rounded-lg border border-slate-700/60 bg-slate-900" onClick={(e) => e.stopPropagation()}>
+            <div className="p-4 border-b border-slate-700/60 flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="text-lg font-semibold truncate">{practiceTitle || 'Luyện tập câu tương tự'}</div>
+                <div className="text-xs text-slate-200/70">Chọn đáp án để xem kết quả ngay, kèm mẹo và giải thích.</div>
+              </div>
+              <Button variant="ghost" size="sm" onClick={() => setPracticeOpen(false)}>
+                Đóng
+              </Button>
+            </div>
+            <div className="p-4 space-y-4">
+              {practiceLoading ? (
+                <div className="text-sm text-slate-200/70">Đang tải câu hỏi…</div>
+              ) : practiceError ? (
+                <div className="p-3 rounded-md border border-rose-500/20 bg-rose-500/10 text-rose-100 text-sm">
+                  {practiceError}
+                </div>
+              ) : null}
+              {!practiceLoading && practiceItems.length ? (
+                <div className="space-y-4">
+                  {practiceItems.map((pq, i) => {
+                    const st = practiceStateByQ[pq.question_id] || {}
+                    const title = `Câu luyện ${i + 1}`
+                    const imageBlock = pq.image_url ? (
+                      <div className="space-y-2">
+                        <img
+                          src={pq.image_url}
+                          alt={pq.image_alt || 'Hình minh hoạ'}
+                          className="w-full max-h-64 object-contain rounded-md border"
+                          style={{ borderColor: 'var(--divider)' }}
+                        />
+                        {pq.image_caption ? (
+                          <div className="text-sm text-gray-200/70">{pq.image_caption}</div>
+                        ) : null}
+                      </div>
+                    ) : null
+
+                    const explainBlock = (explain: string | null | undefined) => {
+                      const t = (explain || '').trim()
+                      if (!t) return null
+                      return (
+                        <div className="p-3 rounded-md border border-blue-500/30 bg-blue-500/10 text-blue-100 text-sm whitespace-pre-line">
+                          <div className="font-semibold">Giải thích</div>
+                          <div className="mt-1">{t}</div>
+                        </div>
+                      )
+                    }
+
+                    const tipBlock = (tip: string | null | undefined) => {
+                      const t = (tip || '').trim()
+                      if (!t) return null
+                      return (
+                        <div className="p-3 rounded-md border border-yellow-500/30 bg-yellow-500/10 text-yellow-100 text-sm italic whitespace-pre-line">
+                          <div className="not-italic font-semibold">Mẹo học nhanh</div>
+                          <div className="mt-1">{t}</div>
+                        </div>
+                      )
+                    }
+
+                    if (pq.question_type === 'single_choice' || pq.question_type === 'true_false') {
+                      const chosenKey = String(st.chosen_key || '')
+                      const options = Array.isArray(pq.options) ? pq.options : []
+                      const correctOpt = options.find(o => o.is_correct)
+                      const chosenOpt = chosenKey ? options.find(o => o.key === chosenKey) : null
+                      const answered = !!chosenKey
+                      const ok = answered ? (chosenOpt?.is_correct === true) : null
+                      return (
+                        <Card key={pq.question_id} className="border border-slate-700/60 bg-slate-950/20">
+                          <CardContent className="p-5 space-y-3">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="flex-1">
+                                <div className="text-base font-semibold leading-snug">{title}</div>
+                                <div className="mt-1 text-base text-slate-100 whitespace-pre-line">{pq.content || ''}</div>
+                                {(pq.topic_unit || pq.topic) ? (
+                                  <div className="mt-1 text-sm text-slate-200/70">{pq.topic_unit || pq.topic}</div>
+                                ) : null}
+                              </div>
+                              {answered ? (
+                                <div className="shrink-0">
+                                  {ok ? <StatusBadge status="correct" /> : <StatusBadge status="wrong" />}
+                                </div>
+                              ) : null}
+                            </div>
+                            {imageBlock}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              {options.map((o) => {
+                                const isChosen = chosenKey === o.key
+                                const show = answered
+                                const cls = show && o.is_correct
+                                  ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-100'
+                                  : show && isChosen && !o.is_correct
+                                    ? 'border-rose-500/30 bg-rose-500/10 text-rose-100'
+                                    : 'border-slate-700/60'
+                                return (
+                                  <Button
+                                    key={o.key}
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={answered}
+                                    className={`justify-start text-left whitespace-pre-line h-auto py-2 ${cls}`}
+                                    onClick={() => patchPracticeState(pq.question_id, { chosen_key: o.key })}
+                                  >
+                                    <span className="font-semibold">{o.key}.</span>
+                                    <span>{o.text}</span>
+                                  </Button>
+                                )
+                              })}
+                            </div>
+                            {answered ? (
+                              <div className="text-sm text-slate-100">
+                                <span className="text-slate-200/70">Đáp án đúng:</span>{' '}
+                                <span className="font-semibold text-emerald-200">{correctOpt ? `${correctOpt.key}. ${correctOpt.text}` : '—'}</span>
+                              </div>
+                            ) : null}
+                            {answered ? (
+                              <div className="space-y-2">
+                                {explainBlock(pq.explanation)}
+                                {tipBlock(pq.tip)}
+                              </div>
+                            ) : null}
+                          </CardContent>
+                        </Card>
+                      )
+                    }
+
+                    if (pq.question_type === 'true_false_group') {
+                      const chosenMap = (st.chosen_by_statement || {}) as Record<string, boolean>
+                      const statements = Array.isArray(pq.statements) ? pq.statements : []
+                      const anyAnswered = Object.keys(chosenMap).length > 0
+                      return (
+                        <Card key={pq.question_id} className="border border-slate-700/60 bg-slate-950/20">
+                          <CardContent className="p-5 space-y-3">
+                            <div className="space-y-1">
+                              <div className="text-base font-semibold leading-snug">{title}</div>
+                              <div className="text-base text-slate-100 whitespace-pre-line">{pq.content || ''}</div>
+                              {(pq.topic_unit || pq.topic) ? (
+                                <div className="text-sm text-slate-200/70">{pq.topic_unit || pq.topic}</div>
+                              ) : null}
+                            </div>
+                            {imageBlock}
+                            <div className="space-y-3">
+                              {statements.map((s, idx2) => {
+                                const label = String.fromCharCode(97 + (idx2 % 26))
+                                const chosen = chosenMap[s.statement_id]
+                                const answered = typeof chosen === 'boolean'
+                                const ok = answered && typeof s.correct_answer === 'boolean' ? (chosen === s.correct_answer) : null
+                                return (
+                                  <div key={s.statement_id} className="border border-slate-700/60 bg-slate-900/30 rounded-md p-4 space-y-2">
+                                    <div className="flex items-start justify-between gap-3">
+                                      <div className="flex-1 text-slate-100">
+                                        <span className="font-semibold">{label}) </span>
+                                        <span>{s.text || ''}</span>
+                                      </div>
+                                      {answered && ok != null ? <div className="shrink-0">{ok ? <StatusBadge status="correct" /> : <StatusBadge status="wrong" />}</div> : null}
+                                    </div>
+                                    <div className="flex flex-wrap gap-2">
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        disabled={answered}
+                                        className="text-xs"
+                                        onClick={() => patchPracticeState(pq.question_id, { chosen_by_statement: { ...chosenMap, [s.statement_id]: true } })}
+                                      >
+                                        Đúng
+                                      </Button>
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        disabled={answered}
+                                        className="text-xs"
+                                        onClick={() => patchPracticeState(pq.question_id, { chosen_by_statement: { ...chosenMap, [s.statement_id]: false } })}
+                                      >
+                                        Sai
+                                      </Button>
+                                      {answered ? (
+                                        <div className="text-xs text-slate-200/70 flex items-center gap-2">
+                                          <span>Đáp án:</span>
+                                          <span className="text-emerald-200 font-semibold">
+                                            {s.correct_answer === true ? 'Đúng' : s.correct_answer === false ? 'Sai' : '—'}
+                                          </span>
+                                        </div>
+                                      ) : null}
+                                    </div>
+                                    {answered ? (
+                                      <div className="space-y-2">
+                                        {explainBlock(s.explanation)}
+                                        {tipBlock(s.tip)}
+                                      </div>
+                                    ) : null}
+                                  </div>
+                                )
+                              })}
+                            </div>
+                            {anyAnswered ? (
+                              <div className="space-y-2">
+                                {explainBlock(pq.explanation)}
+                                {tipBlock(pq.tip)}
+                              </div>
+                            ) : null}
+                          </CardContent>
+                        </Card>
+                      )
+                    }
+
+                    if (pq.question_type === 'short_answer') {
+                      const inputVal = String(st.answer_text || '')
+                      const checked = st.checked === true
+                      const accepted = Array.isArray(pq.accepted_answers) ? pq.accepted_answers : []
+                      const norm = (v: string) => v.trim().toLowerCase()
+                      const ok = checked ? accepted.some(a => norm(a.text) && norm(a.text) === norm(inputVal)) : null
+                      return (
+                        <Card key={pq.question_id} className="border border-slate-700/60 bg-slate-950/20">
+                          <CardContent className="p-5 space-y-3">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="flex-1">
+                                <div className="text-base font-semibold leading-snug">{title}</div>
+                                <div className="mt-1 text-base text-slate-100 whitespace-pre-line">{pq.content || ''}</div>
+                                {(pq.topic_unit || pq.topic) ? (
+                                  <div className="mt-1 text-sm text-slate-200/70">{pq.topic_unit || pq.topic}</div>
+                                ) : null}
+                              </div>
+                              {checked && ok != null ? (
+                                <div className="shrink-0">{ok ? <StatusBadge status="correct" /> : <StatusBadge status="wrong" />}</div>
+                              ) : null}
+                            </div>
+                            {imageBlock}
+                            <div className="space-y-2">
+                              <Input
+                                value={inputVal}
+                                placeholder="Nhập đáp án của em…"
+                                onChange={(e) => patchPracticeState(pq.question_id, { answer_text: e.target.value })}
+                                disabled={checked}
+                              />
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="secondary"
+                                  disabled={checked || !inputVal.trim()}
+                                  className="text-xs"
+                                  onClick={() => patchPracticeState(pq.question_id, { checked: true })}
+                                >
+                                  Chấm
+                                </Button>
+                                {checked ? (
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="text-xs"
+                                    onClick={() => patchPracticeState(pq.question_id, { checked: false, answer_text: '' })}
+                                  >
+                                    Làm lại
+                                  </Button>
+                                ) : null}
+                              </div>
+                            </div>
+                            {checked ? (
+                              <div className="space-y-2">
+                                <div className="text-sm text-slate-100">
+                                  <span className="text-slate-200/70">Đáp án tham khảo:</span>{' '}
+                                  <span className="font-semibold text-emerald-200">
+                                    {accepted.length ? accepted.map(a => a.text).filter(Boolean).join(' | ') : '—'}
+                                  </span>
+                                </div>
+                                {explainBlock(pq.explanation)}
+                                {tipBlock(pq.tip)}
+                              </div>
+                            ) : null}
+                          </CardContent>
+                        </Card>
+                      )
+                    }
+
+                    return (
+                      <Card key={pq.question_id} className="border border-slate-700/60 bg-slate-950/20">
+                        <CardContent className="p-5 space-y-3">
+                          <div className="text-base font-semibold">{title}</div>
+                          <div className="text-sm text-slate-200/70">Chưa hỗ trợ luyện cho dạng câu hỏi này.</div>
+                        </CardContent>
+                      </Card>
+                    )
+                  })}
+                </div>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      ) : null}
       {attempt ? (
         <div className="space-y-4">
           <Card className="border border-slate-700/60 bg-slate-900/30">
@@ -680,6 +1108,53 @@ export default function ResultPage() {
                     <ul className="list-disc pl-5 text-sm text-slate-100 space-y-1">
                       {feedback.plan.map((p, i) => <li key={i}>{p}</li>)}
                     </ul>
+                    {topicUnitStats.length ? (
+                      <div className="pt-4 space-y-2">
+                        <div className="text-sm font-semibold text-slate-100">Thống kê theo chủ đề</div>
+                        <div className="space-y-2">
+                          {topicUnitStats.map((t) => (
+                            <div key={t.topic_label} className="border border-slate-700/60 bg-slate-950/20 rounded-md p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                              <div className="min-w-0 space-y-2">
+                                <div className="text-sm font-medium text-slate-100 truncate">{t.topic_label}</div>
+                                <div className="flex items-center gap-2 text-xs">
+                                  <span className="text-emerald-200 font-semibold">Đúng {t.correct}</span>
+                                  <span className="text-slate-200/70">•</span>
+                                  <span className="text-rose-200 font-semibold">Sai {t.wrong}</span>
+                                  <span className="text-slate-200/70">
+                                    ({(() => {
+                                      const total = (t.correct || 0) + (t.wrong || 0)
+                                      const pct = total ? Math.round(((t.correct || 0) / total) * 100) : 0
+                                      return `${pct}%`
+                                    })()})
+                                  </span>
+                                </div>
+                                <div className="h-2 w-full rounded-full overflow-hidden bg-slate-800/60 border border-slate-700/60">
+                                  {(() => {
+                                    const total = (t.correct || 0) + (t.wrong || 0)
+                                    const p = total ? ((t.correct || 0) / total) * 100 : 0
+                                    const pc = Math.max(0, Math.min(100, p))
+                                    return (
+                                      <div className="h-full w-full flex">
+                                        <div className="h-full bg-emerald-500/70" style={{ width: `${pc}%` }} />
+                                        <div className="h-full bg-rose-500/70" style={{ width: `${100 - pc}%` }} />
+                                      </div>
+                                    )
+                                  })()}
+                                </div>
+                              </div>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className={`text-xs self-start sm:self-auto ${practiceButtonClass}`}
+                                onClick={() => openPractice(t.topic_unit ? { topic_unit: t.topic_unit } : { topic: t.topic || t.topic_label }, `Luyện tập câu tương tự • ${t.topic_label}`)}
+                              >
+                                Luyện tập câu tương tự
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
                   </div>
                 </CardContent>
               </Card>

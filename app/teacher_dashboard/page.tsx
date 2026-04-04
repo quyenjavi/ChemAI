@@ -56,7 +56,6 @@ export default async function TeacherDashboard() {
           {t.can_create_exam ? <Link href="/teacher_dashboard/exams/create" prefetch={false} className="underline">Tạo đề</Link> : null}
           {t.can_create_exam ? <Link href="/teacher_dashboard/exams/review" prefetch={false} className="underline">Xử lí đề mới tạo</Link> : null}
           {t.can_create_exam ? <Link href="/teacher_dashboard/matrix_exams/create" prefetch={false} className="underline">Tạo đề theo ma trận</Link> : null}
-          {t.can_create_exam ? <Link href="/teacher_dashboard/official_exams" prefetch={false} className="underline">Official Exam</Link> : null}
         </div>
       </div>
 

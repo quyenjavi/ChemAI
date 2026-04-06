@@ -47,6 +47,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
                   <span className="text-sm font-semibold" style={{color:'var(--text)'}}>Xin chào, {fullName || 'bạn'}</span>
                   {isTeacher ? <Link href="/teacher_dashboard" prefetch={false} className="text-sm underline" style={{color:'var(--gold)'}}>Giáo viên</Link> : null}
                   <Link href="/profile" prefetch={false} className="text-sm underline" style={{color:'var(--gold)'}}>Hồ sơ</Link>
+                  <Link href="/study-history" prefetch={false} className="text-sm underline" style={{color:'var(--gold)'}}>Lịch sử học tập</Link>
                   <Link href="/contact" prefetch={false} className="text-sm underline font-semibold" style={{color:'var(--gold)'}}>💬 Hỗ trợ</Link>
                   <SignOutButton />
                 </div>
@@ -66,6 +67,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
                       <div className="px-3 py-2 text-sm font-semibold" style={{color:'var(--text)'}}>Xin chào, {fullName || 'bạn'}</div>
                       {isTeacher ? <Link href="/teacher_dashboard" prefetch={false} className="block px-3 py-2 text-sm rounded hover:bg-slate-800/60" style={{color:'var(--gold)'}}>Giáo viên dashboard</Link> : null}
                       <Link href="/profile" prefetch={false} className="block px-3 py-2 text-sm rounded hover:bg-slate-800/60" style={{color:'var(--gold)'}}>Hồ sơ</Link>
+                      <Link href="/study-history" prefetch={false} className="block px-3 py-2 text-sm rounded hover:bg-slate-800/60" style={{color:'var(--gold)'}}>Lịch sử học tập</Link>
                       <Link href="/contact" prefetch={false} className="block px-3 py-2 text-sm rounded hover:bg-slate-800/60 font-semibold" style={{color:'var(--gold)'}}>💬 Hỗ trợ</Link>
                       <div className="px-3 py-2">
                         <SignOutButton />

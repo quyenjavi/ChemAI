@@ -221,7 +221,7 @@ export default function Dashboard() {
             <CardContent className="p-5">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div className="min-w-0">
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <div
                       className={`text-xs px-2 py-1 rounded-md border ${
                         ls.lesson_type === 'exam'
@@ -236,7 +236,7 @@ export default function Dashboard() {
                         Đề cử
                       </div>
                     ) : null}
-                    <CardTitle className="text-lg font-semibold truncate">{ls.title}</CardTitle>
+                    <CardTitle className="text-lg font-semibold whitespace-normal break-words basis-full sm:basis-auto">{ls.title}</CardTitle>
                   </div>
                   {ls.description ? (
                     <div className="mt-2 text-sm text-gray-200/70 whitespace-pre-line">{ls.description}</div>

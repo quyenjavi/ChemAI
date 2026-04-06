@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
 
 type LessonStat = {
   lesson_id: string
@@ -33,6 +34,7 @@ export default function LessonStatsClient() {
   const [recommendedDraft, setRecommendedDraft] = useState<Record<string, boolean>>({})
   const [displayOrderDraft, setDisplayOrderDraft] = useState<Record<string, string>>({})
   const [savingLessonId, setSavingLessonId] = useState<string | null>(null)
+  const [editingLessonId, setEditingLessonId] = useState<string | null>(null)
 
   useEffect(() => {
     setLoading(true)
@@ -86,6 +88,45 @@ export default function LessonStatsClient() {
 
   const gradesFromData = Array.from(new Set(rows.map(x => x.grade_name).filter(Boolean)))
   const totalPages = Math.max(1, Math.ceil(total / pageSize))
+
+  const editLesson = async (lessonId: string, currentTitle: string) => {
+    const title = window.prompt('Nhập tên bài học mới:', currentTitle || '')
+    if (!title) return
+    setEditingLessonId(lessonId)
+    setError('')
+    try {
+      const r = await fetch(`/api/teacher/lessons/${lessonId}/update`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ title }),
+      })
+      const j = await r.json().catch(() => ({}))
+      if (!r.ok) throw new Error(j.error || 'Không thể cập nhật bài học')
+      setRows(prev => prev.map(x => x.lesson_id === lessonId ? { ...x, lesson_title: title } : x))
+    } catch (e: any) {
+      setError(e.message || 'Có lỗi xảy ra')
+    } finally {
+      setEditingLessonId(null)
+    }
+  }
+
+  const deleteLesson = async (lessonId: string, currentTitle: string) => {
+    const ok = window.confirm(`Xóa bài học "${currentTitle}"? (Xóa mềm: ẩn khỏi học sinh)`)
+    if (!ok) return
+    setEditingLessonId(lessonId)
+    setError('')
+    try {
+      const r = await fetch(`/api/teacher/lessons/${lessonId}/delete`, { method: 'POST', credentials: 'include' })
+      const j = await r.json().catch(() => ({}))
+      if (!r.ok) throw new Error(j.error || 'Không thể xóa bài học')
+      setRows(prev => prev.map(x => x.lesson_id === lessonId ? { ...x, is_visible: false, lesson_title: x.lesson_title.startsWith('[Đã xóa]') ? x.lesson_title : `[Đã xóa] ${x.lesson_title}` } : x))
+    } catch (e: any) {
+      setError(e.message || 'Có lỗi xảy ra')
+    } finally {
+      setEditingLessonId(null)
+    }
+  }
 
   return (
     <div className="space-y-4">
@@ -144,17 +185,22 @@ export default function LessonStatsClient() {
               <th className="text-left p-2">Điểm trung bình</th>
               <th className="text-left p-2">Thời gian tạo</th>
               <th className="text-left p-2">Hiển thị</th>
+              <th className="text-left p-2">Sửa/Xóa</th>
               <th className="text-left p-2">Lưu</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td className="p-3 text-sm" colSpan={10}>Đang tải...</td></tr>
+              <tr><td className="p-3 text-sm" colSpan={11}>Đang tải...</td></tr>
             ) : rows.length === 0 ? (
-              <tr><td className="p-3 text-sm" style={{color:'var(--text-muted)'}} colSpan={10}>Chưa có dữ liệu bài học</td></tr>
+              <tr><td className="p-3 text-sm" style={{color:'var(--text-muted)'}} colSpan={11}>Chưa có dữ liệu bài học</td></tr>
             ) : rows.map(l => (
               <tr key={l.lesson_id}>
-                <td className="p-2">{l.lesson_title}</td>
+                <td className="p-2">
+                  <Link href={`/teacher_dashboard/analytics/lessons/${l.lesson_id}`} prefetch={false} className="underline">
+                    {l.lesson_title}
+                  </Link>
+                </td>
                 <td className="p-2">{l.grade_name || '—'}</td>
                 <td className="p-2">
                   <div className="space-y-1">
@@ -212,6 +258,24 @@ export default function LessonStatsClient() {
                     <option value="true">Hiển thị</option>
                     <option value="false">Không hiển thị</option>
                   </select>
+                </td>
+                <td className="p-2">
+                  <div className="flex items-center gap-2">
+                    <button
+                      className="border rounded px-3 py-2"
+                      disabled={editingLessonId === l.lesson_id || savingLessonId === l.lesson_id}
+                      onClick={() => editLesson(l.lesson_id, l.lesson_title)}
+                    >
+                      Sửa
+                    </button>
+                    <button
+                      className="border rounded px-3 py-2"
+                      disabled={editingLessonId === l.lesson_id || savingLessonId === l.lesson_id}
+                      onClick={() => deleteLesson(l.lesson_id, l.lesson_title)}
+                    >
+                      Xóa
+                    </button>
+                  </div>
                 </td>
                 <td className="p-2">
                   <button

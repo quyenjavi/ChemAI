@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { supabaseBrowser } from '@/lib/supabase/client'
+import { useAuth } from '@/components/AuthProvider'
 
 type TopicStat = {
   topic_unit: string | null
@@ -54,6 +54,7 @@ function normalizeText(s: any) {
 
 export default function StudyHistoryPage() {
   const router = useRouter()
+  const { user, loading: authLoading } = useAuth()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [topicStats, setTopicStats] = useState<TopicStat[]>([])
@@ -79,14 +80,11 @@ export default function StudyHistoryPage() {
   const [practiceStateByQ, setPracticeStateByQ] = useState<Record<string, any>>({})
 
   const loadSummary = useCallback(async () => {
+    if (authLoading) return
+    if (!user?.id) { router.push('/login'); return }
     setLoading(true)
     setError('')
     try {
-      const { data: { user } } = await supabaseBrowser.auth.getUser()
-      if (!user?.id) {
-        router.push('/login')
-        return
-      }
       const res = await fetch('/api/student/study-history', { credentials: 'include' })
       const json = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(json.error || 'Không thể tải lịch sử học tập')
@@ -97,7 +95,7 @@ export default function StudyHistoryPage() {
     } finally {
       setLoading(false)
     }
-  }, [router])
+  }, [authLoading, router, user?.id])
 
   useEffect(() => {
     loadSummary()

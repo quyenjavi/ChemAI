@@ -31,6 +31,15 @@ export async function middleware(req: NextRequest) {
     if (pathname.startsWith('/api') || pathname.startsWith('/_next') || pathname.startsWith('/favicon')) return res
   }
 
+  const needsSession =
+    maintenanceEnabled ||
+    !isPublic ||
+    pathname === '/' ||
+    pathname.startsWith('/login') ||
+    pathname.startsWith('/verify')
+
+  if (!needsSession) return res
+
   const supabase = createMiddlewareClient({
     req,
     res,

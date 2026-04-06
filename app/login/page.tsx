@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { useAuth } from '@/components/AuthProvider'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -12,14 +13,12 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const router = useRouter()
+  const { user, loading: authLoading } = useAuth()
 
   useEffect(() => {
-    supabaseBrowser.auth.getUser().then(({ data }) => {
-      if (data.user) {
-        router.replace('/')
-      }
-    })
-  }, [router])
+    if (authLoading) return
+    if (user?.id) router.replace('/dashboard')
+  }, [authLoading, router, user?.id])
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -50,7 +49,7 @@ export default function LoginPage() {
         return
       }
     }
-    fetch('/api/profile/migrate', { method: 'POST' }).catch(()=>{})
+    fetch('/api/profile/migrate', { method: 'POST', credentials: 'include' }).catch(()=>{})
     router.replace('/dashboard')
     router.refresh()
   }

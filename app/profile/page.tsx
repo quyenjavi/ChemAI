@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { useAuth } from '@/components/AuthProvider'
 
 export default function ProfilePage() {
   const [fullName, setFullName] = useState('')
@@ -23,18 +24,22 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(false)
 
   const router = useRouter()
+  const { user, loading: authLoading } = useAuth()
 
   useEffect(() => {
-    supabaseBrowser.auth.getUser().then(async ({ data }) => {
-      if (!data.user) {
-        router.push('/login')
-        return
-      }
+    if (authLoading) return
+    if (!user?.id) {
+      router.push('/login')
+      return
+    }
+    let cancelled = false
+    ;(async () => {
       const { data: existing } = await supabaseBrowser
         .from('student_profiles')
         .select('*')
-        .eq('user_id', data.user.id)
+        .eq('user_id', user.id)
         .maybeSingle()
+      if (cancelled) return
       if (existing) {
         setFullName(existing.full_name || '')
         setSchool(existing.school || '')
@@ -49,6 +54,7 @@ export default function ProfilePage() {
       const cId = city?.id || null
       if (cId) {
         const { data: sch } = await supabaseBrowser.from('schools').select('id,name').eq('city_id', cId).order('name', { ascending: true })
+        if (cancelled) return
         setSchools(sch || [])
         if (!existing?.school_id) {
           const defaultSchool = (sch || []).find(s => s.name === 'THPT Phạm Phú Thứ') || (sch || [])[0]
@@ -56,6 +62,7 @@ export default function ProfilePage() {
         }
       }
       const { data: gr } = await supabaseBrowser.from('grades').select('id,name').order('name', { ascending: true })
+      if (cancelled) return
       setGrades((gr || []).filter(g => ['10','11','12'].includes(String(g.name))))
       if (!existing?.academic_year_id) {
         const now = new Date()
@@ -64,11 +71,13 @@ export default function ProfilePage() {
         const d = now.getDate()
         const label = (m > 7 || (m === 7 && d >= 1)) ? `${y}-${y+1}` : `${y-1}-${y}`
         const { data: ay } = await supabaseBrowser.from('academic_years').select('id,name').eq('name', label).maybeSingle()
+        if (cancelled) return
         setAcademicYearId(ay?.id || null)
         setAcademicYear(ay?.name || '')
       }
-    })
-  }, [router])
+    })()
+    return () => { cancelled = true }
+  }, [authLoading, router, user?.id])
 
   useEffect(() => {
     if (!schoolId || !gradeId || !academicYearId) {

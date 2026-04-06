@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { supabaseBrowser } from '@/lib/supabase/client'
+import { useAuth } from '@/components/AuthProvider'
 
 type LessonDetail = {
   id: string
@@ -113,6 +113,7 @@ export default function LessonManageClient({ lessonId }: { lessonId: string }) {
   const [questions, setQuestions] = useState<LessonQuestion[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const { ensureAuthCookie } = useAuth()
 
   const [editingLesson, setEditingLesson] = useState(false)
   const [lessonTitleDraft, setLessonTitleDraft] = useState('')
@@ -139,20 +140,8 @@ export default function LessonManageClient({ lessonId }: { lessonId: string }) {
   const [imgUploading, setImgUploading] = useState(false)
 
   const syncServerCookieOnce = useCallback(async () => {
-    const { data: sess } = await supabaseBrowser.auth.getSession()
-    const session = sess.session
-    if (!session?.access_token || !session?.refresh_token) return false
-    const r = await fetch('/api/auth/cookie', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({
-        access_token: session.access_token,
-        refresh_token: session.refresh_token
-      })
-    }).catch(() => null)
-    return !!(r && r.ok)
-  }, [])
+    return await ensureAuthCookie()
+  }, [ensureAuthCookie])
 
   const fetchJson = useCallback(async (url: string, init?: RequestInit) => {
     let res = await fetch(url, { ...(init || {}), credentials: 'include' })

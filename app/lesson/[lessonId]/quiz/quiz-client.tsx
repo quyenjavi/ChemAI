@@ -1,9 +1,9 @@
 'use client'
 import { useEffect, useMemo, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabaseBrowser } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { useAuth } from '@/components/AuthProvider'
 
 type Q = {
   id: string,
@@ -32,6 +32,7 @@ export default function QuizClient({ lessonId, n }: { lessonId: string, n?: stri
   const [quoteIndex, setQuoteIndex] = useState(0)
   const [initError, setInitError] = useState('')
   const router = useRouter()
+  const { user, loading: authLoading, ensureAuthCookie } = useAuth()
 
   const quotes = useMemo(() => ([
     'Hoá học dạy ta: thay đổi cấu trúc nhỏ có thể đổi cả tính chất.',
@@ -71,35 +72,21 @@ export default function QuizClient({ lessonId, n }: { lessonId: string, n?: stri
 
   useEffect(() => {
     if (!lessonId || attemptIdRef.current || initStartedRef.current) return
+    if (authLoading) return
+    if (!user?.id) {
+      router.push('/login')
+      return
+    }
     
     initStartedRef.current = true
     let isMounted = true
     
     const initQuiz = async () => {
       setInitError('')
-      const { data } = await supabaseBrowser.auth.getUser()
-      if (!data.user) {
-        router.push('/login')
-        return
-      }
-
-      const syncServerCookieOnce = async () => {
-        const { data: sess } = await supabaseBrowser.auth.getSession()
-        const session = sess.session
-        if (!session?.access_token || !session?.refresh_token) return false
-        const r = await fetch('/api/auth/cookie', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({
-            access_token: session.access_token,
-            refresh_token: session.refresh_token
-          })
-        }).catch(() => null)
-        return !!(r && r.ok)
-      }
 
       try {
+        await ensureAuthCookie()
+
         // 1. Create attempt first
         let createRes = await fetch('/api/attempts/create', {
           method: 'POST',
@@ -109,15 +96,13 @@ export default function QuizClient({ lessonId, n }: { lessonId: string, n?: stri
         })
         
         if (createRes.status === 401) {
-          const ok = await syncServerCookieOnce()
-          if (ok) {
-            createRes = await fetch('/api/attempts/create', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ lessonId }),
-              credentials: 'include',
-            })
-          }
+          await ensureAuthCookie()
+          createRes = await fetch('/api/attempts/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ lessonId }),
+            credentials: 'include',
+          })
         }
 
         const createJson = await createRes.json().catch(() => ({}))
@@ -143,10 +128,8 @@ export default function QuizClient({ lessonId, n }: { lessonId: string, n?: stri
         fetchCountRef.current += 1
         let qRes = await fetch(qUrl, { credentials: 'include' })
         if (qRes.status === 401) {
-          const ok = await syncServerCookieOnce()
-          if (ok) {
-            qRes = await fetch(qUrl, { credentials: 'include' })
-          }
+          await ensureAuthCookie()
+          qRes = await fetch(qUrl, { credentials: 'include' })
         }
         const qJson = await qRes.json().catch(async () => ({ error: await qRes.text().catch(()=> 'Lỗi tải câu hỏi') }))
         
@@ -170,7 +153,7 @@ export default function QuizClient({ lessonId, n }: { lessonId: string, n?: stri
     return () => {
       isMounted = false
     }
-  }, [lessonId, desiredCount, router])
+  }, [authLoading, ensureAuthCookie, lessonId, desiredCount, router, user?.id])
 
   const canSubmit = useMemo(() => {
     return !submitting && attemptId && questions.length > 0

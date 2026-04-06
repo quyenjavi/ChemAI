@@ -1,10 +1,10 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { supabaseBrowser } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { useAuth } from '@/components/AuthProvider'
 
 type Mode = 'menu' | 'bug' | 'teacher'
 
@@ -13,19 +13,16 @@ export default function ContactPage() {
   const [sessionUser, setSessionUser] = useState<{ id: string, email?: string, full_name?: string } | null>(null)
   const [okMsg, setOkMsg] = useState('')
   const [errMsg, setErrMsg] = useState('')
+  const { user } = useAuth()
 
   useEffect(() => {
-    supabaseBrowser.auth.getUser().then(({ data }) => {
-      const user = data.user
-      if (user?.id) {
-        setSessionUser({
-          id: user.id,
-          email: (user.user_metadata?.email || user.email || '') as string,
-          full_name: (user.user_metadata?.full_name || '') as string
-        })
-      }
+    if (!user?.id) { setSessionUser(null); return }
+    setSessionUser({
+      id: user.id,
+      email: (user.user_metadata?.email || user.email || '') as string,
+      full_name: (user.user_metadata?.full_name || '') as string
     })
-  }, [])
+  }, [user])
 
   return (
     <div className="max-w-2xl mx-auto space-y-4">

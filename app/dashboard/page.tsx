@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
+import { useAuth } from '@/components/AuthProvider'
 type Grade = { id: string, name: string }
 type Lesson = {
   id: string,
@@ -25,6 +26,7 @@ const TopTab = dynamic(() => import('./TopTab'), {
 
 export default function Dashboard() {
   const router = useRouter()
+  const { user } = useAuth()
   const [grades, setGrades] = useState<Grade[]>([])
   const [activeGradeId, setActiveGradeId] = useState<string | null>(null)
   const [preferredGradeId, setPreferredGradeId] = useState<string | null>(null)
@@ -42,7 +44,6 @@ export default function Dashboard() {
 
   useEffect(() => {
     ;(async () => {
-      const { data: { user } } = await supabaseBrowser.auth.getUser()
       if (!user?.id) return
       const { data: profile } = await supabaseBrowser
         .from('student_profiles')
@@ -52,7 +53,7 @@ export default function Dashboard() {
       const gid = profile?.grade_id ? String(profile.grade_id) : null
       if (gid) setPreferredGradeId(gid)
     })()
-  }, [])
+  }, [user?.id])
 
   useEffect(() => {
     supabaseBrowser.from('grades').select('*').order('created_at', { ascending: true }).then(({ data }) => {

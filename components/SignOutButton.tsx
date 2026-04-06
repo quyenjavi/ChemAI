@@ -7,6 +7,12 @@ export default function SignOutButton() {
   const router = useRouter()
   async function signOut() {
     await supabaseBrowser.auth.signOut()
+    await fetch('/api/auth/cookie', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ action: 'signout' })
+    }).catch(() => null)
     router.replace('/login')
     router.refresh()
   }

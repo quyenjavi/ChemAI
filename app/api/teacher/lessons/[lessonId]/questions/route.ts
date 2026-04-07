@@ -58,6 +58,7 @@ export async function GET(_: Request, { params }: { params: { lessonId: string }
     const statementsByQ: Record<string, any[]> = {}
     for (const s of (stmtRes as any).data || []) {
       const mapped = {
+        statement_id: s.id,
         statement_key: s.statement_key,
         content: s.statement_text,
         correct_answer: s.correct_answer,

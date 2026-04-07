@@ -75,22 +75,110 @@ export async function POST(req: Request, { params }: { params: { lessonId: strin
     }
 
     if (body.statements !== undefined && questionType === 'true_false_group') {
-      await svc.from('question_statements').delete().eq('question_id', params.questionId)
       const statements = Array.isArray(body.statements) ? body.statements : []
-      const rows = statements.map((s: any, idx: number) => ({
-        question_id: params.questionId,
-        statement_key: String(s.statement_key || '').trim(),
-        statement_text: String(s.content || '').trim(),
-        correct_answer: s.correct_answer === true,
-        score: s.score == null ? null : Number(s.score),
-        explanation: s.explanation == null ? null : String(s.explanation || ''),
-        tip: s.tip == null ? null : String(s.tip || ''),
-        sort_order: idx + 1,
-        created_at: nowIso,
-      })).filter((s: any) => s.statement_key && s.statement_text)
-      if (rows.length) {
-        const ins = await svc.from('question_statements').insert(rows as any)
-        if (ins.error) return NextResponse.json({ error: ins.error.message }, { status: 400 })
+      const normalized = statements.map((s: any, idx: number) => {
+        const statement_id = s.statement_id == null ? null : String(s.statement_id || '').trim() || null
+        const statement_key = String(s.statement_key || '').trim().toLowerCase()
+        const statement_text = String(s.content || '').trim()
+        const correct_answer = (s.correct_answer === true) ? true : (s.correct_answer === false) ? false : null
+        const score = s.score == null ? null : Number(s.score)
+        const explanation = s.explanation == null ? null : String(s.explanation || '')
+        const tip = s.tip == null ? null : String(s.tip || '')
+        return { statement_id, statement_key, statement_text, correct_answer, score: isFinite(score as any) ? score : null, explanation, tip, sort_order: idx + 1 }
+      })
+
+      const seenKeys = new Set<string>()
+      for (const s of normalized) {
+        if (!s.statement_key) return NextResponse.json({ error: 'statement_key is required' }, { status: 400 })
+        if (seenKeys.has(s.statement_key)) return NextResponse.json({ error: `Duplicate statement_key: ${s.statement_key}` }, { status: 400 })
+        seenKeys.add(s.statement_key)
+        if (s.statement_text && s.correct_answer == null) {
+          return NextResponse.json({ error: `correct_answer is required for statement_key ${s.statement_key}` }, { status: 400 })
+        }
+      }
+
+      const { data: existingSt, error: exErr } = await svc
+        .from('question_statements')
+        .select('id, question_id, statement_key')
+        .eq('question_id', params.questionId)
+        .limit(2000)
+      if (exErr) return NextResponse.json({ error: exErr.message }, { status: 400 })
+
+      const existingIds = new Set<string>((existingSt || []).map((r: any) => String(r.id)))
+      const existingByKey: Record<string, string> = {}
+      for (const r of (existingSt || []) as any[]) {
+        const k = String(r.statement_key || '').trim().toLowerCase()
+        if (!k) continue
+        existingByKey[k] = String(r.id)
+      }
+
+      const keepIds: string[] = []
+      const deleteCandidates: string[] = []
+
+      for (const s of normalized) {
+        const key = s.statement_key
+        const desiredId = s.statement_id
+        const fallbackId = existingByKey[key] || null
+        const targetId = desiredId || fallbackId
+
+        if (s.statement_text) {
+          if (desiredId && !existingIds.has(desiredId)) {
+            return NextResponse.json({ error: `Invalid statement_id for key ${key}` }, { status: 400 })
+          }
+
+          if (targetId) {
+            keepIds.push(targetId)
+            const updSt = await svc
+              .from('question_statements')
+              .update({
+                statement_key: key,
+                statement_text: s.statement_text,
+                correct_answer: s.correct_answer,
+                score: s.score,
+                explanation: s.explanation,
+                tip: s.tip,
+                sort_order: s.sort_order,
+              } as any)
+              .eq('id', targetId)
+              .eq('question_id', params.questionId)
+            if (updSt.error) return NextResponse.json({ error: updSt.error.message }, { status: 400 })
+          } else {
+            const insSt = await svc
+              .from('question_statements')
+              .insert({
+                question_id: params.questionId,
+                statement_key: key,
+                statement_text: s.statement_text,
+                correct_answer: s.correct_answer,
+                score: s.score,
+                explanation: s.explanation,
+                tip: s.tip,
+                sort_order: s.sort_order,
+                created_at: nowIso,
+              } as any)
+              .select('id')
+              .single()
+            if (insSt.error) return NextResponse.json({ error: insSt.error.message }, { status: 400 })
+            keepIds.push(String(insSt.data.id))
+          }
+        } else if (targetId) {
+          deleteCandidates.push(targetId)
+        }
+      }
+
+      const uniqueDelete = Array.from(new Set(deleteCandidates.filter((id) => !keepIds.includes(id))))
+      for (const id of uniqueDelete) {
+        const { data: refs, error: refErr } = await svc
+          .from('quiz_attempt_answers')
+          .select('id')
+          .eq('statement_id', id)
+          .limit(1)
+        if (refErr) return NextResponse.json({ error: refErr.message }, { status: 400 })
+        if (refs && refs.length > 0) {
+          return NextResponse.json({ error: 'Không thể xóa statement vì đang được tham chiếu trong quiz_attempt_answers', statement_id: id }, { status: 400 })
+        }
+        const del = await svc.from('question_statements').delete().eq('id', id).eq('question_id', params.questionId)
+        if (del.error) return NextResponse.json({ error: del.error.message }, { status: 400 })
       }
     }
 

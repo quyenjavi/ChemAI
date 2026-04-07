@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useMemo, useState, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -20,6 +20,7 @@ type Q = {
 }
 
 export default function QuizClient({ lessonId, n }: { lessonId: string, n?: string }) {
+  const EXAM_DURATION_SEC = 45 * 60
   const desiredCount = (() => {
     const parsedN = Number(n)
     return (Number.isFinite(parsedN) && parsedN > 0) ? Math.min(50, parsedN) : null
@@ -31,6 +32,7 @@ export default function QuizClient({ lessonId, n }: { lessonId: string, n?: stri
   const [submitting, setSubmitting] = useState(false)
   const [quoteIndex, setQuoteIndex] = useState(0)
   const [initError, setInitError] = useState('')
+  const [examTimeLeftSec, setExamTimeLeftSec] = useState<number | null>(null)
   const router = useRouter()
   const { user, loading: authLoading, ensureAuthCookie } = useAuth()
 
@@ -59,16 +61,31 @@ export default function QuizClient({ lessonId, n }: { lessonId: string, n?: stri
   const initStartedRef = useRef(false)
   const attemptIdRef = useRef<string | null>(null)
   const fetchCountRef = useRef(0)
+  const examEndAtRef = useRef<number | null>(null)
+  const autoSubmittedRef = useRef(false)
+  const questionsRef = useRef<Q[]>([])
+  const answersRef = useRef<Record<string, string>>({})
 
   useEffect(() => {
     initStartedRef.current = false
     attemptIdRef.current = null
     fetchCountRef.current = 0
+    examEndAtRef.current = null
+    autoSubmittedRef.current = false
     setQuestions([])
     setAnswers({})
     setAttemptId(null)
     setInitError('')
+    setExamTimeLeftSec(null)
   }, [lessonId])
+
+  useEffect(() => {
+    questionsRef.current = questions
+  }, [questions])
+
+  useEffect(() => {
+    answersRef.current = answers
+  }, [answers])
 
   useEffect(() => {
     if (!lessonId || attemptIdRef.current || initStartedRef.current) return
@@ -189,41 +206,98 @@ export default function QuizClient({ lessonId, n }: { lessonId: string, n?: stri
     return questions.length ? Math.round((answeredCount / questions.length) * 100) : 0
   }, [answeredCount, questions.length])
 
-  async function onSubmit() {
-    if (!attemptId) return
+  const onSubmit = useCallback(async () => {
+    const id = attemptIdRef.current || attemptId
+    const qs = questionsRef.current || []
+    const ans = answersRef.current || {}
+    if (!id) return
+    if (!qs.length) return
+
+    if (submitting) return
     setSubmitting(true)
-    const answered: Array<any> = questions.map((q) => {
-      if (q.question_type === 'short_answer') {
-        return { questionId: q.id, answer_text: (answers[q.id] || '').trim() }
-      }
-      if (q.question_type === 'true_false_group') {
-        const statement_answers: Record<string, boolean | null> = {}
-        for (const s of (q.statements || [])) {
-          const v = answers[`${q.id}::${s.id}`]
-          statement_answers[s.id] = v === 'true' ? true : v === 'false' ? false : null
+
+    try {
+      await ensureAuthCookie()
+      const answered: Array<any> = qs.map((q) => {
+        if (q.question_type === 'short_answer') {
+          return { questionId: q.id, answer_text: (ans[q.id] || '').trim() }
         }
-        return { questionId: q.id, statement_answers }
+        if (q.question_type === 'true_false_group') {
+          const statement_answers: Record<string, boolean | null> = {}
+          for (const s of (q.statements || [])) {
+            const v = ans[`${q.id}::${s.id}`]
+            statement_answers[s.id] = v === 'true' ? true : v === 'false' ? false : null
+          }
+          return { questionId: q.id, statement_answers }
+        }
+        return { questionId: q.id, selected_answer: (ans[q.id] || '') }
+      })
+      const payload = {
+        attemptId: id,
+        answers: answered
       }
-      return { questionId: q.id, selected_answer: (answers[q.id] || '') }
-    })
-    const payload = {
-      attemptId,
-      answers: answered
+      const res = await fetch('/api/attempts/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        credentials: 'include'
+      })
+      if (!res.ok) {
+        alert('Nộp bài thất bại')
+        return
+      }
+      const j = await res.json()
+      if (lessonType === 'exam') {
+        try {
+          localStorage.removeItem(`exam_end_at:${id}`)
+        } catch {}
+      }
+      router.push(`/attempt/${j.attemptId}/result`)
+    } finally {
+      setSubmitting(false)
     }
-    const res = await fetch('/api/attempts/submit', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-      credentials: 'include'
-    })
-    setSubmitting(false)
-    if (!res.ok) {
-      alert('Nộp bài thất bại')
+  }, [attemptId, ensureAuthCookie, lessonType, router, submitting])
+
+  const formatTimeLeft = useCallback((sec: number) => {
+    const s = Math.max(0, Math.floor(sec))
+    const mm = Math.floor(s / 60)
+    const ss = s % 60
+    return `${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}`
+  }, [])
+
+  useEffect(() => {
+    if (lessonType !== 'exam' || !attemptId) {
+      examEndAtRef.current = null
+      autoSubmittedRef.current = false
+      setExamTimeLeftSec(null)
       return
     }
-    const j = await res.json()
-    router.push(`/attempt/${j.attemptId}/result`)
-  }
+
+    const key = `exam_end_at:${attemptId}`
+    const now = Date.now()
+    const stored = Number(localStorage.getItem(key) || '')
+    const endAt = Number.isFinite(stored) && stored > 0 ? stored : (now + EXAM_DURATION_SEC * 1000)
+    if (!Number.isFinite(stored) || stored <= 0) {
+      localStorage.setItem(key, String(endAt))
+    }
+    examEndAtRef.current = endAt
+
+    const tick = () => {
+      const end = examEndAtRef.current || endAt
+      const left = Math.max(0, Math.ceil((end - Date.now()) / 1000))
+      setExamTimeLeftSec(left)
+
+      if (left <= 0 && !autoSubmittedRef.current && !submitting && attemptId && questions.length > 0) {
+        autoSubmittedRef.current = true
+        localStorage.removeItem(key)
+        onSubmit()
+      }
+    }
+
+    tick()
+    const t = setInterval(tick, 1000)
+    return () => clearInterval(t)
+  }, [EXAM_DURATION_SEC, attemptId, lessonType, onSubmit, questions.length, submitting])
 
   return (
     <div className="space-y-6">
@@ -247,6 +321,14 @@ export default function QuizClient({ lessonId, n }: { lessonId: string, n?: stri
         <h1 className="text-[22px] sm:text-[24px] font-semibold">Bài quiz</h1>
         <div className="text-sm text-gray-200/70">
           {(lessonType === 'exam') ? 'Thi thử' : 'Luyện tập'} · Số câu: {questions.length}
+          {(lessonType === 'exam') && (examTimeLeftSec != null) ? (
+            <>
+              {' '}· Thời gian còn lại:{' '}
+              <span className={examTimeLeftSec <= 5 * 60 ? 'text-rose-300 font-semibold' : 'text-emerald-300 font-semibold'}>
+                {formatTimeLeft(examTimeLeftSec)}
+              </span>
+            </>
+          ) : null}
         </div>
       </div>
       {initError ? <div className="text-sm text-red-600">{initError}</div> : null}

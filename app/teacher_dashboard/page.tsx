@@ -53,6 +53,7 @@ export default async function TeacherDashboard() {
         <div className="flex items-center gap-2">
           <Link href="/teacher_dashboard/questions" prefetch={false} className="underline">Quản lí câu hỏi</Link>
           <Link href="/teacher_dashboard/analytics" prefetch={false} className="underline">Quản lí bài học</Link>
+          <Link href="/teacher_dashboard/official_exams" prefetch={false} className="underline">Official Exam</Link>
           {t.can_create_exam ? <Link href="/teacher_dashboard/exams/create" prefetch={false} className="underline">Tạo đề</Link> : null}
           {t.can_create_exam ? <Link href="/teacher_dashboard/exams/review" prefetch={false} className="underline">Xử lí đề mới tạo</Link> : null}
           {t.can_create_exam ? <Link href="/teacher_dashboard/matrix_exams/create" prefetch={false} className="underline">Tạo đề theo ma trận</Link> : null}

@@ -18,7 +18,7 @@ type LessonDetail = {
 }
 
 type OptionRow = { option_key: string, content: string, is_correct: boolean, tip?: string | null, explanation?: string | null }
-type StatementRow = { statement_key: string, content: string, correct_answer: boolean, score: number | null, tip?: string | null, explanation?: string | null }
+type StatementRow = { statement_id?: string | null, statement_key: string, content: string, correct_answer: boolean, score: number | null, tip?: string | null, explanation?: string | null }
 type ShortAnswerRow = { content: string, score: number | null, tip?: string | null, explanation?: string | null }
 
 type LessonQuestion = {
@@ -82,6 +82,7 @@ function normalizeStatements(rows: any[]): StatementRow[] {
     const k = String(s.statement_key || '').toLowerCase()
     if (!k) continue
     byKey[k] = {
+      statement_id: s.statement_id ? String(s.statement_id) : (s.id ? String(s.id) : null),
       statement_key: k,
       content: String(s.content || ''),
       correct_answer: s.correct_answer === true,
@@ -90,7 +91,7 @@ function normalizeStatements(rows: any[]): StatementRow[] {
       explanation: s.explanation == null ? null : String(s.explanation || ''),
     }
   }
-  return keys.map(k => byKey[k] || ({ statement_key: k, content: '', correct_answer: false, score: null }))
+  return keys.map(k => byKey[k] || ({ statement_id: null, statement_key: k, content: '', correct_answer: false, score: null }))
 }
 
 function normalizeShortAnswers(rows: any[]): ShortAnswerRow[] {

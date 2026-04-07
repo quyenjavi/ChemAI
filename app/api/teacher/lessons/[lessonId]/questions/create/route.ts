@@ -75,9 +75,16 @@ export async function POST(req: Request, { params }: { params: { lessonId: strin
 
     if (question_type === 'true_false_group') {
       const statements = Array.isArray(body.statements) ? body.statements : []
+      const seen = new Set<string>()
+      for (const s of statements) {
+        const k = String(s?.statement_key || '').trim().toLowerCase()
+        if (!k) continue
+        if (seen.has(k)) return NextResponse.json({ error: `Duplicate statement_key: ${k}` }, { status: 400 })
+        seen.add(k)
+      }
       const rows = statements.map((s: any, idx: number) => ({
         question_id: qid,
-        statement_key: String(s.statement_key || '').trim(),
+        statement_key: String(s.statement_key || '').trim().toLowerCase(),
         statement_text: String(s.content || '').trim(),
         correct_answer: s.correct_answer === true,
         score: s.score == null ? null : Number(s.score),

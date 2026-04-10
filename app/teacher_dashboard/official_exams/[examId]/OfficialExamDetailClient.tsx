@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -8,147 +8,154 @@ import { Input } from '@/components/ui/input'
 
 type ExamDetail = {
   id: string
-  exam_title: string
+  title: string
+  school_id: string | null
   grade_id: string | null
-  grade_name: string | null
-  subject_name: string | null
   exam_date: string | null
   status: string | null
-  description: string | null
-  academic_year: string | null
+  lesson_id: string | null
+  total_students: number
+  total_sheets: number
+  published_at: string | null
 }
 
 type PaperRow = {
   id: string
   paper_code: string
-  process_status: string
   lesson_id: string | null
   lesson_title: string | null
-  lesson_question_count: number
 }
 
 type LessonItem = { id: string, title: string, is_visible: boolean }
 
-type SheetItem = {
+type BatchItem = { batch_id: string, batch_name: string | null, sheets_count: number }
+
+type UnmatchedItem = {
   id: string
-  sheet_no: number | null
   detected_student_code: string | null
   detected_paper_code: string | null
+  final_student_code: string | null
+  final_paper_code: string | null
+  student_id: string | null
+  paper_id: string | null
   match_status: string | null
   process_status: string | null
-  signed_url: string | null
-  created_at: string | null
-}
-
-type ScoreRow = {
-  id: string
-  student_code: string | null
-  full_name: string | null
-  class_name: string | null
-  paper_code: string | null
-  lesson_title: string | null
-  raw_score: any
-  total_score: any
-  correct_count: any
-  wrong_count: any
-  blank_count: any
-  grading_status: string | null
-  graded_at: string | null
+  review_note: string | null
+  reviewed_at: string | null
+  duplicate_count_for_student_code: number
+  flags: Record<string, boolean>
 }
 
 export default function OfficialExamDetailClient({ examId }: { examId: string }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [exam, setExam] = useState<ExamDetail | null>(null)
-  const [counts, setCounts] = useState<{ papers: number, students: number, sheets: number, graded: number } | null>(null)
+  const [counts, setCounts] = useState<{ papers: number, students: number, sheets: number } | null>(null)
   const [papers, setPapers] = useState<PaperRow[]>([])
+
   const [lessons, setLessons] = useState<LessonItem[]>([])
-
-  const [paperCodeDraft, setPaperCodeDraft] = useState('')
-  const [lessonIdDraft, setLessonIdDraft] = useState('')
+  const [paperFormId, setPaperFormId] = useState<string | null>(null)
+  const [paperFormCode, setPaperFormCode] = useState('')
+  const [paperFormLessonId, setPaperFormLessonId] = useState('')
   const [savingPaper, setSavingPaper] = useState(false)
+  const [deletingPaperId, setDeletingPaperId] = useState<string | null>(null)
 
-  const [validating, setValidating] = useState(false)
-  const [validation, setValidation] = useState<any | null>(null)
+  const [batches, setBatches] = useState<BatchItem[]>([])
+  const [batchId, setBatchId] = useState<string>('')
 
-  const [excelFile, setExcelFile] = useState<File | null>(null)
-  const [previewLoading, setPreviewLoading] = useState(false)
-  const [preview, setPreview] = useState<any | null>(null)
-  const [importing, setImporting] = useState(false)
+  const [merging, setMerging] = useState(false)
+  const [mergeResult, setMergeResult] = useState<any | null>(null)
 
-  const [sheetFiles, setSheetFiles] = useState<File[]>([])
-  const [uploadingSheets, setUploadingSheets] = useState(false)
-  const [sheetsLoading, setSheetsLoading] = useState(false)
-  const [sheets, setSheets] = useState<SheetItem[]>([])
-  const [processing, setProcessing] = useState(false)
-  const [processResult, setProcessResult] = useState<any | null>(null)
-
-  const [scoresLoading, setScoresLoading] = useState(false)
-  const [scores, setScores] = useState<ScoreRow[]>([])
-
-  const fileInputRef = useRef<HTMLInputElement | null>(null)
-  const sheetInputRef = useRef<HTMLInputElement | null>(null)
+  const [unmatchedLoading, setUnmatchedLoading] = useState(false)
+  const [unmatched, setUnmatched] = useState<UnmatchedItem[]>([])
+  const [unmatchedTotal, setUnmatchedTotal] = useState(0)
+  const [editingSheetId, setEditingSheetId] = useState<string | null>(null)
+  const [editFinalStudent, setEditFinalStudent] = useState('')
+  const [editFinalPaper, setEditFinalPaper] = useState('')
+  const [editNote, setEditNote] = useState('')
+  const [savingSheet, setSavingSheet] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
     setError('')
-    setValidation(null)
     try {
-      const [dRes, pRes] = await Promise.all([
+      const [dRes, papersRes, lessonsRes, batchesRes] = await Promise.all([
         fetch(`/api/teacher/official-exams/${examId}`, { credentials: 'include' }),
-        fetch(`/api/teacher/official-exams/${examId}/papers`, { credentials: 'include' })
+        fetch(`/api/teacher/official-exams/${examId}/papers`, { credentials: 'include' }),
+        fetch(`/api/teacher/official-exams/${examId}/lesson`, { credentials: 'include' }),
+        fetch(`/api/teacher/official-exams/${examId}/batches`, { credentials: 'include' })
       ])
       const d = await dRes.json().catch(() => ({}))
-      const p = await pRes.json().catch(() => ({}))
+      const p = await papersRes.json().catch(() => ({}))
+      const l = await lessonsRes.json().catch(() => ({}))
+      const b = await batchesRes.json().catch(() => ({}))
       if (!dRes.ok) throw new Error(d.error || 'Không thể tải kì kiểm tra')
-      if (!pRes.ok) throw new Error(p.error || 'Không thể tải mã đề')
+      if (!papersRes.ok) throw new Error(p.error || 'Không thể tải mã đề')
+      if (!lessonsRes.ok) throw new Error(l.error || 'Không thể tải danh sách bài học')
+      if (!batchesRes.ok) throw new Error(b.error || 'Không thể tải danh sách batch')
       setExam(d.exam)
       setCounts(d.counts)
-      setPapers(Array.isArray(d.papers) ? d.papers : [])
-      setLessons(Array.isArray(p.lessons) ? p.lessons : [])
+      const paperItems = Array.isArray(p.papers) ? p.papers : []
+      setPapers(paperItems.map((x: any) => ({
+        id: String(x.id),
+        paper_code: String(x.paper_code || ''),
+        lesson_id: x.lesson_id ? String(x.lesson_id) : null,
+        lesson_title: x.lesson_title ? String(x.lesson_title) : null
+      })))
+      setLessons(Array.isArray(l.lessons) ? l.lessons : [])
+      const batchItems = Array.isArray(b.items) ? b.items : []
+      setBatches(batchItems)
+      if (!batchId) {
+        const first = batchItems?.[0]?.batch_id ? String(batchItems[0].batch_id) : ''
+        if (first) setBatchId(first)
+      }
     } catch (e: any) {
       setError(e.message || 'Có lỗi xảy ra')
     } finally {
       setLoading(false)
     }
-  }, [examId])
+  }, [batchId, examId])
 
-  const loadSheets = useCallback(async () => {
-    setSheetsLoading(true)
+  const loadUnmatched = useCallback(async () => {
+    if (!batchId) return
+    setUnmatchedLoading(true)
+    setError('')
     try {
-      const res = await fetch(`/api/teacher/official-exams/${examId}/sheets?limit=30`, { credentials: 'include' })
+      const res = await fetch(`/api/teacher/official-exams/${examId}/unmatched?limit=200&batch_id=${encodeURIComponent(batchId)}`, { credentials: 'include' })
       const json = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(json.error || 'Không thể tải bài làm đã upload')
-      setSheets(Array.isArray(json.items) ? json.items : [])
+      if (!res.ok) throw new Error(json.error || 'Không thể tải unmatched queue')
+      setUnmatched(Array.isArray(json.items) ? json.items : [])
+      setUnmatchedTotal(Number(json.total) || 0)
+    } catch (e: any) {
+      setError(e.message || 'Có lỗi xảy ra')
     } finally {
-      setSheetsLoading(false)
+      setUnmatchedLoading(false)
     }
-  }, [examId])
-
-  const loadScores = useCallback(async () => {
-    setScoresLoading(true)
-    try {
-      const res = await fetch(`/api/teacher/official-exams/${examId}/scores?limit=200`, { credentials: 'include' })
-      const json = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(json.error || 'Không thể tải bảng điểm')
-      setScores(Array.isArray(json.items) ? json.items : [])
-    } finally {
-      setScoresLoading(false)
-    }
-  }, [examId])
+  }, [batchId, examId])
 
   useEffect(() => {
-    load().then(async () => {
-      await Promise.all([loadSheets(), loadScores()])
-    }).catch(() => {})
-  }, [load, loadScores, loadSheets])
+    load().then(loadUnmatched).catch(() => {})
+  }, [load, loadUnmatched])
 
-  const canAddPaper = useMemo(() => {
-    return !!paperCodeDraft.trim() && !!lessonIdDraft
-  }, [lessonIdDraft, paperCodeDraft])
+  const resetPaperForm = useCallback(() => {
+    setPaperFormId(null)
+    setPaperFormCode('')
+    setPaperFormLessonId('')
+    setError('')
+  }, [])
 
-  const savePaper = useCallback(async () => {
-    if (!canAddPaper) return
+  const openEditPaper = useCallback((p: PaperRow) => {
+    setPaperFormId(p.id)
+    setPaperFormCode(p.paper_code || '')
+    setPaperFormLessonId(p.lesson_id || '')
+    setError('')
+  }, [])
+
+  const savePaperForm = useCallback(async () => {
+    const paper_code = paperFormCode.trim()
+    const lesson_id = paperFormLessonId.trim()
+    if (!paper_code) { setError('Thiếu paper_code'); return }
+    if (!lesson_id) { setError('Thiếu lesson_id'); return }
     setSavingPaper(true)
     setError('')
     try {
@@ -156,174 +163,129 @@ export default function OfficialExamDetailClient({ examId }: { examId: string })
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ paper_code: paperCodeDraft.trim(), lesson_id: lessonIdDraft })
+        body: JSON.stringify({
+          id: paperFormId,
+          paper_code,
+          lesson_id
+        })
       })
       const json = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(json.error || 'Không thể lưu mã đề')
-      setPaperCodeDraft('')
-      setLessonIdDraft('')
+      resetPaperForm()
       await load()
     } catch (e: any) {
       setError(e.message || 'Có lỗi xảy ra')
     } finally {
       setSavingPaper(false)
     }
-  }, [canAddPaper, examId, lessonIdDraft, load, paperCodeDraft])
+  }, [examId, load, paperFormCode, paperFormId, paperFormLessonId, resetPaperForm])
 
-  const validate = useCallback(async () => {
-    setValidating(true)
+  const deletePaper = useCallback(async (id: string) => {
+    const ok = window.confirm('Xóa mã đề này?')
+    if (!ok) return
+    setDeletingPaperId(id)
     setError('')
     try {
-      const res = await fetch(`/api/teacher/official-exams/${examId}/validate`, { method: 'POST', credentials: 'include' })
+      const res = await fetch(`/api/teacher/official-exams/${examId}/papers`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ id })
+      })
       const json = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(json.error || 'Không thể kiểm tra')
-      setValidation(json)
+      if (!res.ok) throw new Error(json.error || 'Không thể xóa mã đề')
+      if (paperFormId === id) resetPaperForm()
       await load()
     } catch (e: any) {
       setError(e.message || 'Có lỗi xảy ra')
     } finally {
-      setValidating(false)
+      setDeletingPaperId(null)
     }
-  }, [examId, load])
+  }, [examId, load, paperFormId, resetPaperForm])
 
-  const previewExcel = useCallback(async (file: File) => {
-    setPreviewLoading(true)
+  const merge = useCallback(async () => {
+    if (!batchId) return
+    setMerging(true)
     setError('')
-    setPreview(null)
+    setMergeResult(null)
     try {
-      const form = new FormData()
-      form.append('file', file)
-      const res = await fetch(`/api/teacher/official-exams/${examId}/students/preview`, {
-        method: 'POST',
-        body: form,
-        credentials: 'include'
-      })
-      const json = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(json.error || 'Không thể đọc file Excel')
-      setPreview(json)
-    } catch (e: any) {
-      setError(e.message || 'Có lỗi xảy ra')
-    } finally {
-      setPreviewLoading(false)
-    }
-  }, [examId])
-
-  const importStudents = useCallback(async () => {
-    if (!preview?.items?.length) return
-    setImporting(true)
-    setError('')
-    try {
-      const res = await fetch(`/api/teacher/official-exams/${examId}/students/import`, {
+      const res = await fetch(`/api/teacher/official-exams/${examId}/merge`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ items: preview.items })
+        body: JSON.stringify({ batch_id: batchId })
       })
       const json = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(json.error || 'Import thất bại')
-      setPreview(null)
-      setExcelFile(null)
-      if (fileInputRef.current) fileInputRef.current.value = ''
-      await load()
+      if (!res.ok) throw new Error(json.error || 'Merge thất bại')
+      setMergeResult(json)
+      await Promise.all([load(), loadUnmatched()])
     } catch (e: any) {
       setError(e.message || 'Có lỗi xảy ra')
     } finally {
-      setImporting(false)
+      setMerging(false)
     }
-  }, [examId, load, preview])
+  }, [batchId, examId, load, loadUnmatched])
 
-  const compressImage = useCallback(async (file: File) => {
-    const img = document.createElement('img')
-    const url = URL.createObjectURL(file)
-    try {
-      await new Promise<void>((resolve, reject) => {
-        img.onload = () => resolve()
-        img.onerror = () => reject(new Error('Không đọc được ảnh'))
-        img.src = url
-      })
-      const maxW = 1600
-      const maxH = 1600
-      const w = img.naturalWidth || img.width
-      const h = img.naturalHeight || img.height
-      const scale = Math.min(1, maxW / w, maxH / h)
-      const outW = Math.max(1, Math.round(w * scale))
-      const outH = Math.max(1, Math.round(h * scale))
-      const canvas = document.createElement('canvas')
-      canvas.width = outW
-      canvas.height = outH
-      const ctx = canvas.getContext('2d')
-      if (!ctx) throw new Error('Canvas not supported')
-      ctx.drawImage(img, 0, 0, outW, outH)
-      const blob = await new Promise<Blob>((resolve, reject) => {
-        canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Nén ảnh thất bại'))), 'image/jpeg', 0.75)
-      })
-      return new File([blob], file.name.replace(/\.[^.]+$/, '') + '.jpg', { type: 'image/jpeg' })
-    } finally {
-      URL.revokeObjectURL(url)
-    }
+  const openEditSheet = useCallback((it: UnmatchedItem) => {
+    setEditingSheetId(it.id)
+    setEditFinalStudent(it.final_student_code || '')
+    setEditFinalPaper(it.final_paper_code || '')
+    setEditNote(it.review_note || '')
   }, [])
 
-  const uploadSheets = useCallback(async () => {
-    if (!sheetFiles.length) return
-    setUploadingSheets(true)
-    setError('')
-    setProcessResult(null)
-    try {
-      const compressed: File[] = []
-      for (const f of sheetFiles) {
-        if (!f.type.startsWith('image/')) continue
-        compressed.push(await compressImage(f))
-      }
-      if (!compressed.length) throw new Error('Chỉ hỗ trợ ảnh (JPG/PNG) trong version này')
-
-      const form = new FormData()
-      compressed.forEach((f) => form.append('files', f))
-      const res = await fetch(`/api/teacher/official-exams/${examId}/sheets/upload`, {
-        method: 'POST',
-        body: form,
-        credentials: 'include'
-      })
-      const json = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(json.error || 'Upload thất bại')
-      setSheetFiles([])
-      if (sheetInputRef.current) sheetInputRef.current.value = ''
-      await Promise.all([load(), loadSheets()])
-    } catch (e: any) {
-      setError(e.message || 'Có lỗi xảy ra')
-    } finally {
-      setUploadingSheets(false)
-    }
-  }, [compressImage, examId, load, loadSheets, sheetFiles])
-
-  const processNext = useCallback(async () => {
-    setProcessing(true)
+  const saveSheet = useCallback(async () => {
+    if (!editingSheetId) return
+    setSavingSheet(true)
     setError('')
     try {
-      const res = await fetch(`/api/teacher/official-exams/${examId}/process-batch`, {
+      const res = await fetch(`/api/teacher/official-exams/${examId}/sheets/${editingSheetId}/review`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ limit: 5 })
+        body: JSON.stringify({
+          final_student_code: editFinalStudent,
+          final_paper_code: editFinalPaper,
+          review_note: editNote
+        })
       })
       const json = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(json.error || 'Xử lý thất bại')
-      setProcessResult(json)
-      await Promise.all([load(), loadSheets(), loadScores()])
+      if (!res.ok) throw new Error(json.error || 'Không thể lưu chỉnh sửa')
+      await fetch(`/api/teacher/official-exams/${examId}/merge`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ sheet_ids: [editingSheetId] })
+      })
+      setEditingSheetId(null)
+      await Promise.all([load(), loadUnmatched()])
     } catch (e: any) {
       setError(e.message || 'Có lỗi xảy ra')
     } finally {
-      setProcessing(false)
+      setSavingSheet(false)
     }
-  }, [examId, load, loadScores, loadSheets])
+  }, [editFinalPaper, editFinalStudent, editNote, editingSheetId, examId, load, loadUnmatched])
+
+  const publish = useCallback(async () => {
+    setError('')
+    try {
+      const ok = window.confirm('Publish kì thi này? Sau khi publish, học sinh có thể claim điểm.')
+      if (!ok) return
+      const res = await fetch(`/api/teacher/official-exams/${examId}/publish`, { method: 'POST', credentials: 'include' })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(json.error || 'Publish thất bại')
+      await load()
+    } catch (e: any) {
+      setError(e.message || 'Có lỗi xảy ra')
+    }
+  }, [examId, load])
 
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-3">
         <div className="space-y-1 min-w-0">
-          <div className="text-2xl font-semibold whitespace-normal break-words">{exam?.exam_title || 'Official Exam'}</div>
+          <div className="text-2xl font-semibold whitespace-normal break-words">{exam?.title || 'Official Exam'}</div>
           <div className="text-sm" style={{ color: 'var(--text-muted)' }}>
-            {exam?.grade_name ? <>Khối {exam.grade_name}</> : null}
-            {exam?.subject_name ? <> · {exam.subject_name}</> : null}
+            {exam?.grade_id ? <>Khối {exam.grade_id}</> : null}
             {exam?.exam_date ? <> · Ngày thi {new Date(exam.exam_date).toLocaleDateString()}</> : null}
           </div>
         </div>
@@ -338,303 +300,182 @@ export default function OfficialExamDetailClient({ examId }: { examId: string })
           <CardTitle>Thông tin chung</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2 text-sm">
-          <div>Trạng thái: <b>{exam?.status || 'Draft'}</b></div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <div>Trạng thái: <b>{exam?.status || 'draft'}</b></div>
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
             <div>Mã đề: <b>{counts?.papers ?? 0}</b></div>
-            <div>Học sinh: <b>{counts?.students ?? 0}</b></div>
-            <div>Bài làm: <b>{counts?.sheets ?? 0}</b></div>
-            <div>Đã chấm: <b>{counts?.graded ?? 0}</b></div>
+            <div>Học sinh: <b>{exam?.total_students ?? (counts?.students ?? 0)}</b></div>
+            <div>Bài làm: <b>{exam?.total_sheets ?? (counts?.sheets ?? 0)}</b></div>
           </div>
-          {exam?.description ? <div className="pt-2" style={{ color: 'var(--text-muted)' }}>{exam.description}</div> : null}
         </CardContent>
       </Card>
 
-      <Card id="papers">
+      <Card id="merge">
         <CardHeader>
-          <CardTitle>Mã đề / Lessons</CardTitle>
+          <CardTitle>Merge kết quả thi trường</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            <div className="space-y-1">
-              <div className="text-sm">Mã đề</div>
-              <Input value={paperCodeDraft} onChange={(e) => setPaperCodeDraft(e.target.value)} placeholder="Ví dụ: 101" />
-            </div>
-            <div className="space-y-1 sm:col-span-2">
-              <div className="text-sm">Lesson</div>
-              <select className="w-full border rounded px-3 py-2 text-sm bg-slate-950" style={{ borderColor: 'var(--divider)' }} value={lessonIdDraft} onChange={(e) => setLessonIdDraft(e.target.value)}>
-                <option value="">-- Chọn lesson --</option>
-                {lessons.map((l) => (
-                  <option key={l.id} value={l.id}>
-                    {l.title}{l.is_visible ? '' : ' [Hidden]'}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <div className="flex justify-end">
-            <Button disabled={!canAddPaper || savingPaper} onClick={savePaper}>
-              {savingPaper ? 'Đang lưu…' : 'Thêm / Cập nhật mã đề'}
-            </Button>
-          </div>
-
-          {!papers.length ? (
-            <div className="text-sm" style={{ color: 'var(--text-muted)' }}>Chưa có mã đề nào.</div>
-          ) : (
-            <div className="space-y-2">
-              {papers.map((p) => (
-                <div key={p.id} className="border rounded p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2" style={{ borderColor: 'var(--divider)' }}>
-                  <div className="min-w-0">
-                    <div className="font-semibold">Mã đề {p.paper_code}</div>
-                    <div className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                      Lesson: <span style={{ color: 'var(--text)' }}>{p.lesson_title || '—'}</span>
-                      {' '}· Số câu: <span style={{ color: 'var(--text)' }}>{p.lesson_question_count ?? 0}</span>
-                    </div>
-                  </div>
-                  <div className="text-xs px-2 py-1 rounded border w-fit" style={{ borderColor: 'var(--divider)' }}>
-                    {p.process_status}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="space-y-2">
+            <div className="text-sm font-semibold">Quản lý mã đề</div>
             <div className="text-sm" style={{ color: 'var(--text-muted)' }}>
-              Chỉ khi “Kiểm tra” pass mới nên upload bài làm.
+              Mỗi mã đề cần gắn với 1 bài học (lesson) để dùng cho merge và claim.
             </div>
-            <Button variant="outline" disabled={validating} onClick={validate}>
-              {validating ? 'Đang kiểm tra…' : 'Kiểm tra đã đủ bài chưa'}
-            </Button>
-          </div>
 
-          {validation ? (
-            <div className="space-y-3">
-              {validation.ok ? (
-                <div className="p-3 rounded border border-emerald-500/30 bg-emerald-500/10 text-emerald-100 text-sm">
-                  OK — Có thể upload bài làm.
-                </div>
-              ) : (
-                <div className="p-3 rounded border border-rose-500/30 bg-rose-500/10 text-rose-100 text-sm">
-                  Không hợp lệ — cần sửa các lỗi dưới đây trước khi upload bài làm.
-                </div>
-              )}
-              {Array.isArray(validation.warnings) && validation.warnings.length ? (
-                <div className="p-3 rounded border border-amber-500/30 bg-amber-500/10 text-amber-100 text-sm">
-                  <div className="font-semibold">Cảnh báo</div>
-                  <div className="mt-2 space-y-1">
-                    {validation.warnings.map((w: any, idx: number) => (
-                      <div key={idx}>{w.message}</div>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-              {Array.isArray(validation.errors) && validation.errors.length ? (
-                <div className="p-3 rounded border border-rose-500/30 bg-rose-500/10 text-rose-100 text-sm">
-                  <div className="font-semibold">Danh sách lỗi</div>
-                  <div className="mt-2 space-y-1">
-                    {validation.errors.slice(0, 50).map((e: any, idx: number) => (
-                      <div key={idx}>
-                        {e.paper_code ? `Mã đề ${e.paper_code}: ` : ''}{e.message}
-                        {e.question_id ? <span style={{ color: 'rgba(255,255,255,0.6)' }}> ({String(e.question_id).slice(0, 8)}…)</span> : null}
-                      </div>
-                    ))}
-                    {validation.errors.length > 50 ? (
-                      <div style={{ color: 'rgba(255,255,255,0.6)' }}>… và {validation.errors.length - 50} lỗi khác</div>
-                    ) : null}
-                  </div>
-                </div>
-              ) : null}
-            </div>
-          ) : null}
-        </CardContent>
-      </Card>
-
-      <Card id="students">
-        <CardHeader>
-          <CardTitle>Danh sách học sinh</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="text-sm" style={{ color: 'var(--text-muted)' }}>
-            Upload file Excel (.xlsx). Cột tối thiểu: student_code/SBD, full_name, class_name.
-          </div>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".xlsx,.xls"
-            onChange={(e) => {
-              const f = e.target.files?.[0] || null
-              setExcelFile(f)
-              if (f) previewExcel(f)
-              else setPreview(null)
-            }}
-          />
-          {previewLoading ? <div className="text-sm" style={{ color: 'var(--text-muted)' }}>Đang đọc file…</div> : null}
-
-          {preview ? (
-            <div className="space-y-3">
-              {Array.isArray(preview.duplicates_in_file) && preview.duplicates_in_file.length ? (
-                <div className="p-3 rounded border border-rose-500/30 bg-rose-500/10 text-rose-100 text-sm">
-                  Trùng student_code trong file: {preview.duplicates_in_file.join(', ')}
-                </div>
-              ) : null}
-              <div className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                Preview: {Array.isArray(preview.items) ? preview.items.length : 0} dòng
+            <div className="grid grid-cols-1 sm:grid-cols-6 gap-2 items-end">
+              <div className="sm:col-span-2 space-y-1">
+                <div className="text-xs" style={{ color: 'var(--text-muted)' }}>paper_code</div>
+                <Input value={paperFormCode} onChange={(e) => setPaperFormCode(e.target.value)} placeholder="VD: 001" />
               </div>
+              <div className="sm:col-span-4 space-y-1">
+                <div className="text-xs" style={{ color: 'var(--text-muted)' }}>lesson_id</div>
+                <select
+                  className="w-full border rounded px-3 py-2 text-sm bg-slate-950"
+                  style={{ borderColor: 'var(--divider)' }}
+                  value={paperFormLessonId}
+                  onChange={(e) => setPaperFormLessonId(e.target.value)}
+                >
+                  <option value="">-- Chọn lesson --</option>
+                  {lessons.map((l) => (
+                    <option key={l.id} value={l.id}>
+                      {l.title}{l.is_visible ? '' : ' [Hidden]'}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 flex-wrap">
+              <Button variant="outline" disabled={savingPaper} onClick={resetPaperForm}>Reset form</Button>
+              <Button disabled={savingPaper} onClick={savePaperForm}>
+                {savingPaper ? 'Đang lưu…' : (paperFormId ? 'Lưu' : 'Thêm')}
+              </Button>
+            </div>
+
+            {!papers.length ? (
+              <div className="text-sm" style={{ color: 'var(--text-muted)' }}>Chưa có mã đề.</div>
+            ) : (
               <div className="border rounded overflow-auto" style={{ borderColor: 'var(--divider)' }}>
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b" style={{ borderColor: 'var(--divider)' }}>
-                      <th className="text-left p-2">student_code</th>
-                      <th className="text-left p-2">full_name</th>
-                      <th className="text-left p-2">class_name</th>
+                      <th className="text-left p-2">paper_code</th>
+                      <th className="text-left p-2">lesson title</th>
+                      <th className="text-left p-2">lesson_id</th>
+                      <th className="text-left p-2">action</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {(preview.items || []).slice(0, 30).map((r: any, idx: number) => (
-                      <tr key={idx} className="border-b" style={{ borderColor: 'var(--divider)' }}>
-                        <td className="p-2">{r.student_code}</td>
-                        <td className="p-2">{r.full_name}</td>
-                        <td className="p-2">{r.class_name}</td>
+                    {papers.map((p) => (
+                      <tr key={p.id} className="border-b" style={{ borderColor: 'var(--divider)' }}>
+                        <td className="p-2 font-semibold">{p.paper_code}</td>
+                        <td className="p-2">{p.lesson_title || '—'}</td>
+                        <td className="p-2 text-xs" style={{ color: 'var(--text-muted)' }}>{p.lesson_id || '—'}</td>
+                        <td className="p-2">
+                          <div className="flex gap-2 flex-wrap">
+                            <Button variant="outline" size="sm" onClick={() => openEditPaper(p)}>Edit</Button>
+                            <Button variant="outline" size="sm" disabled={deletingPaperId === p.id} onClick={() => deletePaper(p.id)}>
+                              {deletingPaperId === p.id ? 'Đang xóa…' : 'Delete'}
+                            </Button>
+                          </div>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => { setPreview(null); setExcelFile(null); if (fileInputRef.current) fileInputRef.current.value = '' }}>
-                  Hủy
-                </Button>
-                <Button disabled={importing || (preview.duplicates_in_file || []).length > 0} onClick={importStudents}>
-                  {importing ? 'Đang lưu…' : 'Lưu danh sách'}
-                </Button>
-              </div>
-            </div>
-          ) : excelFile ? null : null}
-        </CardContent>
-      </Card>
-
-      <Card id="upload">
-        <CardHeader>
-          <CardTitle>Upload bài làm</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="text-sm" style={{ color: 'var(--text-muted)' }}>
-            Upload ảnh (JPG/PNG). Hệ thống sẽ nén ảnh trước khi lưu để tiết kiệm storage.
+            )}
           </div>
 
-          <input
-            ref={sheetInputRef}
-            type="file"
-            accept="image/*"
-            multiple
-            onChange={(e) => {
-              const fs = Array.from(e.target.files || [])
-              setSheetFiles(fs)
-            }}
-          />
-          <div className="flex justify-end gap-2 flex-wrap">
-            <Button variant="outline" disabled={processing} onClick={processNext}>
-              {processing ? 'Đang xử lý…' : 'Xử lý & Chấm (5 bài)'}
-            </Button>
-            <Button disabled={!sheetFiles.length || uploadingSheets} onClick={uploadSheets}>
-              {uploadingSheets ? 'Đang upload…' : `Upload ${sheetFiles.length || 0} ảnh`}
-            </Button>
-          </div>
-
-          {processResult ? (
-            <div className="p-3 rounded border border-[var(--divider)] text-sm">
-              <div className="font-semibold">Kết quả xử lý</div>
-              <div className="mt-2 whitespace-pre-wrap" style={{ color: 'var(--text-muted)' }}>
-                {JSON.stringify(processResult.processed || processResult, null, 2)}
-              </div>
-            </div>
-          ) : null}
-
-          <div className="flex items-center justify-between gap-3">
-            <div className="font-semibold">Danh sách bài làm gần đây</div>
-            <Button variant="outline" size="sm" disabled={sheetsLoading} onClick={loadSheets}>
-              {sheetsLoading ? 'Đang tải…' : 'Tải lại'}
-            </Button>
-          </div>
-          {!sheets.length ? (
-            <div className="text-sm" style={{ color: 'var(--text-muted)' }}>Chưa có bài làm nào.</div>
-          ) : (
-            <div className="space-y-2">
-              {sheets.map((s) => (
-                <div key={s.id} className="border rounded p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2" style={{ borderColor: 'var(--divider)' }}>
-                  <div className="min-w-0">
-                    <div className="text-sm font-semibold">Sheet #{s.sheet_no ?? '—'}</div>
-                    <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                      SBD: <span style={{ color: 'var(--text)' }}>{s.detected_student_code || '—'}</span>
-                      {' '}· Mã đề: <span style={{ color: 'var(--text)' }}>{s.detected_paper_code || '—'}</span>
-                      {' '}· {s.process_status || '—'}
-                    </div>
-                  </div>
-                  <div className="flex gap-2 items-center flex-wrap">
-                    {s.signed_url ? (
-                      <a href={s.signed_url} target="_blank" rel="noreferrer" className="underline text-sm">
-                        Xem ảnh
-                      </a>
-                    ) : null}
-                    <span className="text-xs px-2 py-1 rounded border" style={{ borderColor: 'var(--divider)' }}>
-                      {s.match_status || '—'}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card id="scores">
-        <CardHeader>
-          <CardTitle>Bảng điểm</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="space-y-2">
+            <div className="text-sm font-semibold">Merge</div>
             <div className="text-sm" style={{ color: 'var(--text-muted)' }}>
-              Dữ liệu lấy từ official_exam_attempts (backend).
+              Chọn batch đã import, rồi merge để match sheet theo final_* (nếu có) hoặc detected_*.
             </div>
-            <div className="flex gap-2 items-center flex-wrap">
-              <a href={`/api/teacher/official-exams/${examId}/scores/export`} className="underline text-sm">Xuất Excel (CSV)</a>
-              <Button variant="outline" size="sm" disabled={scoresLoading} onClick={loadScores}>
-                {scoresLoading ? 'Đang tải…' : 'Tải lại'}
+          </div>
+
+          <div className="space-y-2">
+            <div className="space-y-1">
+              <div className="text-sm">Batch</div>
+              <select
+                className="w-full border rounded px-3 py-2 text-sm bg-slate-950"
+                style={{ borderColor: 'var(--divider)' }}
+                value={batchId}
+                onChange={(e) => setBatchId(e.target.value)}
+              >
+                <option value="">-- Chọn batch_name --</option>
+                {batches.map((b) => (
+                  <option key={b.batch_id} value={b.batch_id}>
+                    {(b.batch_name || b.batch_id)} ({b.sheets_count})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex justify-end gap-2 flex-wrap">
+              <Button variant="outline" disabled={unmatchedLoading} onClick={loadUnmatched}>
+                {unmatchedLoading ? 'Đang tải…' : `Unmatched queue (${unmatchedTotal})`}
+              </Button>
+              <Button disabled={merging} onClick={merge}>
+                {merging ? 'Đang merge…' : 'Merge'}
               </Button>
             </div>
+            {mergeResult ? (
+              <div className="p-3 rounded border border-[var(--divider)] text-sm">
+                <div className="font-semibold">Kết quả merge</div>
+                {mergeResult?.counts ? (
+                  <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-2 text-sm">
+                    <div>Total students: <b>{mergeResult.counts.total_students}</b></div>
+                    <div>Total sheets: <b>{mergeResult.counts.total_sheets}</b></div>
+                    <div>Batch sheets: <b>{mergeResult.counts.batch_sheets}</b></div>
+                    <div>Matched students: <b>{mergeResult.counts.matched_students}</b></div>
+                    <div>Matched papers: <b>{mergeResult.counts.matched_papers}</b></div>
+                    <div>Unmatched: <b>{mergeResult.counts.unmatched_count}</b></div>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
           </div>
+        </CardContent>
+      </Card>
 
-          {!scores.length ? (
-            <div className="text-sm" style={{ color: 'var(--text-muted)' }}>Chưa có bài nào được chấm.</div>
+      <Card id="unmatched">
+        <CardHeader>
+          <CardTitle>Unmatched queue</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="text-sm" style={{ color: 'var(--text-muted)' }}>
+            Các sheet cần review: thiếu student/paper, mã nhận diện rỗng, trùng SBD trong cùng batch.
+          </div>
+          {!unmatched.length ? (
+            <div className="text-sm" style={{ color: 'var(--text-muted)' }}>
+              {unmatchedLoading ? 'Đang tải…' : 'Không có item cần xử lý.'}
+            </div>
           ) : (
             <div className="border rounded overflow-auto" style={{ borderColor: 'var(--divider)' }}>
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b" style={{ borderColor: 'var(--divider)' }}>
-                    <th className="text-left p-2">student_code</th>
-                    <th className="text-left p-2">full_name</th>
-                    <th className="text-left p-2">class</th>
-                    <th className="text-left p-2">paper</th>
-                    <th className="text-left p-2">lesson</th>
-                    <th className="text-left p-2">score</th>
-                    <th className="text-left p-2">đúng/sai/trống</th>
+                    <th className="text-left p-2">sheet_id</th>
+                    <th className="text-left p-2">detected_student</th>
+                    <th className="text-left p-2">detected_paper</th>
+                    <th className="text-left p-2">final_student</th>
+                    <th className="text-left p-2">final_paper</th>
+                    <th className="text-left p-2">flags</th>
                     <th className="text-left p-2">action</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {scores.map((r) => (
-                    <tr key={r.id} className="border-b" style={{ borderColor: 'var(--divider)' }}>
-                      <td className="p-2">{r.student_code || '—'}</td>
-                      <td className="p-2">{r.full_name || '—'}</td>
-                      <td className="p-2">{r.class_name || '—'}</td>
-                      <td className="p-2">{r.paper_code || '—'}</td>
-                      <td className="p-2 whitespace-normal break-words">{r.lesson_title || '—'}</td>
-                      <td className="p-2">{String(r.raw_score ?? '—')}/{String(r.total_score ?? '—')}</td>
-                      <td className="p-2">{r.correct_count ?? 0}/{r.wrong_count ?? 0}/{r.blank_count ?? 0}</td>
+                  {unmatched.map((it) => (
+                    <tr key={it.id} className="border-b" style={{ borderColor: 'var(--divider)' }}>
+                      <td className="p-2" title={it.id}>{it.id.slice(0, 8)}</td>
+                      <td className="p-2">{it.detected_student_code || '—'}</td>
+                      <td className="p-2">{it.detected_paper_code || '—'}</td>
+                      <td className="p-2">{it.final_student_code || '—'}</td>
+                      <td className="p-2">{it.final_paper_code || '—'}</td>
+                      <td className="p-2 text-xs" style={{ color: 'var(--text-muted)' }}>
+                        {Object.entries(it.flags || {}).filter(([, v]) => v).map(([k]) => k).join(', ') || '—'}
+                        {it.duplicate_count_for_student_code > 1 ? ` (${it.duplicate_count_for_student_code} sheets)` : ''}
+                      </td>
                       <td className="p-2">
-                        <Link href={`/teacher_dashboard/official_exams/${examId}/attempts/${r.id}`} prefetch={false} className="underline">
-                          Xem
-                        </Link>
+                        <Button variant="outline" size="sm" onClick={() => openEditSheet(it)}>Sửa</Button>
                       </td>
                     </tr>
                   ))}
@@ -644,6 +485,66 @@ export default function OfficialExamDetailClient({ examId }: { examId: string })
           )}
         </CardContent>
       </Card>
+
+      <Card id="export">
+        <CardHeader>
+          <CardTitle>Export</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2 text-sm">
+          <div className="flex gap-3 flex-wrap">
+            <a className="underline" href={`/api/teacher/official-exams/${examId}/export?group=class`}>Xuất theo lớp (CSV)</a>
+            <a className="underline" href={`/api/teacher/official-exams/${examId}/export?group=room`}>Xuất theo phòng (CSV)</a>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card id="publish">
+        <CardHeader>
+          <CardTitle>Publish</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm">
+          <div style={{ color: 'var(--text-muted)' }}>
+            Khi publish: set status=published và published_at=now().
+          </div>
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div>
+              Published at: <span style={{ color: 'var(--text)' }}>{exam?.published_at ? new Date(exam.published_at).toLocaleString() : '—'}</span>
+            </div>
+            <Button onClick={publish}>Publish</Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {editingSheetId ? (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setEditingSheetId(null)}>
+          <div className="w-full max-w-lg rounded-lg border border-[var(--divider)] bg-slate-950 p-4 space-y-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between gap-3">
+              <div className="text-lg font-semibold">Sửa sheet</div>
+              <Button variant="ghost" size="sm" onClick={() => setEditingSheetId(null)}>Đóng</Button>
+            </div>
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <div className="text-sm">final_student_code</div>
+                <Input value={editFinalStudent} onChange={(e) => setEditFinalStudent(e.target.value)} placeholder="Nhập SBD đúng" />
+              </div>
+              <div className="space-y-1">
+                <div className="text-sm">final_paper_code</div>
+                <Input value={editFinalPaper} onChange={(e) => setEditFinalPaper(e.target.value)} placeholder="Nhập mã đề đúng" />
+              </div>
+              <div className="space-y-1">
+                <div className="text-sm">review_note</div>
+                <Input value={editNote} onChange={(e) => setEditNote(e.target.value)} placeholder="Ghi chú" />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setEditingSheetId(null)}>Hủy</Button>
+              <Button disabled={savingSheet} onClick={saveSheet}>
+                {savingSheet ? 'Đang lưu…' : 'Lưu & re-merge'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }

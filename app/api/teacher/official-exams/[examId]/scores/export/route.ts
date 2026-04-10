@@ -21,12 +21,12 @@ export async function GET(_req: Request, { params }: { params: { examId: string 
   const { data: teacher } = await svc.from('teacher_profiles').select('id').eq('user_id', user.id).maybeSingle()
   if (!teacher?.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-  const { data: exam } = await svc.from('official_exams').select('id, teacher_id, exam_title').eq('id', examId).maybeSingle()
-  if (!exam || String(exam.teacher_id) !== String(teacher.id)) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  const { data: exam } = await svc.from('official_exams').select('id, teacher_user_id, created_by, title').eq('id', examId).maybeSingle()
+  if (!exam || String(exam.teacher_user_id || exam.created_by) !== String(user.id)) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
   const { data: attempts, error } = await svc
     .from('official_exam_attempts')
-    .select('id, student_id, paper_id, raw_score, total_score, correct_count, wrong_count, blank_count, grading_status, graded_at')
+    .select('id, student_id, paper_id, total_score, max_score, correct_count, incorrect_count, blank_count, status, graded_at')
     .eq('official_exam_id', examId)
     .order('graded_at', { ascending: true })
     .limit(200000)
@@ -51,12 +51,12 @@ export async function GET(_req: Request, { params }: { params: { examId: string 
     'full_name',
     'class_name',
     'paper_code',
-    'raw_score',
     'total_score',
+    'max_score',
     'correct_count',
-    'wrong_count',
+    'incorrect_count',
     'blank_count',
-    'grading_status',
+    'status',
     'graded_at'
   ]
 
@@ -70,12 +70,12 @@ export async function GET(_req: Request, { params }: { params: { examId: string 
       normalizeText(st.full_name),
       normalizeText(st.class_name),
       normalizeText(pp.paper_code),
-      a.raw_score ?? '',
       a.total_score ?? '',
+      a.max_score ?? '',
       a.correct_count ?? '',
-      a.wrong_count ?? '',
+      a.incorrect_count ?? '',
       a.blank_count ?? '',
-      normalizeText(a.grading_status),
+      normalizeText(a.status),
       a.graded_at ?? ''
     ].map(escCsv)
     lines.push(row.join(','))
@@ -86,8 +86,7 @@ export async function GET(_req: Request, { params }: { params: { examId: string 
     status: 200,
     headers: {
       'Content-Type': 'text/csv; charset=utf-8',
-      'Content-Disposition': `attachment; filename="${escCsv(String(exam.exam_title || 'official-exam'))}.csv"`
+      'Content-Disposition': `attachment; filename="${escCsv(String(exam.title || 'official-exam'))}.csv"`
     }
   })
 }
-

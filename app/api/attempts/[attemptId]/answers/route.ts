@@ -29,12 +29,17 @@ export async function GET(_: Request, { params }: { params: { attemptId: string 
     // 1. Get attempt to verify ownership
     const { data: att, error: attErr } = await svc
       .from('quiz_attempts')
-      .select('*, lessons(title, lesson_type)')
+      .select('id,user_id,lesson_id,total_questions,correct_answers,score_percent,created_at,mode,raw_score,total_score,accuracy_correct_units,accuracy_total_units,accuracy_percent,status, lessons(title, lesson_type)')
       .eq('id', params.attemptId)
       .maybeSingle()
     
     if (attErr) return NextResponse.json({ error: attErr.message }, { status: 500 })
     if (!att || att.user_id !== user.id) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+
+    const lessonRel: any = (att as any).lessons
+    const lessonObj: any = Array.isArray(lessonRel) ? lessonRel[0] : lessonRel
+    const lessonTitle = lessonObj?.title || null
+    const lessonType = lessonObj?.lesson_type || null
 
     // 2. Get grading report if available
     const { data: gradingReport } = await svc
@@ -65,8 +70,8 @@ export async function GET(_: Request, { params }: { params: { attemptId: string 
     const finalAttempt = {
       id: att.id,
       lesson_id: att.lesson_id,
-      lesson_title: att.lessons?.title || null,
-      lesson_type: att.lessons?.lesson_type || null,
+      lesson_title: lessonTitle,
+      lesson_type: lessonType,
       created_at: att.created_at,
       mode: att.mode,
       status: att.status,
@@ -324,8 +329,8 @@ export async function GET(_: Request, { params }: { params: { attemptId: string 
       attempt: {
         id: att.id,
         lesson_id: att.lesson_id,
-        lesson_title: att.lessons?.title || null,
-        lesson_type: att.lessons?.lesson_type || null,
+        lesson_title: lessonTitle,
+        lesson_type: lessonType,
         created_at: att.created_at,
         mode: att.mode,
         status: att.status,

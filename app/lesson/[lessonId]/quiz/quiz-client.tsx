@@ -31,6 +31,9 @@ export default function QuizClient({ lessonId, n }: { lessonId: string, n?: stri
   const [lessonType, setLessonType] = useState<'practice' | 'exam'>('practice')
   const [submitting, setSubmitting] = useState(false)
   const [quoteIndex, setQuoteIndex] = useState(0)
+  const [interestSelected, setInterestSelected] = useState<Record<string, boolean>>({})
+  const [interestSaving, setInterestSaving] = useState<Record<string, boolean>>({})
+  const [interestFeedback, setInterestFeedback] = useState('')
   const [initError, setInitError] = useState('')
   const [examTimeLeftSec, setExamTimeLeftSec] = useState<number | null>(null)
   const router = useRouter()
@@ -57,6 +60,23 @@ export default function QuizClient({ lessonId, n }: { lessonId: string, n?: stri
     }, 3000)
     return () => clearInterval(t)
   }, [submitting, quotes.length])
+
+  const toggleInterest = useCallback(async (subject: 'english' | 'math' | 'physics') => {
+    setInterestSelected(prev => ({ ...prev, [subject]: !prev[subject] }))
+    setInterestSaving(prev => ({ ...prev, [subject]: true }))
+    setInterestFeedback('')
+    try {
+      const res = await fetch('/api/user-interests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ user_id: user?.id, subject })
+      })
+      if (res.ok) setInterestFeedback('Got it! We’ll share useful content with you.')
+    } finally {
+      setInterestSaving(prev => ({ ...prev, [subject]: false }))
+    }
+  }, [user?.id])
 
   const initStartedRef = useRef(false)
   const attemptIdRef = useRef<string | null>(null)
@@ -303,16 +323,58 @@ export default function QuizClient({ lessonId, n }: { lessonId: string, n?: stri
     <div className="space-y-6">
       {submitting ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
-          <div className="w-full max-w-lg border rounded-xl p-6 bg-[var(--bg)]" style={{borderColor:'var(--divider)'}}>
-            <div className="text-xl font-semibold">Giáo viên đang chấm bài…</div>
-            <div className="mt-2 text-sm" style={{color:'var(--text-muted)'}}>
-              Vui lòng đợi một chút, ChemAI đang tổng hợp kết quả và nhận xét.
+          <div className="w-full max-w-lg border rounded-2xl p-6 bg-[var(--bg)] space-y-5" style={{borderColor:'var(--divider)'}}>
+            <div className="space-y-2">
+              <div className="text-xl font-semibold">Giáo viên đang chấm bài…</div>
+              <div className="text-sm" style={{color:'var(--text-secondary)'}}>
+                Vui lòng đợi một chút, ChemAI đang tổng hợp kết quả và nhận xét.
+              </div>
             </div>
-            <div className="mt-4 h-2 w-full rounded bg-slate-700/40 overflow-hidden">
-              <div className="h-full w-1/2 bg-violet-500/70 animate-pulse" />
+
+            <div className="space-y-2">
+              <div className="text-base font-semibold">While waiting... what do you want to study next?</div>
+              <div className="text-sm" style={{color:'var(--text-secondary)'}}>We may send you useful materials later</div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <Button
+                  variant={interestSelected.english ? 'default' : 'outline'}
+                  size="lg"
+                  disabled={!!interestSaving.english}
+                  onClick={() => toggleInterest('english')}
+                  className="w-full"
+                >
+                  English
+                </Button>
+                <Button
+                  variant={interestSelected.math ? 'default' : 'outline'}
+                  size="lg"
+                  disabled={!!interestSaving.math}
+                  onClick={() => toggleInterest('math')}
+                  className="w-full"
+                >
+                  Math
+                </Button>
+                <Button
+                  variant={interestSelected.physics ? 'default' : 'outline'}
+                  size="lg"
+                  disabled={!!interestSaving.physics}
+                  onClick={() => toggleInterest('physics')}
+                  className="w-full"
+                >
+                  Physics
+                </Button>
+              </div>
+              {interestFeedback ? (
+                <div className="text-sm" style={{ color: 'var(--success)' }}>{interestFeedback}</div>
+              ) : null}
             </div>
-            <div className="mt-5 text-sm italic whitespace-pre-line" style={{color:'var(--gold)'}}>
-              {quotes[quoteIndex] || ''}
+
+            <div className="space-y-3">
+              <div className="h-2 w-full rounded bg-slate-700/40 overflow-hidden">
+                <div className="h-full w-1/2 bg-violet-500/70 animate-pulse" />
+              </div>
+              <div className="text-sm italic whitespace-pre-line" style={{color:'var(--text-secondary)'}}>
+                {quotes[quoteIndex] || ''}
+              </div>
             </div>
           </div>
         </div>

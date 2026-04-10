@@ -216,84 +216,106 @@ export default function Dashboard() {
       {activeGradeId === 'top' ? (
         <TopTab />
       ) : (
-      <div className="space-y-3">
-        {filtered.map(ls => (
-          <Card key={ls.id} className="border" style={{borderColor:'var(--divider)'}}>
-            <CardContent className="p-5">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <div
-                      className={`text-xs px-2 py-1 rounded-md border ${
-                        ls.lesson_type === 'exam'
-                          ? 'text-purple-300 bg-purple-900/20 border-purple-500'
-                          : 'text-blue-300 bg-blue-900/20 border-blue-400'
-                      }`}
-                    >
-                      {ls.lesson_type === 'exam' ? 'Thi thử' : 'Luyện tập'}
-                    </div>
-                    {ls.is_teacher_recommended ? (
-                      <div className="text-xs px-2 py-1 rounded-md border text-yellow-300 bg-yellow-900/20 border-yellow-400">
-                        Đề cử
-                      </div>
-                    ) : null}
-                    <CardTitle className="text-lg font-semibold whitespace-normal break-words basis-full sm:basis-auto">{ls.title}</CardTitle>
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        {filtered.map(ls => {
+          const isExam = ls.lesson_type === 'exam'
+          const totalBank = counts[ls.id] ?? 0
+          const maxN = Math.min(50, totalBank)
+          const defaultN = maxN <= 25 ? maxN : 25
+          const selectedNRaw = questionCounts[ls.id]
+          const selectedN = Math.max(1, Math.min(Number.isFinite(selectedNRaw as any) ? Number(selectedNRaw) : defaultN, maxN || 1))
+          const cardCls = isExam
+            ? 'border-orange-400/40 bg-orange-500/10 hover:border-orange-300/70'
+            : 'border-green-400/40 bg-green-500/10 hover:border-green-300/70'
+          const tagCls = isExam
+            ? 'text-orange-100 bg-orange-600/20 border-orange-400/40'
+            : 'text-green-100 bg-green-600/20 border-green-400/40'
+          return (
+            <Card
+              key={ls.id}
+              className={`relative overflow-hidden border cursor-pointer ${cardCls} transition-all duration-200 shadow-sm hover:shadow-xl hover:-translate-y-1`}
+              onClick={() => {
+                const lessonType = isExam ? 'exam' : 'practice'
+                setStartLoading({ lesson_id: ls.id, lesson_type: lessonType })
+                const href = lessonType === 'exam'
+                  ? `/lesson/${ls.id}/quiz`
+                  : `/lesson/${ls.id}/quiz?n=${selectedN}`
+                setTimeout(() => router.push(href), 50)
+              }}
+            >
+              <CardContent className="p-4 h-full flex flex-col gap-3">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <div className={`text-[11px] px-2.5 py-1 rounded-md border ${tagCls} bg-white/5`}>
+                    {isExam ? 'Thi thử' : 'Luyện tập'}
                   </div>
-                  {ls.description ? (
-                    <div className="mt-2 text-sm text-gray-200/70 whitespace-pre-line">{ls.description}</div>
+                  {ls.is_teacher_recommended ? (
+                    <div className="text-[11px] px-2.5 py-1 rounded-md border text-yellow-100 bg-yellow-600/20 border-yellow-400/40 bg-white/5">
+                      Đề cử
+                    </div>
                   ) : null}
-                  <div className="mt-2 text-sm text-gray-200/70">{counts[ls.id] ?? 0} câu hỏi</div>
                 </div>
 
-                <div className="flex flex-col items-start sm:items-end gap-3">
-                  {ls.lesson_type === 'exam' ? null : (
-                    <div className="flex items-center gap-3">
-                      {(() => {
-                        const maxBank = counts[ls.id] ?? 0
-                        const max = Math.min(50, maxBank)
-                        const disabled = max === 0
-                        const val = questionCounts[ls.id] ?? (max || 1)
-                        return (
-                          <>
-                            <label className="text-sm text-gray-200/70">Số câu</label>
-                            <input
-                              type="number"
-                              min={1}
-                              max={max || 1}
-                              disabled={disabled}
-                              value={val}
-                              onChange={e => {
-                                const n = Math.max(1, Math.min(Number(e.target.value || 1), max || 1))
-                                setQuestionCounts(m => ({ ...m, [ls.id]: n }))
-                              }}
-                              className="w-24 min-h-12 rounded-md border border-[var(--divider)] bg-[var(--bg)] text-[var(--text)] px-3"
-                              aria-label="Chọn số câu hỏi"
-                              title={`Chọn số câu (tối đa ${max})`}
-                            />
-                          </>
-                        )
-                      })()}
+                <div className="space-y-1">
+                  <div
+                    className="text-[15px] font-semibold leading-snug"
+                    style={{
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden'
+                    }}
+                  >
+                    {ls.title}
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="text-[13px]" style={{ color: 'var(--text-secondary)' }}>
+                      {totalBank} câu
                     </div>
-                  )}
-                  <Button
-                    className="w-full sm:w-auto min-w-24 whitespace-nowrap bg-blue-600 hover:bg-blue-700 rounded-lg disabled:opacity-50 shrink-0"
-                    disabled={(counts[ls.id] ?? 0) === 0}
-                    onClick={() => {
-                      const lessonType = ls.lesson_type === 'exam' ? 'exam' : 'practice'
+                    {!isExam ? (
+                      <div className="flex items-center gap-2">
+                        <div className="text-[12px]" style={{ color: 'var(--text-muted)' }}>Số câu</div>
+                        <input
+                          type="number"
+                          min={1}
+                          max={maxN || 1}
+                          disabled={maxN === 0}
+                          value={selectedN}
+                          onChange={e => {
+                            const n = Math.max(1, Math.min(Number(e.target.value || 1), maxN || 1))
+                            setQuestionCounts(m => ({ ...m, [ls.id]: n }))
+                          }}
+                          className="w-16 h-9 rounded-xl border border-[var(--divider)] bg-[var(--bg)] text-[var(--text)] px-2 text-[14px]"
+                          aria-label="Chọn số câu luyện tập"
+                          title={`Chọn số câu (tối đa ${maxN || 1})`}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+
+                <div className="mt-auto flex justify-center">
+                  <button
+                    className="text-sm px-4 py-2 rounded-md border border-slate-200/25 bg-white/10 hover:bg-white/20 transition disabled:opacity-50 disabled:pointer-events-none"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      const lessonType = isExam ? 'exam' : 'practice'
                       setStartLoading({ lesson_id: ls.id, lesson_type: lessonType })
                       const href = lessonType === 'exam'
                         ? `/lesson/${ls.id}/quiz`
-                        : `/lesson/${ls.id}/quiz?n=${questionCounts[ls.id] ?? (Math.min(50, counts[ls.id] ?? 0) || 1)}`
+                        : `/lesson/${ls.id}/quiz?n=${selectedN}`
                       setTimeout(() => router.push(href), 50)
                     }}
+                    disabled={totalBank === 0}
                   >
-                    {ls.lesson_type === 'exam' ? 'Bắt đầu' : 'Làm bài'}
-                  </Button>
+                    Làm ▶
+                  </button>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+              </CardContent>
+            </Card>
+          )
+        })}
       </div>
       )}
     </div>

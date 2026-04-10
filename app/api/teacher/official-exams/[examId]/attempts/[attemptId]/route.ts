@@ -16,12 +16,12 @@ export async function GET(_req: Request, { params }: { params: { examId: string,
   const { data: teacher } = await svc.from('teacher_profiles').select('id').eq('user_id', user.id).maybeSingle()
   if (!teacher?.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-  const { data: exam } = await svc.from('official_exams').select('id, teacher_id').eq('id', examId).maybeSingle()
-  if (!exam || String(exam.teacher_id) !== String(teacher.id)) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  const { data: exam } = await svc.from('official_exams').select('id, teacher_user_id, created_by, lesson_id').eq('id', examId).maybeSingle()
+  if (!exam || String(exam.teacher_user_id || exam.created_by) !== String(user.id)) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
   const { data: attempt, error: aErr } = await svc
     .from('official_exam_attempts')
-    .select('id, official_exam_id, student_id, sheet_id, paper_id, raw_score, total_score, correct_count, wrong_count, blank_count, grading_status, graded_at, metadata')
+    .select('id, official_exam_id, student_id, sheet_id, paper_id, status, detected_student_code, detected_paper_code, total_score, max_score, correct_count, incorrect_count, blank_count, graded_at, metadata')
     .eq('id', attemptId)
     .eq('official_exam_id', examId)
     .maybeSingle()
@@ -30,12 +30,12 @@ export async function GET(_req: Request, { params }: { params: { examId: string,
 
   const [studentRes, paperRes, sheetRes, answersRes] = await Promise.all([
     svc.from('official_exam_students').select('id, student_code, full_name, class_name').eq('id', attempt.student_id).maybeSingle(),
-    svc.from('official_exam_papers').select('id, paper_code, metadata').eq('id', attempt.paper_id).maybeSingle(),
-    svc.from('official_exam_sheets').select('id, storage_bucket, storage_path, detected_student_code, detected_paper_code, ocr_json, process_status').eq('id', attempt.sheet_id).maybeSingle(),
-    svc.from('official_exam_attempt_answers').select('question_id, paper_question_no, student_answer_option_key, is_correct, score_awarded, max_score').eq('attempt_id', attemptId).order('paper_question_no', { ascending: true }).limit(200000)
+    svc.from('official_exam_papers').select('id, paper_code').eq('id', attempt.paper_id).maybeSingle(),
+    svc.from('official_exam_sheets').select('id, storage_bucket, storage_path, detected_student_code, detected_paper_code, final_student_code, final_paper_code, process_status').eq('id', attempt.sheet_id).maybeSingle(),
+    svc.from('official_exam_attempt_answers').select('question_id, paper_question_no, selected_answer, is_correct, score_awarded, max_score').eq('attempt_id', attemptId).order('paper_question_no', { ascending: true }).limit(200000)
   ])
 
-  const lessonId = paperRes.data?.metadata?.lesson_id ? String(paperRes.data.metadata.lesson_id) : null
+  const lessonId = exam.lesson_id ? String(exam.lesson_id) : null
   const { data: questions } = lessonId
     ? await svc.from('questions').select('id, question_type, order_index, content, tip, explanation, image_url, image_alt, image_caption').eq('lesson_id', lessonId).limit(200000)
     : { data: [] as any[] }
@@ -90,7 +90,7 @@ export async function GET(_req: Request, { params }: { params: { examId: string,
         text: normalizeText(o.option_text),
         is_correct: o.is_correct === true
       })),
-      student_choice: a?.student_answer_option_key ? normalizeText(a.student_answer_option_key) : '',
+      student_choice: a?.selected_answer ? normalizeText(a.selected_answer) : '',
       correct_choice: correct ? normalizeText(correct) : '',
       is_correct: a?.is_correct === true,
       score_awarded: a?.score_awarded ?? 0,
@@ -101,12 +101,12 @@ export async function GET(_req: Request, { params }: { params: { examId: string,
   return NextResponse.json({
     attempt: {
       id: String(attempt.id),
-      raw_score: attempt.raw_score,
       total_score: attempt.total_score,
+      max_score: attempt.max_score,
       correct_count: attempt.correct_count,
-      wrong_count: attempt.wrong_count,
+      incorrect_count: attempt.incorrect_count,
       blank_count: attempt.blank_count,
-      grading_status: normalizeText(attempt.grading_status),
+      status: normalizeText(attempt.status),
       graded_at: attempt.graded_at || null
     },
     student: studentRes.data ? {
@@ -120,12 +120,11 @@ export async function GET(_req: Request, { params }: { params: { examId: string,
     } : null,
     sheet: sheetRes.data ? {
       id: String(sheetRes.data.id),
-      detected_student_code: sheetRes.data.detected_student_code || null,
-      detected_paper_code: sheetRes.data.detected_paper_code || null,
+      detected_student_code: sheetRes.data.final_student_code || sheetRes.data.detected_student_code || null,
+      detected_paper_code: sheetRes.data.final_paper_code || sheetRes.data.detected_paper_code || null,
       process_status: normalizeText(sheetRes.data.process_status) || null,
       signed_url: sheetSignedUrl
     } : null,
     questions: items
   })
 }
-

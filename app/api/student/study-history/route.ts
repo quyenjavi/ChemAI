@@ -37,8 +37,9 @@ export async function GET() {
 
     const { data: attemptsRaw, error: attemptsErr } = await svc
       .from('quiz_attempts')
-      .select('id, lesson_id, created_at, total_questions, correct_answers, score_percent, lessons(title)')
+      .select('id, lesson_id, created_at, total_questions, correct_answers, score_percent, lessons(title), status')
       .eq('user_id', user.id)
+      .eq('status', 'submitted')
       .order('created_at', { ascending: false })
       .limit(2000)
 

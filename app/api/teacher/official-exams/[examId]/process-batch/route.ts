@@ -1,76 +1,32 @@
 import { NextResponse } from 'next/server'
 import { createSupabaseServer, serviceRoleClient } from '@/lib/supabase/server'
-import { env } from '@/lib/env'
 
 function normalizeText(v: any) {
   return String(v ?? '').trim()
 }
 
-function pickJson(text: string) {
-  const s = text.trim()
-  const first = s.indexOf('{')
-  const last = s.lastIndexOf('}')
-  if (first >= 0 && last >= 0 && last > first) {
-    return s.slice(first, last + 1)
-  }
-  return s
+function normKey(v: any) {
+  return normalizeText(v).toLowerCase()
 }
 
-function toBase64(buf: Buffer) {
-  return buf.toString('base64')
+function boolFromTfText(v: any): boolean | null {
+  const s = normalizeText(v)
+  if (!s) return null
+  if (s === 'Đúng' || s === 'Dung' || s.toLowerCase() === 'dung') return true
+  if (s === 'Sai' || s.toLowerCase() === 'sai') return false
+  return null
 }
 
-async function parseSheetWithOpenAI(image: Buffer, contentType: string) {
-  const model = env.openaiModel
-  if (!env.openaiApiKey) throw new Error('Missing OPENAI_API_KEY')
-  const dataUrl = `data:${contentType || 'image/jpeg'};base64,${toBase64(image)}`
+function normalizeAnswerText(s: string) {
+  return String(s || '').toLowerCase().trim().replace(/\s+/g, ' ')
+}
 
-  const prompt = [
-    'Bạn là hệ thống OCR cho phiếu trả lời trắc nghiệm.',
-    'Hãy trích xuất chính xác:',
-    '- paper_code: mã đề (chuỗi số, ví dụ 101/102/103/104)',
-    '- student_code: SBD / mã học sinh (chuỗi ký tự/số)',
-    '- answers: danh sách đáp án theo thứ tự câu, mỗi phần tử: { no: <số câu>, choice: "A"|"B"|"C"|"D"|""|"MULTI" }',
-    '- confidence: số 0..1',
-    'Quy tắc:',
-    '- Nếu bỏ trống: choice=""',
-    '- Nếu tô nhiều hơn 1 đáp án: choice="MULTI"',
-    '- Nếu không đọc được paper_code hoặc student_code: để chuỗi rỗng.',
-    'Chỉ trả về JSON hợp lệ, không thêm chữ khác.'
-  ].join('\n')
-
-  const r = await fetch(`${env.openaiBaseUrl}/chat/completions`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${env.openaiApiKey}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      model,
-      temperature: 0,
-      response_format: { type: 'json_object' },
-      messages: [
-        {
-          role: 'user',
-          content: [
-            { type: 'text', text: prompt },
-            { type: 'image_url', image_url: { url: dataUrl } }
-          ]
-        }
-      ]
-    })
-  })
-
-  const j = await r.json().catch(() => ({}))
-  if (!r.ok) {
-    const msg = j?.error?.message || `OpenAI error ${r.status}`
-    throw new Error(msg)
-  }
-
-  const content = j?.choices?.[0]?.message?.content
-  if (!content) throw new Error('No OpenAI content')
-  const jsonText = pickJson(String(content))
-  return JSON.parse(jsonText)
+function extractFirstNumber(s: string): number | null {
+  const t = String(s || '').trim().replace(/\s+/g, ' ')
+  const m = t.match(/-?\d+(?:[.,]\d+)?/)
+  if (!m) return null
+  const n = parseFloat(m[0].replace(',', '.'))
+  return Number.isFinite(n) ? n : null
 }
 
 export async function POST(req: Request, { params }: { params: { examId: string } }) {
@@ -80,206 +36,368 @@ export async function POST(req: Request, { params }: { params: { examId: string 
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await req.json().catch(() => ({}))
-  const limit = Math.min(20, Math.max(1, Number(body.limit || 5)))
+  const limit = Math.min(50, Math.max(1, Number(body.limit || 10)))
+  const force = body.force === true
 
   const svc = serviceRoleClient()
   const { data: teacher } = await svc.from('teacher_profiles').select('id').eq('user_id', user.id).maybeSingle()
   if (!teacher?.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-  const { data: exam } = await svc.from('official_exams').select('id, teacher_id').eq('id', examId).maybeSingle()
-  if (!exam || String(exam.teacher_id) !== String(teacher.id)) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  const { data: exam } = await svc
+    .from('official_exams')
+    .select('id, teacher_user_id, created_by')
+    .eq('id', examId)
+    .maybeSingle()
+  if (!exam || String(exam.teacher_user_id || exam.created_by) !== String(user.id)) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
   const { data: sheets, error: sheetsErr } = await svc
     .from('official_exam_sheets')
-    .select('id, batch_id, sheet_no, storage_bucket, storage_path')
+    .select('id, batch_id, sheet_no, detected_student_code, detected_paper_code, student_id, paper_id, match_status, process_status, ocr_json, metadata, created_at')
     .eq('official_exam_id', examId)
-    .eq('process_status', 'uploaded')
     .order('created_at', { ascending: true })
-    .limit(limit)
-
+    .limit(200)
   if (sheetsErr) return NextResponse.json({ error: sheetsErr.message }, { status: 500 })
-  if (!sheets?.length) return NextResponse.json({ ok: true, processed: 0 })
+
+  const sheetIds = (sheets || []).map((s: any) => String(s.id))
+  const { data: existingAttempts } = await svc
+    .from('official_exam_attempts')
+    .select('id, sheet_id, summary_json')
+    .eq('official_exam_id', examId)
+    .in('sheet_id', sheetIds)
+    .limit(200000)
+  const attemptBySheetId: Record<string, any> = {}
+  for (const a of (existingAttempts || []) as any[]) {
+    const sid = String(a.sheet_id || '')
+    if (!sid) continue
+    attemptBySheetId[sid] = a
+  }
+
+  const candidates = (sheets || []).filter((s: any) => force || !attemptBySheetId[String(s.id)])
+  const toProcess = candidates.slice(0, limit)
+  if (!toProcess.length) return NextResponse.json({ ok: true, processed: 0 })
 
   const processed: any[] = []
 
-  for (const s of sheets as any[]) {
+  for (const s of toProcess as any[]) {
     const sheetId = String(s.id)
-    await svc.from('official_exam_sheets').update({ process_status: 'verifying' }).eq('id', sheetId)
-
     try {
-      const bucket = normalizeText(s.storage_bucket)
-      const path = normalizeText(s.storage_path)
-      const { data: dl, error: dlErr } = await svc.storage.from(bucket).download(path)
-      if (dlErr) throw new Error(dlErr.message)
-      const arr = await dl.arrayBuffer()
-      const buf = Buffer.from(arr)
-      const contentType = (dl as any)?.type || 'image/jpeg'
+      const ocr = (s.ocr_json && typeof s.ocr_json === 'object') ? s.ocr_json : {}
+      const detectedStudent = normalizeText(s.detected_student_code || ocr.sbd || ocr.student_code || '')
+      const detectedPaper = normalizeText(s.detected_paper_code || ocr.made || ocr.paper_code || '')
+      const confidence = Number(ocr.confidence ?? s?.metadata?.confidence ?? null)
 
-      const ocr = await parseSheetWithOpenAI(buf, contentType)
+      await svc.from('official_exam_sheets').update({
+        detected_student_code: detectedStudent || null,
+        detected_paper_code: detectedPaper || null,
+        process_status: 'verifying',
+        metadata: { ...(s.metadata || {}), confidence: Number.isFinite(confidence) ? confidence : null }
+      }).eq('id', sheetId)
 
-      const paper_code = normalizeText(ocr.paper_code)
-      const student_code = normalizeText(ocr.student_code)
-      const confidence = Number(ocr.confidence)
-      const answersRaw = Array.isArray(ocr.answers) ? ocr.answers : []
-
-      const { data: paper } = paper_code
-        ? await svc.from('official_exam_papers').select('id, paper_code, metadata').eq('official_exam_id', examId).eq('paper_code', paper_code).maybeSingle()
+      const { data: paper } = detectedPaper
+        ? await svc.from('official_exam_papers').select('id, paper_code, metadata').eq('official_exam_id', examId).eq('paper_code', detectedPaper).maybeSingle()
         : { data: null as any }
       const paperId = paper?.id ? String(paper.id) : null
       const lessonId = paper?.metadata?.lesson_id ? String(paper.metadata.lesson_id) : null
 
-      const { data: student } = student_code
-        ? await svc.from('official_exam_students').select('id, student_code').eq('official_exam_id', examId).eq('student_code', student_code).maybeSingle()
+      const { data: student } = detectedStudent
+        ? await svc.from('official_exam_students').select('id, student_code, seat_no').eq('official_exam_id', examId).or(`seat_no.eq.${detectedStudent},student_code.eq.${detectedStudent}`).maybeSingle()
         : { data: null as any }
       const studentId = student?.id ? String(student.id) : null
 
       if (!paperId || !lessonId || !studentId) {
         await svc.from('official_exam_sheets').update({
-          detected_paper_code: paper_code || null,
-          detected_student_code: student_code || null,
           paper_id: paperId,
           student_id: studentId,
           match_status: 'unmatched',
           process_status: 'failed',
-          ocr_json: ocr,
-          metadata: { error: 'unmatched_paper_or_student', confidence: Number.isFinite(confidence) ? confidence : null }
+          metadata: { ...(s.metadata || {}), error: 'unmatched_paper_or_student' }
         }).eq('id', sheetId)
         processed.push({ sheet_id: sheetId, ok: false, reason: 'unmatched' })
         continue
       }
 
-      const { data: qs } = await svc
+      const { data: qRows, error: qErr } = await svc
         .from('questions')
         .select('id, lesson_id, question_type, order_index, exam_score, created_at')
         .eq('lesson_id', lessonId)
         .limit(200000)
+      if (qErr) throw new Error(qErr.message)
 
-      const questions = (qs || []).slice().sort((a: any, b: any) => {
+      const questions = (qRows || []).slice().sort((a: any, b: any) => {
         const ao = a.order_index ?? 1e9
         const bo = b.order_index ?? 1e9
         if (ao !== bo) return ao - bo
         return String(a.created_at || '').localeCompare(String(b.created_at || ''))
       })
 
-      const qIds = questions.map((q: any) => String(q.id))
-      const { data: opts } = await svc
-        .from('question_options')
-        .select('question_id, option_key, is_correct')
-        .in('question_id', qIds)
-        .limit(500000)
+      const choiceQs = questions.filter((q: any) => ['single_choice', 'true_false'].includes(normalizeText(q.question_type)))
+      const tfGroupQs = questions.filter((q: any) => normalizeText(q.question_type) === 'true_false_group')
+      const saQs = questions.filter((q: any) => normalizeText(q.question_type) === 'short_answer')
 
-      const correctByQ: Record<string, string> = {}
-      for (const o of (opts || []) as any[]) {
-        if (o.is_correct === true) correctByQ[String(o.question_id)] = normalizeText(o.option_key).toUpperCase()
+      const choiceQIds = choiceQs.map((q: any) => String(q.id))
+      const tfQIds = tfGroupQs.map((q: any) => String(q.id))
+      const saQIds = saQs.map((q: any) => String(q.id))
+
+      const [optsRes, stRes, saRes] = await Promise.all([
+        choiceQIds.length ? svc.from('question_options').select('question_id, option_key, is_correct').in('question_id', choiceQIds).limit(500000) : Promise.resolve({ data: [] as any[] }),
+        tfQIds.length ? svc.from('question_statements').select('question_id, statement_key, correct_answer, score').in('question_id', tfQIds).order('sort_order', { ascending: true }).limit(500000) : Promise.resolve({ data: [] as any[] }),
+        saQIds.length ? svc.from('question_short_answers').select('question_id, answer_text').in('question_id', saQIds).limit(500000) : Promise.resolve({ data: [] as any[] })
+      ])
+
+      const correctOptionByQ: Record<string, string> = {}
+      for (const o of (optsRes.data || []) as any[]) {
+        if (o.is_correct === true) correctOptionByQ[String(o.question_id)] = normalizeText(o.option_key).toUpperCase()
       }
 
-      const answerByNo: Record<number, string> = {}
-      for (const row of answersRaw as any[]) {
-        const no = Number(row?.no)
-        const ch = normalizeText(row?.choice).toUpperCase()
-        if (Number.isFinite(no) && no > 0) answerByNo[no] = ch
+      const statementsByQ: Record<string, any[]> = {}
+      for (const r of (stRes.data || []) as any[]) {
+        const qid = String(r.question_id || '')
+        if (!qid) continue
+        statementsByQ[qid] = statementsByQ[qid] || []
+        statementsByQ[qid].push({
+          statement_key: normKey(r.statement_key),
+          correct_answer: (r.correct_answer === true) ? true : (r.correct_answer === false) ? false : null,
+          score: r.score == null ? null : Number(r.score)
+        })
       }
 
+      const saRefsByQ: Record<string, string[]> = {}
+      for (const r of (saRes.data || []) as any[]) {
+        const qid = String(r.question_id || '')
+        const txt = normalizeText(r.answer_text)
+        if (!qid || !txt) continue
+        saRefsByQ[qid] = saRefsByQ[qid] || []
+        saRefsByQ[qid].push(txt)
+      }
+
+      const part1 = (ocr.part1 && typeof ocr.part1 === 'object') ? ocr.part1 : {}
+      const part2 = (ocr.part2 && typeof ocr.part2 === 'object') ? ocr.part2 : {}
+      const part3 = (ocr.part3 && typeof ocr.part3 === 'object') ? ocr.part3 : {}
+
+      const nowIso = new Date().toISOString()
+      let paperNo = 0
       let totalScore = 0
-      let rawScore = 0
+      let maxScore = 0
       let correctCount = 0
-      let wrongCount = 0
+      let incorrectCount = 0
       let blankCount = 0
 
       const answerRows: any[] = []
-      questions.forEach((q: any, idx: number) => {
-        const qNo = idx + 1
-        const max = q.exam_score != null ? Number(q.exam_score) : 0.25
+
+      for (let i = 0; i < choiceQs.length; i++) {
+        const q = choiceQs[i]
+        paperNo += 1
         const qid = String(q.id)
-        const studentChoice = normalizeText(answerByNo[qNo] || '')
-        const correctChoice = normalizeText(correctByQ[qid] || '')
-        const isBlank = !studentChoice
-        const isMulti = studentChoice === 'MULTI'
-        const isCorrect = !isBlank && !isMulti && correctChoice && studentChoice === correctChoice
+        const selected = normalizeText(part1[String(i + 1)] || '').toUpperCase()
+        const correct = normalizeText(correctOptionByQ[qid] || '').toUpperCase()
+        const max = q.exam_score != null ? Number(q.exam_score) : 0.25
+        const isBlank = !selected
+        const isCorrect = !isBlank && !!correct && selected === correct
         const awarded = isCorrect ? max : 0
 
-        totalScore += max
-        rawScore += awarded
+        maxScore += max
+        totalScore += awarded
         if (isBlank) blankCount += 1
         else if (isCorrect) correctCount += 1
-        else wrongCount += 1
+        else incorrectCount += 1
 
         answerRows.push({
+          attempt_id: null,
           official_exam_id: examId,
           paper_id: paperId,
-          sheet_id: sheetId,
           student_id: studentId,
-          attempt_id: null,
-          question_id: qid,
-          paper_question_no: qNo,
-          master_question_no: qNo,
-          paper_question_id: null,
+          sheet_id: sheetId,
+          paper_question_no: paperNo,
+          master_question_no: paperNo,
           master_question_id: null,
-          student_answer_text: null,
-          student_answer_option_key: studentChoice || null,
+          question_id: qid,
+          selected_answer: selected || null,
+          normalized_answer: selected || null,
+          correct_answer: correct || null,
+          is_correct: !!correct ? isCorrect : null,
+          score_awarded: awarded,
+          max_score: max,
+          answer_source: 'ocr',
+          confidence: Number.isFinite(confidence) ? confidence : null,
+          review_status: 'none',
+          raw_ocr_text: null,
+          metadata: { section: 'part1', index: i + 1 }
+        })
+      }
+
+      for (let i = 0; i < tfGroupQs.length; i++) {
+        const q = tfGroupQs[i]
+        const qid = String(q.id)
+        const group = (part2[String(i + 1)] && typeof part2[String(i + 1)] === 'object') ? part2[String(i + 1)] : {}
+        const stList = statementsByQ[qid] || []
+
+        for (const st of stList) {
+          paperNo += 1
+          const pickedText = normalizeText(group[st.statement_key] || '')
+          const pickedBool = boolFromTfText(pickedText)
+          const correctBool = (st.correct_answer === true) ? true : (st.correct_answer === false) ? false : null
+          const max = st.score != null ? Number(st.score) : 0
+          const isBlank = pickedBool == null
+          const isCorrect = (!isBlank && correctBool != null) ? pickedBool === correctBool : null
+          const awarded = isCorrect === true ? max : 0
+
+          maxScore += max
+          totalScore += awarded
+          if (isBlank) blankCount += 1
+          else if (isCorrect === true) correctCount += 1
+          else if (isCorrect === false) incorrectCount += 1
+
+          answerRows.push({
+            attempt_id: null,
+            official_exam_id: examId,
+            paper_id: paperId,
+            student_id: studentId,
+            sheet_id: sheetId,
+            paper_question_no: paperNo,
+            master_question_no: paperNo,
+            master_question_id: null,
+            question_id: qid,
+            selected_answer: pickedText || null,
+            normalized_answer: pickedBool == null ? null : (pickedBool ? 'true' : 'false'),
+            correct_answer: correctBool == null ? null : (correctBool ? 'Đúng' : 'Sai'),
+            is_correct: isCorrect,
+            score_awarded: awarded,
+            max_score: max,
+            answer_source: 'ocr',
+            confidence: Number.isFinite(confidence) ? confidence : null,
+            review_status: 'none',
+            raw_ocr_text: null,
+            metadata: { section: 'part2', group_index: i + 1, statement_key: st.statement_key }
+          })
+        }
+      }
+
+      for (let i = 0; i < saQs.length; i++) {
+        const q = saQs[i]
+        paperNo += 1
+        const qid = String(q.id)
+        const raw = normalizeText(part3[String(i + 1)] || '')
+        const refs = (saRefsByQ[qid] || []).map(normalizeAnswerText).filter(Boolean)
+        const max = q.exam_score != null ? Number(q.exam_score) : 0
+        const canRule = refs.length > 0
+        const studentNorm = normalizeAnswerText(raw)
+        const numericStudent = extractFirstNumber(raw)
+        const numericRefs = (saRefsByQ[qid] || []).map(extractFirstNumber).filter((n: any) => typeof n === 'number' && Number.isFinite(n)) as number[]
+        const isNumericCorrect = numericStudent != null && numericRefs.some((r) => Math.abs(r - numericStudent) <= 1e-6)
+        const isExactCorrect = canRule ? refs.includes(studentNorm) : false
+        const isCorrect = canRule ? (isExactCorrect || isNumericCorrect) : null
+        const isBlank = !raw
+        const awarded = (isCorrect === true) ? max : 0
+
+        maxScore += max
+        totalScore += awarded
+        if (isBlank) blankCount += 1
+        else if (isCorrect === true) correctCount += 1
+        else if (isCorrect === false) incorrectCount += 1
+
+        answerRows.push({
+          attempt_id: null,
+          official_exam_id: examId,
+          paper_id: paperId,
+          student_id: studentId,
+          sheet_id: sheetId,
+          paper_question_no: paperNo,
+          master_question_no: paperNo,
+          master_question_id: null,
+          question_id: qid,
+          selected_answer: raw || null,
+          normalized_answer: raw ? studentNorm : null,
+          correct_answer: (saRefsByQ[qid] || []).length ? String((saRefsByQ[qid] || []).join(' | ')) : null,
           is_correct: isCorrect,
           score_awarded: awarded,
           max_score: max,
+          answer_source: 'ocr',
           confidence: Number.isFinite(confidence) ? confidence : null,
-          needs_review: isMulti || !correctChoice,
           review_status: 'none',
-          review_adjustment_type: 'none',
-          review_adjustment_note: null,
-          raw_data_json: { ocr_choice: studentChoice || null }
+          raw_ocr_text: null,
+          metadata: { section: 'part3', index: i + 1, grading_method: canRule ? (isNumericCorrect && !isExactCorrect ? 'numeric' : 'exact') : 'none' }
         })
-      })
+      }
 
-      const { data: attempt, error: attemptErr } = await svc
-        .from('official_exam_attempts')
-        .insert({
-          official_exam_id: examId,
-          student_id: studentId,
-          sheet_id: sheetId,
-          paper_id: paperId,
-          status: 'graded',
-          grading_status: 'graded',
-          raw_score: rawScore,
-          total_score: totalScore,
-          correct_count: correctCount,
-          wrong_count: wrongCount,
-          blank_count: blankCount,
-          graded_at: new Date().toISOString(),
-          metadata: { paper_code, student_code, lesson_id: lessonId, confidence: Number.isFinite(confidence) ? confidence : null }
-        })
-        .select('id')
-        .single()
-
-      if (attemptErr) throw new Error(attemptErr.message)
-      const attemptId = String(attempt.id)
+      const existing = attemptBySheetId[sheetId] || null
+      let attemptId: string
+      if (existing?.id) {
+        attemptId = String(existing.id)
+        await svc.from('official_exam_attempt_answers').delete().eq('attempt_id', attemptId)
+        const upd = await svc
+          .from('official_exam_attempts')
+          .update({
+            student_id: studentId,
+            paper_id: paperId,
+            sheet_id: sheetId,
+            status: 'graded',
+            detected_student_code: detectedStudent || null,
+            detected_paper_code: detectedPaper || null,
+            total_score: totalScore,
+            max_score: maxScore,
+            correct_count: correctCount,
+            incorrect_count: incorrectCount,
+            blank_count: blankCount,
+            grading_source: 'ocr',
+            graded_at: nowIso,
+            updated_at: nowIso
+          } as any)
+          .eq('id', attemptId)
+          .select('id')
+          .single()
+        if (upd.error) throw new Error(upd.error.message)
+      } else {
+        const ins = await svc
+          .from('official_exam_attempts')
+          .insert({
+            official_exam_id: examId,
+            student_id: studentId,
+            paper_id: paperId,
+            sheet_id: sheetId,
+            status: 'graded',
+            detected_student_code: detectedStudent || null,
+            detected_paper_code: detectedPaper || null,
+            total_score: totalScore,
+            max_score: maxScore,
+            correct_count: correctCount,
+            incorrect_count: incorrectCount,
+            blank_count: blankCount,
+            grading_source: 'ocr',
+            graded_at: nowIso,
+            summary_json: {},
+            metadata: { lesson_id: lessonId, confidence: Number.isFinite(confidence) ? confidence : null }
+          } as any)
+          .select('id')
+          .single()
+        if (ins.error) throw new Error(ins.error.message)
+        attemptId = String(ins.data.id)
+      }
 
       for (const r of answerRows) r.attempt_id = attemptId
       const { error: ansErr } = await svc.from('official_exam_attempt_answers').insert(answerRows)
       if (ansErr) throw new Error(ansErr.message)
 
       await svc.from('official_exam_sheets').update({
-        detected_paper_code: paper_code || null,
-        detected_student_code: student_code || null,
-        paper_id: paperId,
         student_id: studentId,
+        paper_id: paperId,
         match_status: 'matched',
-        process_status: 'verified',
-        ocr_json: ocr,
-        metadata: { confidence: Number.isFinite(confidence) ? confidence : null, lesson_id: lessonId }
-      }).eq('id', sheetId)
-
-      if (s.batch_id) {
-        await svc.from('official_exam_sheet_batches').update({ processed_sheets: (s.sheet_no || 0) }).eq('id', s.batch_id)
-      }
+        process_status: 'graded',
+        updated_at: nowIso
+      } as any).eq('id', sheetId)
 
       processed.push({ sheet_id: sheetId, ok: true, attempt_id: attemptId })
     } catch (e: any) {
-      await svc.from('official_exam_sheets').update({
-        process_status: 'failed',
-        metadata: { error: e?.message || 'failed' }
-      }).eq('id', sheetId)
+      await svc.from('official_exam_sheets').update({ process_status: 'failed', metadata: { ...(s.metadata || {}), error: e?.message || 'failed' } }).eq('id', sheetId)
       processed.push({ sheet_id: sheetId, ok: false, reason: e?.message || 'failed' })
     }
   }
+
+  const { count: gradedTotal } = await svc
+    .from('official_exam_attempts')
+    .select('id', { count: 'exact', head: true })
+    .eq('official_exam_id', examId)
+    .eq('status', 'graded')
+  await svc.from('official_exams').update({ total_graded: gradedTotal || 0 }).eq('id', examId)
 
   return NextResponse.json({ ok: true, processed })
 }

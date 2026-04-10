@@ -271,11 +271,11 @@ export default function StudyHistoryPage() {
           ) : (
             <div className="space-y-2">
               {attempts.map((a) => (
-                <div
+                <a
                   key={a.id}
-                  className="border rounded p-3 cursor-pointer hover:bg-slate-900/10 transition-colors"
+                  href={`/attempt/${a.id}/result`}
+                  className="block border rounded p-3 hover:bg-slate-900/10 transition-colors"
                   style={{ borderColor: 'var(--divider)' }}
-                  onClick={() => openAttemptDetail(a.id)}
                 >
                   <div className="flex justify-between items-start gap-2">
                     <div className="text-sm font-medium whitespace-normal break-words">{a.lesson_title || 'Bài làm'}</div>
@@ -293,7 +293,7 @@ export default function StudyHistoryPage() {
                       Thời gian: {new Date(a.created_at).toLocaleString()}
                     </div>
                   ) : null}
-                </div>
+                </a>
               ))}
             </div>
           )}
@@ -672,11 +672,6 @@ export default function StudyHistoryPage() {
                               <Button variant="outline" size="sm" onClick={() => patchPracticeState(pq.question_id, { revealed: true })}>
                                 Kiểm tra
                               </Button>
-                              {accepted.length ? (
-                                <div className="text-xs text-slate-200/70">
-                                  Đáp án tham khảo: <span className="text-slate-100">{accepted.join(' | ')}</span>
-                                </div>
-                              ) : null}
                             </div>
                             {showExplain && (pq.tip || pq.explanation) ? (
                               <div className="mt-2 p-3 bg-slate-950/20 border border-slate-700/60 rounded text-xs space-y-1 text-slate-100">

@@ -1,43 +1,34 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
 import { supabaseBrowser } from '@/lib/supabase/client'
 
 type ExamCard = {
   id: string
-  exam_title: string
+  title: string
   grade_id: string | null
-  grade_name: string | null
-  subject_name: string | null
   exam_date: string | null
   status: string | null
   papers_count: number
   students_count: number
   sheets_count: number
-  graded_count: number
 }
-
-type GradeItem = { id: string, name: string }
 
 export default function OfficialExamListClient() {
   const [items, setItems] = useState<ExamCard[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-
   const [createOpen, setCreateOpen] = useState(false)
   const [creating, setCreating] = useState(false)
-  const [examTitle, setExamTitle] = useState('')
-  const [gradeId, setGradeId] = useState<string>('')
-  const [subjectName, setSubjectName] = useState('Hóa học')
-  const [academicYear, setAcademicYear] = useState('')
-  const [examDate, setExamDate] = useState('')
-  const [description, setDescription] = useState('')
-  const [grades, setGrades] = useState<GradeItem[]>([])
+  const [createError, setCreateError] = useState('')
+  const [createTitle, setCreateTitle] = useState('')
+  const [createGradeId, setCreateGradeId] = useState('')
+  const [createExamDate, setCreateExamDate] = useState('')
+  const [grades, setGrades] = useState<Array<{ id: string, name: string }>>([])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -47,10 +38,6 @@ export default function OfficialExamListClient() {
       const listJson = await listRes.json().catch(() => ({}))
       if (!listRes.ok) throw new Error(listJson.error || 'Không thể tải danh sách kì kiểm tra')
       setItems(Array.isArray(listJson.items) ? listJson.items : [])
-
-      const { data: g } = await supabaseBrowser.from('grades').select('id,name').order('name', { ascending: true })
-      const mapped: GradeItem[] = (g || []).map((x: any) => ({ id: String(x.id), name: String(x.name) }))
-      setGrades(mapped.filter((x) => ['10', '11', '12'].includes(String(x.name))))
     } catch (e: any) {
       setError(e.message || 'Có lỗi xảy ra')
     } finally {
@@ -62,48 +49,55 @@ export default function OfficialExamListClient() {
     load()
   }, [load])
 
-  const canCreate = useMemo(() => {
-    return !!examTitle.trim() && !!gradeId
-  }, [examTitle, gradeId])
+  useEffect(() => {
+    supabaseBrowser
+      .from('grades')
+      .select('id,name')
+      .order('name', { ascending: true })
+      .then(({ data }) => {
+        setGrades((data || []).map((g: any) => ({ id: String(g.id), name: String(g.name || '') })))
+      })
+  }, [])
 
   const createExam = useCallback(async () => {
-    if (!canCreate) return
+    setCreateError('')
+    if (!createTitle.trim()) { setCreateError('Thiếu tên kì kiểm tra'); return }
+    if (!createGradeId) { setCreateError('Thiếu khối'); return }
     setCreating(true)
-    setError('')
     try {
       const res = await fetch('/api/teacher/official-exams/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
-          exam_title: examTitle.trim(),
-          grade_id: gradeId,
-          subject_name: subjectName.trim(),
-          academic_year: academicYear.trim(),
-          exam_date: examDate || null,
-          description: description.trim()
+          title: createTitle.trim(),
+          grade_id: createGradeId,
+          exam_date: createExamDate || null
         })
       })
       const json = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(json.error || 'Tạo kì kiểm tra thất bại')
+      if (!res.ok) throw new Error(json.error || 'Không thể tạo kì kiểm tra')
       setCreateOpen(false)
-      setExamTitle('')
-      setDescription('')
+      setCreateTitle('')
+      setCreateGradeId('')
+      setCreateExamDate('')
       await load()
     } catch (e: any) {
-      setError(e.message || 'Có lỗi xảy ra')
+      setCreateError(e.message || 'Có lỗi xảy ra')
     } finally {
       setCreating(false)
     }
-  }, [academicYear, canCreate, description, examDate, examTitle, gradeId, load, subjectName])
+  }, [createExamDate, createGradeId, createTitle, load])
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <div className="text-sm" style={{ color: 'var(--text-muted)' }}>
-          Tạo kì kiểm tra offline và chấm bằng ChemAI (mỗi mã đề = 1 lesson)
+          Chọn kì kiểm tra đã import sẵn từ hệ thống chấm tại trường để merge kết quả và xuất bảng điểm
         </div>
-        <Button onClick={() => setCreateOpen(true)}>Tạo kì kiểm tra</Button>
+        <Button variant="outline" onClick={() => { setCreateOpen(true); setCreateError('') }}>
+          Tạo kì thi
+        </Button>
       </div>
 
       {loading ? <div className="text-sm" style={{ color: 'var(--text-muted)' }}>Đang tải…</div> : null}
@@ -117,7 +111,7 @@ export default function OfficialExamListClient() {
             <Card key={e.id}>
               <CardHeader>
                 <CardTitle className="flex items-start justify-between gap-3">
-                  <span className="whitespace-normal break-words">{e.exam_title}</span>
+                  <span className="whitespace-normal break-words">{e.title}</span>
                   <span className="text-xs px-2 py-1 rounded border" style={{ borderColor: 'var(--divider)' }}>
                     {e.status || 'Draft'}
                   </span>
@@ -125,25 +119,20 @@ export default function OfficialExamListClient() {
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                  Khối: <span style={{ color: 'var(--text)' }}>{e.grade_name || '—'}</span>
-                  {' '}· Môn: <span style={{ color: 'var(--text)' }}>{e.subject_name || '—'}</span>
+                  Khối: <span style={{ color: 'var(--text)' }}>{e.grade_id || '—'}</span>
                   {e.exam_date ? <> · Ngày thi: <span style={{ color: 'var(--text)' }}>{new Date(e.exam_date).toLocaleDateString()}</span></> : null}
                 </div>
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <div>Mã đề: <b>{e.papers_count}</b></div>
                   <div>Học sinh: <b>{e.students_count}</b></div>
                   <div>Bài làm: <b>{e.sheets_count}</b></div>
-                  <div>Đã chấm: <b>{e.graded_count}</b></div>
                 </div>
                 <div className="flex gap-2 flex-wrap">
                   <Link href={`/teacher_dashboard/official_exams/${e.id}`} prefetch={false}>
                     <Button variant="outline">Xem chi tiết</Button>
                   </Link>
-                  <Link href={`/teacher_dashboard/official_exams/${e.id}#upload`} prefetch={false}>
-                    <Button variant="outline">Upload bài làm</Button>
-                  </Link>
-                  <Link href={`/teacher_dashboard/official_exams/${e.id}#scores`} prefetch={false}>
-                    <Button variant="outline">Xem bảng điểm</Button>
+                  <Link href={`/teacher_dashboard/official_exams/${e.id}#merge`} prefetch={false}>
+                    <Button variant="outline">Merge</Button>
                   </Link>
                 </div>
               </CardContent>
@@ -154,51 +143,34 @@ export default function OfficialExamListClient() {
 
       {createOpen ? (
         <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setCreateOpen(false)}>
-          <div className="w-full max-w-xl rounded-lg border border-[var(--divider)] bg-slate-950 p-4 space-y-4" onClick={(e) => e.stopPropagation()}>
+          <div className="w-full max-w-lg rounded-lg border border-[var(--divider)] bg-slate-950 p-4 space-y-4" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between gap-3">
-              <div className="text-lg font-semibold">Tạo kì kiểm tra</div>
+              <div className="text-lg font-semibold">Tạo kì thi (Official Exam)</div>
               <Button variant="ghost" size="sm" onClick={() => setCreateOpen(false)}>Đóng</Button>
             </div>
-
             <div className="space-y-3">
               <div className="space-y-1">
-                <div className="text-sm">Tên kì kiểm tra</div>
-                <Input value={examTitle} onChange={(e) => setExamTitle(e.target.value)} placeholder="Ví dụ: Thi thử HK2 - Khối 12" />
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <div className="text-sm">Khối</div>
-                  <select className="w-full border rounded px-3 py-2 text-sm bg-slate-950" style={{ borderColor: 'var(--divider)' }} value={gradeId} onChange={(e) => setGradeId(e.target.value)}>
-                    <option value="">-- Chọn khối --</option>
-                    {grades.map((g) => (
-                      <option key={g.id} value={g.id}>{g.name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="space-y-1">
-                  <div className="text-sm">Môn</div>
-                  <Input value={subjectName} onChange={(e) => setSubjectName(e.target.value)} />
-                </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <div className="text-sm">Năm học</div>
-                  <Input value={academicYear} onChange={(e) => setAcademicYear(e.target.value)} placeholder="Ví dụ: 2025-2026" />
-                </div>
-                <div className="space-y-1">
-                  <div className="text-sm">Ngày thi</div>
-                  <Input type="date" value={examDate} onChange={(e) => setExamDate(e.target.value)} />
-                </div>
+                <div className="text-sm">Tên kì thi</div>
+                <Input value={createTitle} onChange={(e) => setCreateTitle(e.target.value)} placeholder="VD: Thi thử HK2 - Khối 12" />
               </div>
               <div className="space-y-1">
-                <div className="text-sm">Mô tả (không bắt buộc)</div>
-                <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Ghi chú cho kì kiểm tra…" />
+                <div className="text-sm">Khối (grade)</div>
+                <select className="w-full border rounded px-3 py-2 text-sm bg-slate-950" style={{ borderColor: 'var(--divider)' }} value={createGradeId} onChange={(e) => setCreateGradeId(e.target.value)}>
+                  <option value="">-- Chọn khối --</option>
+                  {grades.map((g) => (
+                    <option key={g.id} value={g.id}>{g.name}</option>
+                  ))}
+                </select>
               </div>
+              <div className="space-y-1">
+                <div className="text-sm">Ngày thi (tuỳ chọn)</div>
+                <Input type="date" value={createExamDate} onChange={(e) => setCreateExamDate(e.target.value)} />
+              </div>
+              {createError ? <div className="text-sm text-red-600">{createError}</div> : null}
             </div>
-
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setCreateOpen(false)}>Hủy</Button>
-              <Button disabled={!canCreate || creating} onClick={createExam}>
+              <Button disabled={creating} onClick={createExam}>
                 {creating ? 'Đang tạo…' : 'Tạo'}
               </Button>
             </div>

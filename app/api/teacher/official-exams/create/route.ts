@@ -11,14 +11,11 @@ export async function POST(request: Request) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await request.json().catch(() => ({}))
-  const exam_title = normalizeText(body.exam_title)
+  const title = normalizeText(body.title || body.exam_title)
   const grade_id = normalizeText(body.grade_id)
-  const subject_name = normalizeText(body.subject_name || 'Hóa học')
-  const academic_year = normalizeText(body.academic_year)
   const exam_date = body.exam_date ? String(body.exam_date) : null
-  const description = normalizeText(body.description)
 
-  if (!exam_title) return NextResponse.json({ error: 'Thiếu tên kì kiểm tra' }, { status: 400 })
+  if (!title) return NextResponse.json({ error: 'Thiếu tên kì kiểm tra' }, { status: 400 })
   if (!grade_id) return NextResponse.json({ error: 'Thiếu khối' }, { status: 400 })
 
   const svc = serviceRoleClient()
@@ -29,19 +26,14 @@ export async function POST(request: Request) {
     .maybeSingle()
   if (!teacher?.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
+  const schoolId = teacher.school_id ? String(teacher.school_id) : null
+  if (!schoolId) return NextResponse.json({ error: 'Thiếu school_id' }, { status: 400 })
+
   const insert: any = {
-    teacher_id: teacher.id,
-    exam_title,
+    title,
     grade_id,
-    subject_name,
-    description: description || null,
-    status: 'Draft',
-    is_visible: true,
-    metadata: {
-      academic_year: academic_year || null,
-      exam_date: exam_date || null,
-      school_id: teacher.school_id || null
-    }
+    school_id: schoolId,
+    status: 'draft'
   }
   if (exam_date) insert.exam_date = exam_date
 
@@ -54,4 +46,3 @@ export async function POST(request: Request) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ id: created.id })
 }
-

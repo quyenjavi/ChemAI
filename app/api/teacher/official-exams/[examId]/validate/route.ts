@@ -15,8 +15,8 @@ export async function POST(_req: Request, { params }: { params: { examId: string
   const { data: teacher } = await svc.from('teacher_profiles').select('id').eq('user_id', user.id).maybeSingle()
   if (!teacher?.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-  const { data: exam } = await svc.from('official_exams').select('id, teacher_id').eq('id', examId).maybeSingle()
-  if (!exam || String(exam.teacher_id) !== String(teacher.id)) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  const { data: exam } = await svc.from('official_exams').select('id, teacher_user_id, created_by').eq('id', examId).maybeSingle()
+  if (!exam || String(exam.teacher_user_id || exam.created_by) !== String(user.id)) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
   const { data: papers, error: papersErr } = await svc
     .from('official_exam_papers')
@@ -168,4 +168,3 @@ export async function POST(_req: Request, { params }: { params: { examId: string
 
   return NextResponse.json({ errors, warnings, ok: errors.length === 0 })
 }
-

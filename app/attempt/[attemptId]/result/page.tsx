@@ -5,6 +5,337 @@ import { useParams } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { supabaseBrowser } from '@/lib/supabase/client'
+
+function normalizeText(v: any) {
+  return String(v ?? '').trim()
+}
+
+function academicYearLabel(d: Date) {
+  const y = d.getFullYear()
+  const m = d.getMonth() + 1
+  const day = d.getDate()
+  return (m > 7 || (m === 7 && day >= 1)) ? `${y}-${y + 1}` : `${y - 1}-${y}`
+}
+
+function canShowProfilePrompt() {
+  try {
+    const raw = localStorage.getItem('chemAI_profile_prompt_last') || ''
+    const last = raw ? Number(raw) : 0
+    if (!last) return true
+    return (Date.now() - last) > 24 * 60 * 60 * 1000
+  } catch {
+    return true
+  }
+}
+
+function markProfilePromptShown() {
+  try {
+    localStorage.setItem('chemAI_profile_prompt_last', String(Date.now()))
+  } catch {}
+}
+
+function isBadSchoolName(input: string) {
+  const t = String(input || '').trim().toLowerCase()
+  if (t.length < 5) return true
+  if (/^(a+|1+|0+)$/.test(t)) return true
+  if (t === 'test' || t === 'testing') return true
+  if (/^\d+$/.test(t)) return true
+  return false
+}
+
+function ProfileCompletionPrompt({ enabled }: { enabled: boolean }) {
+  const [open, setOpen] = useState(false)
+  const [step, setStep] = useState(0)
+  const [loading, setLoading] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const [cities, setCities] = useState<Array<{ id: string, name: string }>>([])
+  const [schoolInput, setSchoolInput] = useState('')
+  const [selectedSchoolId, setSelectedSchoolId] = useState<string | null>(null)
+  const [schoolSuggestions, setSchoolSuggestions] = useState<Array<{ id: string, name: string, status: string | null, city_id: string }>>([])
+  const [schoolLoading, setSchoolLoading] = useState(false)
+  const [grades, setGrades] = useState<Array<{ id: string, name: string }>>([])
+  const [classes, setClasses] = useState<Array<{ id: string, name: string }>>([])
+  const [cityId, setCityId] = useState('')
+  const [schoolId, setSchoolId] = useState('')
+  const [gradeId, setGradeId] = useState('')
+  const [academicYearId, setAcademicYearId] = useState<string | null>(null)
+  const [className, setClassName] = useState('')
+
+  useEffect(() => {
+    if (!enabled) return
+    if (!canShowProfilePrompt()) return
+    let cancelled = false
+    ;(async () => {
+      setLoading(true)
+      setError('')
+      try {
+        const { data: auth } = await supabaseBrowser.auth.getUser()
+        const u = auth?.user
+        if (!u?.id) return
+
+        const [{ data: cityList }, { data: gradeList }, { data: ayList }] = await Promise.all([
+          supabaseBrowser.from('cities').select('id,name').order('name', { ascending: true }),
+          supabaseBrowser.from('grades').select('id,name').order('name', { ascending: true }),
+          supabaseBrowser.from('academic_years').select('id,name').eq('name', academicYearLabel(new Date())).limit(1),
+        ])
+        if (cancelled) return
+        setCities((cityList || []).map((c: any) => ({ id: String(c.id), name: String(c.name || '') })))
+        setGrades((gradeList || []).filter((g: any) => ['10', '11', '12'].includes(String(g.name))).map((g: any) => ({ id: String(g.id), name: String(g.name || '') })))
+        setAcademicYearId((ayList || [])[0]?.id ? String((ayList || [])[0].id) : null)
+
+        const { data: profile } = await supabaseBrowser
+          .from('student_profiles')
+          .select('school_id, grade_id, class_id, academic_year_id')
+          .eq('user_id', u.id)
+          .maybeSingle()
+        if (cancelled) return
+
+        const classId = profile?.class_id ? String(profile.class_id) : ''
+        const schId = profile?.school_id ? String(profile.school_id) : ''
+        const gId = profile?.grade_id ? String(profile.grade_id) : ''
+        const ayId = profile?.academic_year_id ? String(profile.academic_year_id) : (ayList || [])[0]?.id ? String((ayList || [])[0].id) : null
+        setSchoolId(schId)
+        setSelectedSchoolId(schId || null)
+        setGradeId(gId)
+        setAcademicYearId(ayId)
+
+        let currentClassName = ''
+        if (classId) {
+          const { data: cls } = await supabaseBrowser.from('classes').select('name').eq('id', classId).maybeSingle()
+          currentClassName = cls?.name ? String(cls.name) : ''
+          setClassName(currentClassName)
+        }
+
+        let schCityId = ''
+        if (schId) {
+          const { data: sch } = await supabaseBrowser.from('schools').select('city_id,name').eq('id', schId).maybeSingle()
+          schCityId = sch?.city_id ? String(sch.city_id) : ''
+          if (sch?.name) setSchoolInput(String(sch.name))
+        }
+        const dn = (cityList || []).find((c: any) => c.name === 'Đà Nẵng')
+        const nextCityId = schCityId || (dn?.id ? String(dn.id) : ((cityList || [])[0]?.id ? String((cityList || [])[0].id) : ''))
+        setCityId(nextCityId)
+
+        const incomplete = !schId || !gId || !classId || currentClassName === '10.0'
+        if (incomplete) setOpen(true)
+      } finally {
+        if (cancelled) return
+        setLoading(false)
+      }
+    })()
+    return () => { cancelled = true }
+  }, [enabled])
+
+  useEffect(() => {
+    if (!open) return
+    if (!cityId || schoolInput.trim().length < 2) {
+      setSchoolSuggestions([])
+      return
+    }
+    const t = setTimeout(async () => {
+      setSchoolLoading(true)
+      try {
+        const url = `/api/schools/search?city_id=${encodeURIComponent(cityId)}&keyword=${encodeURIComponent(schoolInput)}`
+        const r = await fetch(url)
+        const j = await r.json().catch(() => ({}))
+        if (!r.ok) {
+          setSchoolSuggestions([])
+          return
+        }
+        setSchoolSuggestions(Array.isArray(j.schools) ? j.schools : [])
+      } finally {
+        setSchoolLoading(false)
+      }
+    }, 250)
+    return () => clearTimeout(t)
+  }, [cityId, open, schoolInput])
+
+  useEffect(() => {
+    if (!open) return
+    if (!(schoolId && gradeId && academicYearId)) { setClasses([]); return }
+    let cancelled = false
+    ;(async () => {
+      const { data } = await supabaseBrowser
+        .from('classes')
+        .select('id,name')
+        .eq('school_id', schoolId)
+        .eq('grade_id', gradeId)
+        .eq('academic_year_id', academicYearId)
+        .order('name', { ascending: true })
+      if (cancelled) return
+      setClasses((data || []).map((c: any) => ({ id: String(c.id), name: String(c.name || '') })))
+    })()
+    return () => { cancelled = true }
+  }, [academicYearId, gradeId, open, schoolId])
+
+  const close = () => {
+    markProfilePromptShown()
+    setOpen(false)
+  }
+
+  const next = () => setStep(s => Math.min(3, s + 1))
+  const prev = () => setStep(s => Math.max(0, s - 1))
+
+  const save = async () => {
+    setSaving(true)
+    setError('')
+    try {
+      if (!schoolId && schoolInput.trim() && isBadSchoolName(schoolInput) && !selectedSchoolId) {
+        throw new Error('Tên trường không hợp lệ')
+      }
+      const res = await fetch('/api/profile/upsert', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          city_id: cityId || null,
+          school_input: schoolInput.trim() || null,
+          selected_school_id: selectedSchoolId || null,
+          school_id: schoolId || null,
+          grade_id: gradeId || null,
+          academic_year_id: academicYearId || null,
+          class_name: className || null
+        })
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(json.error || 'Không thể lưu hồ sơ')
+      close()
+    } catch (e: any) {
+      setError(e.message || 'Có lỗi xảy ra')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (!open) return null
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center px-4" onClick={close}>
+      <div className="w-full max-w-md border rounded-2xl bg-[var(--card)]" style={{ borderColor: 'var(--divider)' }} onClick={(e) => e.stopPropagation()}>
+        <div className="p-5 space-y-2 border-b" style={{ borderColor: 'var(--divider)' }}>
+          <div className="text-lg font-semibold">Bạn đang học ở đâu để ChemAI gợi ý chính xác hơn?</div>
+          <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>Có thể cập nhật nhanh, hoặc để sau.</div>
+        </div>
+        <div className="p-5 space-y-4">
+          {loading ? <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>Đang tải…</div> : null}
+          {!loading ? (
+            <>
+              {step === 0 ? (
+                <div className="space-y-2">
+                  <div className="text-sm font-semibold">1. Thành phố nào?</div>
+                  <select
+                    className="w-full border rounded-xl px-3 py-2 bg-transparent"
+                    style={{ borderColor: 'var(--divider)' }}
+                    value={cityId}
+                    onChange={(e) => {
+                      setCityId(e.target.value)
+                      setSchoolId('')
+                      setSchoolInput('')
+                      setSelectedSchoolId(null)
+                      setSchoolSuggestions([])
+                      setClassName('')
+                    }}
+                  >
+                    <option value="" disabled>Chọn thành phố</option>
+                    {cities.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                </div>
+              ) : null}
+              {step === 1 ? (
+                <div className="space-y-2">
+                  <div className="text-sm font-semibold">2. Trường nào?</div>
+                  <div className="relative">
+                    <Input
+                      placeholder={cityId ? 'Nhập tên trường...' : 'Chọn thành phố trước'}
+                      value={schoolInput}
+                      onChange={(e) => {
+                        setSchoolInput(e.target.value)
+                        setSelectedSchoolId(null)
+                        setSchoolId('')
+                      }}
+                      disabled={!cityId}
+                    />
+                    {schoolLoading ? <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs opacity-70">...</div> : null}
+                  </div>
+                  {cityId && schoolInput.trim().length >= 2 ? (
+                    <div className="border rounded overflow-hidden" style={{ borderColor: 'var(--divider)' }}>
+                      {schoolSuggestions.length ? (
+                        <div className="max-h-56 overflow-y-auto">
+                          {schoolSuggestions.map((s) => (
+                            <button
+                              key={s.id}
+                              type="button"
+                              className="w-full text-left px-3 py-2 text-sm hover:bg-slate-900/10 flex items-center justify-between gap-3"
+                              onClick={() => {
+                                setSelectedSchoolId(String(s.id))
+                                setSchoolId(String(s.id))
+                                setSchoolInput(String(s.name || ''))
+                                setSchoolSuggestions([])
+                                setClassName('')
+                              }}
+                            >
+                              <span>{s.name}</span>
+                              <span className="text-xs opacity-70">{s.status === 'active' ? '' : '(đang xác minh)'}</span>
+                            </button>
+                          ))}
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          className="w-full text-left px-3 py-2 text-sm hover:bg-slate-900/10"
+                          onClick={() => {
+                            setSelectedSchoolId(null)
+                            setSchoolId('')
+                            setSchoolSuggestions([])
+                            setClassName('')
+                          }}
+                          disabled={isBadSchoolName(schoolInput)}
+                          title={isBadSchoolName(schoolInput) ? 'Tên trường tối thiểu 5 ký tự và không dùng tên vô nghĩa' : undefined}
+                        >
+                          + Thêm trường mới: “{schoolInput.trim()}”
+                        </button>
+                      )}
+                    </div>
+                  ) : null}
+                  {isBadSchoolName(schoolInput) && schoolInput.trim().length > 0 ? (
+                    <div className="text-xs text-red-400">Tên trường không hợp lệ (tối thiểu 5 ký tự, không dùng tên vô nghĩa)</div>
+                  ) : null}
+                </div>
+              ) : null}
+              {step === 2 ? (
+                <div className="space-y-2">
+                  <div className="text-sm font-semibold">3. Khối nào?</div>
+                  <select className="w-full border rounded-xl px-3 py-2 bg-transparent" style={{ borderColor: 'var(--divider)' }} value={gradeId} onChange={(e) => { setGradeId(e.target.value); setClassName(''); }}>
+                    <option value="" disabled>Chọn khối</option>
+                    {grades.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+                  </select>
+                </div>
+              ) : null}
+              {step === 3 ? (
+                <div className="space-y-2">
+                  <div className="text-sm font-semibold">4. Lớp nào?</div>
+                  <Input list="prompt-class-options" placeholder="VD: 10.1" value={className} onChange={(e) => setClassName(e.target.value)} />
+                  <datalist id="prompt-class-options">
+                    {classes.map(c => <option key={c.id} value={c.name} />)}
+                  </datalist>
+                </div>
+              ) : null}
+              {error ? <div className="text-sm text-red-400">{error}</div> : null}
+            </>
+          ) : null}
+        </div>
+        <div className="p-5 flex items-center justify-between gap-2 border-t" style={{ borderColor: 'var(--divider)' }}>
+          <Button variant="ghost" onClick={close}>Để sau</Button>
+          <div className="flex gap-2">
+            {step > 0 ? <Button variant="outline" onClick={prev}>Quay lại</Button> : null}
+            {step < 3 ? <Button onClick={next}>Tiếp</Button> : <Button disabled={saving} onClick={save}>{saving ? 'Đang lưu…' : 'Lưu'}</Button>}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 function ReportDialog({ answer, onReportSuccess }: { answer: AnyAnswer, onReportSuccess: (questionId: string, reportId: string) => void }) {
   const [isOpen, setIsOpen] = useState(false)
@@ -446,6 +777,27 @@ export default function ResultPage() {
       return hasScore ? null : <StatusBadge status="pending" />
     })()
 
+    const practiceScoreLine = (() => {
+      if (getMode() !== 'practice') return null
+      if (q.question_type === 'true_false_group') {
+        const st = (q as TrueFalseGroupAnswer).statements || []
+        const sumScore = st.reduce((acc, s) => acc + (Number(s.score_awarded) || 0), 0)
+        const sumMax = st.reduce((acc, s) => acc + (Number(s.max_score) || 0), 0)
+        return (
+          <div className="mt-1 text-sm text-blue-300">
+            Điểm: <span className="font-semibold">{formatScore(sumScore)} / {formatScore(sumMax)}</span>
+          </div>
+        )
+      }
+      const scoreAw = Number((q as any).score_awarded) || 0
+      const maxSc = Number((q as any).max_score) || 0
+      return (
+        <div className="mt-1 text-sm text-blue-300">
+          Điểm: <span className="font-semibold">{formatScore(scoreAw)} / {formatScore(maxSc)}</span>
+        </div>
+      )
+    })()
+
     const baseHeader = (
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1">
@@ -458,6 +810,7 @@ export default function ResultPage() {
             if (!raw) return null
             return <div className="mt-1 text-sm text-gray-200/70">{getTopicLabel(q)}</div>
           })()}
+          {practiceScoreLine}
         </div>
         {headerBadge ? <div className="shrink-0">{headerBadge}</div> : null}
       </div>
@@ -497,9 +850,11 @@ export default function ResultPage() {
                 <span className="text-gray-200/70">Đáp án đúng:</span>
                 <span className="text-green-400 font-medium">{correct}</span>
               </div>
-              <div className="text-sm text-blue-300">
-                Điểm: <span className="font-semibold">{formatScore(scoreAw)} / {formatScore(maxSc)}</span>
-              </div>
+              {getMode() === 'practice' ? null : (
+                <div className="text-sm text-blue-300">
+                  Điểm: <span className="font-semibold">{formatScore(scoreAw)} / {formatScore(maxSc)}</span>
+                </div>
+              )}
               {isWrong && qa.explanation ? (
                 <div className="p-3 rounded-md border border-blue-500/30 bg-blue-500/10 text-blue-100 text-sm whitespace-pre-line">
                   <div className="font-semibold">Giải thích</div>
@@ -560,9 +915,11 @@ export default function ResultPage() {
                   </>
                 ) : null}
               </div>
-              <div className="text-sm text-blue-300">
-                Điểm: <span className="font-semibold">{scoreAw == null ? '—' : formatScore(scoreAw)} / {formatScore(maxSc)}</span>
-              </div>
+              {getMode() === 'practice' ? null : (
+                <div className="text-sm text-blue-300">
+                  Điểm: <span className="font-semibold">{scoreAw == null ? '—' : formatScore(scoreAw)} / {formatScore(maxSc)}</span>
+                </div>
+              )}
               {comment ? (
                 <div className="text-sm text-gray-200 whitespace-pre-line">{comment}</div>
               ) : qa.explanation ? (
@@ -610,9 +967,11 @@ export default function ResultPage() {
           <CardContent className="p-5 space-y-3">
             {baseHeader}
             {imageBlock}
-            <div className="text-sm text-blue-300">
-              Điểm: <span className="font-semibold">{formatScore(sumScore)} / {formatScore(sumMax)}</span>
-            </div>
+            {getMode() === 'practice' ? null : (
+              <div className="text-sm text-blue-300">
+                Điểm: <span className="font-semibold">{formatScore(sumScore)} / {formatScore(sumMax)}</span>
+              </div>
+            )}
             {qa.explanation ? (
               <div className="text-sm text-gray-200/70 whitespace-pre-line">{qa.explanation}</div>
             ) : null}
@@ -648,11 +1007,13 @@ export default function ResultPage() {
                         <div className="text-base text-gray-200">{correct}</div>
                       </div>
                     </div>
-                    <div>
-                      <div className="text-sm text-blue-300">
-                        Điểm: <span className="font-semibold">{formatScore(stScore)} / {formatScore(stMax)}</span>
+                    {getMode() === 'practice' ? null : (
+                      <div>
+                        <div className="text-sm text-blue-300">
+                          Điểm: <span className="font-semibold">{formatScore(stScore)} / {formatScore(stMax)}</span>
+                        </div>
                       </div>
-                    </div>
+                    )}
                     {stExplain ? (
                       <div className="p-3 rounded-md border border-blue-500/30 bg-blue-500/10 text-blue-100 text-sm whitespace-pre-line">
                         <div className="font-semibold">Giải thích</div>
@@ -1034,11 +1395,32 @@ export default function ResultPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 p-5">
-              {getMode() === 'exam' ? (
+              {(getMode() === 'exam' || getMode() === 'practice') ? (
                 <div className="flex flex-wrap items-end gap-x-3 gap-y-1">
                   <div className="text-sm text-slate-200/70">Điểm</div>
                   <div className="text-3xl font-semibold text-blue-200">
-                    {formatScore((attempt.raw_score ?? 0) as any)}<span className="text-base text-slate-200/70"> / 10</span>
+                    {(() => {
+                      const totalFromAttempt = Number((attempt as any).total_score)
+                      const derivedTotal = (() => {
+                        let sum = 0
+                        for (const q of answers) {
+                          if ((q as any).question_type === 'true_false_group') {
+                            const st = Array.isArray((q as any).statements) ? (q as any).statements : []
+                            for (const s of st) sum += Number(s?.max_score) || 0
+                            continue
+                          }
+                          sum += Number((q as any).max_score) || 0
+                        }
+                        return sum
+                      })()
+                      const total = Number.isFinite(totalFromAttempt) && totalFromAttempt > 0 ? totalFromAttempt : derivedTotal
+                      return (
+                        <>
+                          {formatScore((attempt.raw_score ?? 0) as any)}
+                          <span className="text-base text-slate-200/70"> / {formatScore(total as any)}</span>
+                        </>
+                      )
+                    })()}
                   </div>
                 </div>
               ) : null}
@@ -1215,6 +1597,7 @@ export default function ResultPage() {
       <div className="pt-2 flex justify-center">
         <Link href="/"><Button variant="outline">Trở về trang chủ</Button></Link>
       </div>
+      <ProfileCompletionPrompt enabled={!!attempt && !loading} />
     </div>
   )
 }

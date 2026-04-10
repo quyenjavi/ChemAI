@@ -1,8 +1,9 @@
 'use client'
-import { useCallback, useEffect, useMemo, useState, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useState, useRef, type ChangeEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { useAuth } from '@/components/AuthProvider'
 
 type Q = {
@@ -34,6 +35,7 @@ export default function QuizClient({ lessonId, n }: { lessonId: string, n?: stri
   const [interestSelected, setInterestSelected] = useState<Record<string, boolean>>({})
   const [interestSaving, setInterestSaving] = useState<Record<string, boolean>>({})
   const [interestFeedback, setInterestFeedback] = useState('')
+  const [interestOtherText, setInterestOtherText] = useState('')
   const [initError, setInitError] = useState('')
   const [examTimeLeftSec, setExamTimeLeftSec] = useState<number | null>(null)
   const router = useRouter()
@@ -70,13 +72,32 @@ export default function QuizClient({ lessonId, n }: { lessonId: string, n?: stri
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ user_id: user?.id, subject })
+        body: JSON.stringify({ subject })
       })
-      if (res.ok) setInterestFeedback('Got it! We’ll share useful content with you.')
+      if (res.ok) setInterestFeedback('Đã ghi nhận! ChemAI sẽ gửi nội dung hữu ích sau.')
     } finally {
       setInterestSaving(prev => ({ ...prev, [subject]: false }))
     }
-  }, [user?.id])
+  }, [])
+
+  const saveOtherInterest = useCallback(async () => {
+    const text = String(interestOtherText || '').trim()
+    if (!text) return
+    setInterestSelected(prev => ({ ...prev, other: true }))
+    setInterestSaving(prev => ({ ...prev, other: true }))
+    setInterestFeedback('')
+    try {
+      const res = await fetch('/api/user-interests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ subject: 'other', other_text: text })
+      })
+      if (res.ok) setInterestFeedback('Đã ghi nhận! ChemAI sẽ gửi nội dung hữu ích sau.')
+    } finally {
+      setInterestSaving(prev => ({ ...prev, other: false }))
+    }
+  }, [interestOtherText])
 
   const initStartedRef = useRef(false)
   const attemptIdRef = useRef<string | null>(null)
@@ -332,9 +353,9 @@ export default function QuizClient({ lessonId, n }: { lessonId: string, n?: stri
             </div>
 
             <div className="space-y-2">
-              <div className="text-base font-semibold">While waiting... what do you want to study next?</div>
-              <div className="text-sm" style={{color:'var(--text-secondary)'}}>We may send you useful materials later</div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <div className="text-base font-semibold">Trong lúc chờ... em muốn học thêm môn gì?</div>
+              <div className="text-sm" style={{color:'var(--text-secondary)'}}>ChemAI có thể gửi tài liệu phù hợp sau.</div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <Button
                   variant={interestSelected.english ? 'default' : 'outline'}
                   size="lg"
@@ -342,7 +363,7 @@ export default function QuizClient({ lessonId, n }: { lessonId: string, n?: stri
                   onClick={() => toggleInterest('english')}
                   className="w-full"
                 >
-                  English
+                  Tiếng Anh
                 </Button>
                 <Button
                   variant={interestSelected.math ? 'default' : 'outline'}
@@ -351,7 +372,7 @@ export default function QuizClient({ lessonId, n }: { lessonId: string, n?: stri
                   onClick={() => toggleInterest('math')}
                   className="w-full"
                 >
-                  Math
+                  Toán
                 </Button>
                 <Button
                   variant={interestSelected.physics ? 'default' : 'outline'}
@@ -360,9 +381,34 @@ export default function QuizClient({ lessonId, n }: { lessonId: string, n?: stri
                   onClick={() => toggleInterest('physics')}
                   className="w-full"
                 >
-                  Physics
+                  Vật lý
+                </Button>
+                <Button
+                  variant={interestSelected.other ? 'default' : 'outline'}
+                  size="lg"
+                  disabled={!!interestSaving.other}
+                  onClick={() => setInterestSelected(prev => ({ ...prev, other: !prev.other }))}
+                  className="w-full"
+                >
+                  Khác
                 </Button>
               </div>
+              {interestSelected.other ? (
+                <div className="flex gap-2 items-center">
+                  <Input
+                    value={interestOtherText}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => setInterestOtherText(e.target.value)}
+                    placeholder="Môn khác (VD: Sinh học)"
+                  />
+                  <Button
+                    variant="outline"
+                    disabled={!!interestSaving.other || !String(interestOtherText || '').trim()}
+                    onClick={saveOtherInterest}
+                  >
+                    Lưu
+                  </Button>
+                </div>
+              ) : null}
               {interestFeedback ? (
                 <div className="text-sm" style={{ color: 'var(--success)' }}>{interestFeedback}</div>
               ) : null}

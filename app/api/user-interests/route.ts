@@ -21,8 +21,15 @@ export async function POST(req: Request) {
 
   const svc = serviceRoleClient()
 
-  const clickPromise = svc.from('user_interest_clicks').insert({ user_id: user.id, subject, subject_other: other_text || null } as any)
-  const dedupePromise = svc.from('user_interests').upsert({ user_id: user.id, subject, subject_other: other_text || null } as any, { onConflict: 'user_id,subject' } as any)
+  const clickPayload: any = { user_id: user.id, subject }
+  const interestPayload: any = { user_id: user.id, subject }
+  if (subject === 'other') {
+    clickPayload.subject_other = other_text
+    interestPayload.subject_other = other_text
+  }
+
+  const clickPromise = svc.from('user_interest_clicks').insert(clickPayload)
+  const dedupePromise = svc.from('user_interests').upsert(interestPayload, { onConflict: 'user_id,subject' } as any)
 
   const [clickRes, dedupeRes] = await Promise.all([clickPromise, dedupePromise])
   if (clickRes.error) return NextResponse.json({ error: clickRes.error.message }, { status: 500 })

@@ -1385,81 +1385,137 @@ export default function ResultPage() {
       ) : null}
       {attempt ? (
         <div className="space-y-4">
-          <Card className="border border-slate-700/60 bg-slate-900/30">
+          <Card
+            className="border bg-slate-900/30 overflow-hidden"
+            style={{
+              borderColor: 'rgba(251,191,36,0.20)',
+              backgroundImage: 'radial-gradient(700px 200px at 20% 0%, rgba(251,191,36,0.16), rgba(0,0,0,0)), radial-gradient(700px 200px at 80% 100%, rgba(59,130,246,0.10), rgba(0,0,0,0))'
+            }}
+          >
             <CardHeader>
               <CardTitle className="flex flex-wrap items-center justify-between gap-2">
-                <span>{attempt.lesson_title || 'Bài làm'}</span>
-                <span className="text-sm font-normal" style={{color:'var(--text-muted)'}}>
-                  Loại bài: {(getMode() === 'exam') ? 'Exam' : 'Practice'}
-                </span>
+                <span className="truncate">{attempt.lesson_title || 'Bài làm'}</span>
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3 p-5">
-              {(getMode() === 'exam' || getMode() === 'practice') ? (
-                <div className="flex flex-wrap items-end gap-x-3 gap-y-1">
-                  <div className="text-sm text-slate-200/70">Điểm</div>
-                  <div className="text-3xl font-semibold text-blue-200">
-                    {(() => {
-                      const totalFromAttempt = Number((attempt as any).total_score)
-                      const derivedTotal = (() => {
-                        let sum = 0
-                        for (const q of answers) {
-                          if ((q as any).question_type === 'true_false_group') {
-                            const st = Array.isArray((q as any).statements) ? (q as any).statements : []
-                            for (const s of st) sum += Number(s?.max_score) || 0
-                            continue
-                          }
-                          sum += Number((q as any).max_score) || 0
-                        }
-                        return sum
-                      })()
-                      const total = Number.isFinite(totalFromAttempt) && totalFromAttempt > 0 ? totalFromAttempt : derivedTotal
-                      return (
-                        <>
-                          {formatScore((attempt.raw_score ?? 0) as any)}
-                          <span className="text-base text-slate-200/70"> / {formatScore(total as any)}</span>
-                        </>
-                      )
-                    })()}
-                  </div>
-                </div>
-              ) : null}
-              {!loading && !hasResult ? (
-                <div className="p-4 rounded-md border border-rose-500/20 bg-rose-500/10 text-rose-100">
-                  <div className="font-semibold">Đang có vấn đề hệ thống</div>
-                  <div className="mt-1 text-sm text-rose-100/80">
-                    Không thể lấy kết quả từ AI. Vui lòng bấm nộp lại. Bài làm của em vẫn được giữ nguyên.
-                  </div>
-                  <div className="mt-3">
-                    <Button
-                      className="bg-rose-600 hover:bg-rose-700 rounded-lg"
-                      onClick={() => window.location.reload()}
-                    >
-                      Tải lại kết quả
-                    </Button>
-                  </div>
-                </div>
-              ) : null}
+            <CardContent className="space-y-4 p-5">
               {(() => {
+                const totalFromAttempt = Number((attempt as any).total_score)
+                const derivedTotal = (() => {
+                  let sum = 0
+                  for (const q of answers) {
+                    if ((q as any).question_type === 'true_false_group') {
+                      const st = Array.isArray((q as any).statements) ? (q as any).statements : []
+                      for (const s of st) sum += Number(s?.max_score) || 0
+                      continue
+                    }
+                    sum += Number((q as any).max_score) || 0
+                  }
+                  return sum
+                })()
+                const total = Number.isFinite(totalFromAttempt) && totalFromAttempt > 0 ? totalFromAttempt : derivedTotal
+                const raw = Number((attempt as any).raw_score) || 0
+                const scorePct = total > 0 ? Math.max(0, Math.min(100, (raw / total) * 100)) : 0
+
                 const correctUnits = typeof attempt.accuracy_correct_units === 'number' ? attempt.accuracy_correct_units : stats.correct
                 const totalUnits = typeof attempt.accuracy_total_units === 'number' ? attempt.accuracy_total_units : (stats.total || (attempt.total_questions ?? 0))
                 const acc = typeof attempt.accuracy_percent === 'number'
                   ? attempt.accuracy_percent
                   : (totalUnits ? Math.round((correctUnits / totalUnits) * 100) : 0)
+                const wrongUnits = Math.max(0, (totalUnits || 0) - (correctUnits || 0))
+                const correctPct = totalUnits ? Math.max(0, Math.min(100, (correctUnits / totalUnits) * 100)) : 0
+
+                const r = 54
+                const c = 2 * Math.PI * r
+                const offset = c - (scorePct / 100) * c
+
                 return (
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    <SummaryStat label="Tổng câu" value={String(totalUnits || 0)} tone="neutral" />
-                    <SummaryStat label="Đúng" value={String(correctUnits || 0)} tone="success" />
-                    <SummaryStat label="Sai" value={String(Math.max(0, (totalUnits || 0) - (correctUnits || 0)))} tone="error" />
-                    <SummaryStat label="Tỉ lệ đúng" value={`${acc}%`} tone="primary" />
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-center">
+                    <div className="flex items-center justify-center">
+                      <div className="relative w-[140px] h-[140px]">
+                        <svg width="140" height="140" viewBox="0 0 140 140" className="block">
+                          <circle cx="70" cy="70" r={r} stroke="rgba(255,255,255,0.10)" strokeWidth="10" fill="none" />
+                          <circle
+                            cx="70"
+                            cy="70"
+                            r={r}
+                            stroke="rgba(251,191,36,0.85)"
+                            strokeWidth="10"
+                            fill="none"
+                            strokeLinecap="round"
+                            strokeDasharray={c}
+                            strokeDashoffset={offset}
+                            transform="rotate(-90 70 70)"
+                          />
+                        </svg>
+                        <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+                          <div className="text-[28px] font-semibold leading-none" style={{ color: 'rgba(254,243,199,0.98)' }}>
+                            {formatScore(raw as any)}
+                          </div>
+                          <div className="mt-1 text-xs" style={{ color: 'var(--text-secondary)' }}>
+                            / {formatScore(total as any)}
+                          </div>
+                          <div className="mt-1 text-xs" style={{ color: 'var(--text-secondary)' }}>
+                            {Math.round(scorePct)}%
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="sm:col-span-2 space-y-4">
+                      {!loading && !hasResult ? (
+                        <div className="p-4 rounded-md border border-rose-500/20 bg-rose-500/10 text-rose-100">
+                          <div className="font-semibold">Đang có vấn đề hệ thống</div>
+                          <div className="mt-1 text-sm text-rose-100/80">
+                            Không thể lấy kết quả từ AI. Vui lòng bấm nộp lại. Bài làm của em vẫn được giữ nguyên.
+                          </div>
+                          <div className="mt-3">
+                            <Button
+                              className="bg-rose-600 hover:bg-rose-700 rounded-lg"
+                              onClick={() => window.location.reload()}
+                            >
+                              Tải lại kết quả
+                            </Button>
+                          </div>
+                        </div>
+                      ) : null}
+
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <SummaryStat label="Tổng câu" value={String(totalUnits || 0)} tone="neutral" />
+                        <SummaryStat label="Đúng" value={String(correctUnits || 0)} tone="success" />
+                        <SummaryStat label="Sai" value={String(wrongUnits)} tone="error" />
+                        <SummaryStat label="Tỉ lệ đúng" value={`${acc}%`} tone="primary" />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="rounded-xl border p-3 bg-white/5" style={{ borderColor: 'var(--divider)' }}>
+                          <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>Tiến độ làm đúng</div>
+                          <div className="mt-2 h-2 w-full rounded-full overflow-hidden bg-slate-800/60 border border-slate-700/60">
+                            <div className="h-full bg-emerald-500/70" style={{ width: `${correctPct}%` }} />
+                          </div>
+                          <div className="mt-2 text-xs" style={{ color: 'var(--text-secondary)' }}>
+                            Đúng {correctUnits || 0} • Sai {wrongUnits}
+                          </div>
+                        </div>
+                        <div className="rounded-xl border p-3 bg-white/5" style={{ borderColor: 'var(--divider)' }}>
+                          <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>Gợi ý</div>
+                          <div className="mt-1 text-sm font-semibold" style={{ color: 'rgba(254,243,199,0.95)' }}>
+                            Xem Nhận xét AI & Kế hoạch học tập
+                          </div>
+                          <div className="mt-1 text-xs" style={{ color: 'var(--text-secondary)' }}>
+                            Ưu tiên luyện phần sai trước để tăng điểm nhanh.
+                          </div>
+                        </div>
+                      </div>
+
+                      {attempt.created_at ? (
+                        <div className="text-sm" style={{color:'var(--text-muted)'}}>
+                          Thời gian nộp bài: {formatDateTime(attempt.created_at)}
+                        </div>
+                      ) : null}
+                    </div>
                   </div>
                 )
               })()}
-              {attempt.created_at ? (
-                <div className="text-sm" style={{color:'var(--text-muted)'}}>
-                  Thời gian nộp bài: {formatDateTime(attempt.created_at)}
-                </div>
-              ) : null}
             </CardContent>
           </Card>
 

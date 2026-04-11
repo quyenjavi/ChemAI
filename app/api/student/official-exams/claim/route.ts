@@ -13,6 +13,18 @@ function toScore(v: any): number | null {
   return Number.isFinite(n) ? n : null
 }
 
+function getOcrTotalScore(ocrJson: any): number | null {
+  if (!ocrJson || typeof ocrJson !== 'object') return null
+  const legacy = toScore((ocrJson as any).score)
+  if (legacy != null) return legacy
+  const mcqScore = toScore((ocrJson as any)?.mcq?.mcq_score)
+  const tfScore = toScore((ocrJson as any)?.true_false?.tf_score)
+  const saScore = toScore((ocrJson as any)?.short_answer?.sa_score)
+  const parts = [mcqScore, tfScore, saScore].filter((x) => x != null) as number[]
+  if (!parts.length) return null
+  return parts.reduce((a, b) => a + b, 0)
+}
+
 function typeWeight(t: string) {
   return t === 'single_choice' ? 1
     : (t === 'true_false' || t === 'true_false_group') ? 2
@@ -99,9 +111,9 @@ export async function POST(req: Request) {
       if (!list.length) return null
       let best: any = null
       for (const sh of list) {
-        const s = toScore(sh?.ocr_json?.score)
+        const s = getOcrTotalScore(sh?.ocr_json)
         const cur = best
-        const curS = toScore(cur?.ocr_json?.score)
+        const curS = getOcrTotalScore(cur?.ocr_json)
         const choose = cur == null
           || (s != null && (curS == null || s > curS))
           || (s != null && curS != null && s === curS && (String(sh.reviewed_at || '') > String(cur.reviewed_at || '')))
@@ -126,13 +138,28 @@ export async function POST(req: Request) {
     }
     if (!lesson_id) return NextResponse.json({ error: 'Paper not configured: missing lesson_id' }, { status: 400 })
 
-    const score = sheet?.ocr_json?.score ?? null
+    const score = getOcrTotalScore(sheet?.ocr_json)
 
     let attempt_id: string | null = null
     if (sheet && lesson_id) {
-      const answersObj = sheet?.ocr_json?.answers
-      const ocrAnswers = (answersObj && typeof answersObj === 'object') ? answersObj : null
-      if (!ocrAnswers) return NextResponse.json({ error: 'Sheet missing ocr_json.answers' }, { status: 400 })
+      const ocrJson = sheet?.ocr_json
+      const legacyAnswersObj = (ocrJson && typeof ocrJson === 'object') ? (ocrJson as any).answers : null
+      const legacyAnswers = (legacyAnswersObj && typeof legacyAnswersObj === 'object') ? legacyAnswersObj : null
+      const mcqObj = (ocrJson && typeof ocrJson === 'object') ? (ocrJson as any).mcq : null
+      const tfObj = (ocrJson && typeof ocrJson === 'object') ? (ocrJson as any).true_false : null
+      const saObj = (ocrJson && typeof ocrJson === 'object') ? (ocrJson as any).short_answer : null
+
+      const getOcrValue = (key: string) => {
+        if (legacyAnswers && Object.prototype.hasOwnProperty.call(legacyAnswers, key)) return (legacyAnswers as any)[key]
+        if (key.startsWith('mcq_')) return mcqObj?.[key]
+        if (key.startsWith('tf_')) return tfObj?.[key]
+        if (key.startsWith('sa_')) return saObj?.[key]
+        return null
+      }
+
+      if (!legacyAnswers && !mcqObj && !tfObj && !saObj) {
+        return NextResponse.json({ error: 'Sheet missing ocr_json answers' }, { status: 400 })
+      }
 
       const { data: lessonRow } = await svc
         .from('lessons')
@@ -205,7 +232,7 @@ export async function POST(req: Request) {
         if (typ === 'single_choice') {
           const key = `mcq_${mcqIdx}`
           mcqIdx += 1
-          const picked = normMcq((ocrAnswers as any)[key])
+          const picked = normMcq(getOcrValue(key))
           answersPayload.push({ questionId: qid, selected_answer: picked })
           continue
         }
@@ -213,7 +240,7 @@ export async function POST(req: Request) {
         if (typ === 'short_answer') {
           const key = `sa_${saIdx}`
           saIdx += 1
-          const txt = normalizeText((ocrAnswers as any)[key])
+          const txt = normalizeText(getOcrValue(key))
           answersPayload.push({ questionId: qid, answer_text: txt })
           continue
         }
@@ -227,7 +254,7 @@ export async function POST(req: Request) {
             const letter = letters[i] || null
             if (!letter) continue
             const key = `tf_${tfGroupIdx}_${letter}`
-            statement_answers[sid] = normTf((ocrAnswers as any)[key])
+            statement_answers[sid] = normTf(getOcrValue(key))
           }
           tfGroupIdx += 1
           answersPayload.push({ questionId: qid, statement_answers })

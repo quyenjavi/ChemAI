@@ -56,10 +56,15 @@ export default function ProfilePage() {
   const [studentCodeByExamId, setStudentCodeByExamId] = useState<Record<string, string>>({})
   const [claimLoadingByExamId, setClaimLoadingByExamId] = useState<Record<string, boolean>>({})
   const [claimResultByExamId, setClaimResultByExamId] = useState<Record<string, any>>({})
+  const [interestSelected, setInterestSelected] = useState<Record<string, boolean>>({})
+  const [interestSaving, setInterestSaving] = useState<Record<string, boolean>>({})
+  const [interestFeedback, setInterestFeedback] = useState('')
+  const [interestOtherText, setInterestOtherText] = useState('')
 
   const router = useRouter()
   const { user, loading: authLoading } = useAuth()
   const metaFullName = (user as any)?.user_metadata?.full_name ? String((user as any).user_metadata.full_name) : ''
+  const claimStorageKey = user?.id ? `chemAI_claim_results_${user.id}` : ''
 
   useEffect(() => {
     if (authLoading) return
@@ -194,6 +199,18 @@ export default function ProfilePage() {
     return () => { cancelled = true }
   }, [authLoading, user?.id])
 
+  useEffect(() => {
+    if (!claimStorageKey) return
+    try {
+      const raw = localStorage.getItem(claimStorageKey) || ''
+      if (!raw) return
+      const parsed = JSON.parse(raw)
+      if (parsed && typeof parsed === 'object') {
+        setClaimResultByExamId(parsed as any)
+      }
+    } catch {}
+  }, [claimStorageKey])
+
   async function claimExam(examId: string) {
     const student_code = (studentCodeByExamId[examId] || '').trim()
     if (!student_code) {
@@ -211,11 +228,65 @@ export default function ProfilePage() {
       })
       const json = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(json.error || 'Claim thất bại')
-      setClaimResultByExamId(prev => ({ ...prev, [examId]: json }))
+      setClaimResultByExamId(prev => {
+        const next = { ...prev, [examId]: json }
+        if (claimStorageKey) {
+          try { localStorage.setItem(claimStorageKey, JSON.stringify(next)) } catch {}
+        }
+        return next
+      })
     } catch (e: any) {
       setClaimResultByExamId(prev => ({ ...prev, [examId]: { error: e.message || 'Có lỗi xảy ra' } }))
     } finally {
       setClaimLoadingByExamId(prev => ({ ...prev, [examId]: false }))
+    }
+  }
+
+  const anyClaimLoading = Object.values(claimLoadingByExamId).some(Boolean)
+
+  const toggleInterest = async (subject: 'english' | 'math' | 'physics') => {
+    setInterestSelected(prev => ({ ...prev, [subject]: !prev[subject] }))
+    setInterestSaving(prev => ({ ...prev, [subject]: true }))
+    setInterestFeedback('')
+    try {
+      const res = await fetch('/api/user-interests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ subject })
+      })
+      const j = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setInterestFeedback(String(j.error || 'Không thể lưu lựa chọn, vui lòng thử lại.'))
+        return
+      }
+      setInterestFeedback('Đã ghi nhận! ChemAI sẽ gửi nội dung hữu ích sau.')
+    } finally {
+      setInterestSaving(prev => ({ ...prev, [subject]: false }))
+    }
+  }
+
+  const saveOtherInterest = async () => {
+    const text = String(interestOtherText || '').trim()
+    if (!text) return
+    setInterestSelected(prev => ({ ...prev, other: true }))
+    setInterestSaving(prev => ({ ...prev, other: true }))
+    setInterestFeedback('')
+    try {
+      const res = await fetch('/api/user-interests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ subject: 'other', other_text: text })
+      })
+      const j = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setInterestFeedback(String(j.error || 'Không thể lưu lựa chọn, vui lòng thử lại.'))
+        return
+      }
+      setInterestFeedback('Đã ghi nhận! ChemAI sẽ gửi nội dung hữu ích sau.')
+    } finally {
+      setInterestSaving(prev => ({ ...prev, other: false }))
     }
   }
 
@@ -282,186 +353,288 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="space-y-4 max-w-xl">
-      <h1 className="text-2xl font-semibold">Hồ sơ</h1>
-      <Card>
-        <CardHeader>
-          <CardTitle>Thông tin</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={onSubmit} className="space-y-3">
-            <Input placeholder="Họ tên" value={fullName} onChange={e=>setFullName(e.target.value)} />
-            <div>
-              <label className="text-sm">Thành phố</label>
-              <select className="w-full mt-1 border rounded p-2 bg-transparent select-clean" value={cityId} onChange={e=>{ setCityId(e.target.value); setSchoolInput(''); setSelectedSchoolId(null); setSchoolId(''); setSchoolSuggestions([]); setClassId(''); setClassName('') }} disabled={!cities.length}>
-                <option value="" disabled>Chọn thành phố</option>
-                {cities.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="text-sm">Trường</label>
-              <div className="relative mt-1">
-                <Input
-                  placeholder={cityId ? 'Nhập tên trường...' : 'Chọn thành phố trước'}
-                  value={schoolInput}
-                  onChange={(e) => {
-                    setSchoolInput(e.target.value)
-                    setSelectedSchoolId(null)
-                    setSchoolId('')
-                  }}
-                  disabled={!cityId}
-                />
-                {schoolLoading ? <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs opacity-70">...</div> : null}
+    <div className="space-y-4 max-w-5xl">
+      {anyClaimLoading ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
+          <div className="w-full max-w-lg border rounded-2xl p-6 bg-[var(--bg)] space-y-5" style={{borderColor:'var(--divider)'}}>
+            <div className="space-y-2">
+              <div className="text-xl font-semibold">Đang xử lý bài làm…</div>
+              <div className="text-sm" style={{color:'var(--text-secondary)'}}>
+                Vui lòng đợi một chút, ChemAI đang nhận bài và tổng hợp kết quả.
               </div>
-              {cityId && schoolInput.trim().length >= 2 ? (
-                <div className="mt-2 border rounded overflow-hidden" style={{borderColor:'var(--divider)'}}>
-                  {schoolSuggestions.length ? (
-                    <div className="max-h-56 overflow-y-auto">
-                      {schoolSuggestions.map(s => (
-                        <button
-                          key={s.id}
-                          type="button"
-                          className="w-full text-left px-3 py-2 text-sm hover:bg-slate-900/10 flex items-center justify-between gap-3"
-                          onClick={() => {
-                            setSelectedSchoolId(String(s.id))
-                            setSchoolId(String(s.id))
-                            setSchoolInput(String(s.name || ''))
-                            setSchoolSuggestions([])
-                          }}
-                        >
-                          <span>{s.name}</span>
-                          <span className="text-xs opacity-70">{s.status === 'active' ? '' : '(đang xác minh)'}</span>
-                        </button>
-                      ))}
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      className="w-full text-left px-3 py-2 text-sm hover:bg-slate-900/10"
-                      onClick={() => {
-                        setSelectedSchoolId(null)
-                        setSchoolId('')
-                        setSchoolSuggestions([])
-                      }}
-                      disabled={isBadSchoolName(schoolInput)}
-                      title={isBadSchoolName(schoolInput) ? 'Tên trường tối thiểu 5 ký tự và không dùng tên vô nghĩa' : undefined}
-                    >
-                      + Thêm trường mới: “{schoolInput.trim()}”
-                    </button>
-                  )}
+            </div>
+
+            <div className="space-y-2">
+              <div className="text-base font-semibold">Trong lúc chờ... em muốn học thêm môn gì?</div>
+              <div className="text-sm" style={{color:'var(--text-secondary)'}}>ChemAI có thể gửi tài liệu phù hợp sau.</div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <Button
+                  variant={interestSelected.english ? 'default' : 'outline'}
+                  size="lg"
+                  disabled={!!interestSaving.english}
+                  onClick={() => toggleInterest('english')}
+                  className="w-full"
+                >
+                  Tiếng Anh
+                </Button>
+                <Button
+                  variant={interestSelected.math ? 'default' : 'outline'}
+                  size="lg"
+                  disabled={!!interestSaving.math}
+                  onClick={() => toggleInterest('math')}
+                  className="w-full"
+                >
+                  Toán
+                </Button>
+                <Button
+                  variant={interestSelected.physics ? 'default' : 'outline'}
+                  size="lg"
+                  disabled={!!interestSaving.physics}
+                  onClick={() => toggleInterest('physics')}
+                  className="w-full"
+                >
+                  Vật lý
+                </Button>
+                <Button
+                  variant={interestSelected.other ? 'default' : 'outline'}
+                  size="lg"
+                  disabled={!!interestSaving.other}
+                  onClick={() => setInterestSelected(prev => ({ ...prev, other: !prev.other }))}
+                  className="w-full"
+                >
+                  Khác
+                </Button>
+              </div>
+              {interestSelected.other ? (
+                <div className="flex gap-2 items-center">
+                  <Input
+                    value={interestOtherText}
+                    onChange={(e) => setInterestOtherText(e.target.value)}
+                    placeholder="Môn khác (VD: Sinh học)"
+                  />
+                  <Button
+                    variant="outline"
+                    disabled={!!interestSaving.other || !String(interestOtherText || '').trim()}
+                    onClick={saveOtherInterest}
+                  >
+                    Lưu
+                  </Button>
                 </div>
               ) : null}
-              {isBadSchoolName(schoolInput) && schoolInput.trim().length > 0 ? (
-                <div className="text-xs mt-1 text-red-400">Tên trường không hợp lệ (tối thiểu 5 ký tự, không dùng tên vô nghĩa)</div>
+              {interestFeedback ? (
+                <div className="text-sm" style={{ color: interestFeedback.includes('không thể') ? 'var(--danger)' : 'var(--success)' }}>
+                  {interestFeedback}
+                </div>
               ) : null}
             </div>
-            <div>
-              <label className="text-sm">Khối</label>
-              <select className="w-full mt-1 border rounded p-2 bg-transparent select-clean" value={gradeId} onChange={e=>{ setGradeId(e.target.value); setClassId(''); setClassName('') }} disabled={!grades.length}>
-                <option value="" disabled>Chọn khối</option>
-                {grades.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="text-sm">Lớp</label>
-              <Input
-                list="class-options"
-                placeholder="VD: 10.1"
-                value={className}
-                onChange={(e) => {
-                  const v = e.target.value
-                  setClassName(v)
-                  const found = classes.find(c => String(c.name) === String(v))
-                  setClassId(found ? String(found.id) : '')
-                }}
-                disabled={!(gradeId && academicYearId && (schoolId || selectedSchoolId || schoolInput.trim()))}
-              />
-              <datalist id="class-options">
-                {classes.map(c => <option key={c.id} value={c.name} />)}
-              </datalist>
-            </div>
-            <div>
-              <label className="text-sm">Năm học</label>
-              <select className="w-full mt-1 border rounded p-2 bg-transparent select-clean" value={academicYearId || ''} onChange={e=>{ setAcademicYearId(e.target.value || null); setClassId(''); setClassName('') }} disabled={!academicYears.length}>
-                <option value="" disabled>Chọn năm học</option>
-                {academicYears.map(ay => <option key={ay.id} value={ay.id}>{ay.name}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="text-sm">Ngày sinh</label>
-              <Input className="mt-1" placeholder="Ngày sinh" type="date" value={birthDate} onChange={e=>setBirthDate(e.target.value)} />
-            </div>
-            {error ? <div className="text-red-600 text-sm">{error}</div> : null}
-            <Button disabled={loading}>
-              {loading ? 'Đang lưu...' : 'Lưu hồ sơ'}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Kì thi trường (Official Exam)</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {publishedLoading ? <div className="text-sm" style={{ color: 'var(--text-muted)' }}>Đang tải…</div> : null}
-          {publishedError ? <div className="text-sm text-red-600">{publishedError}</div> : null}
-          {!publishedLoading && !publishedExams.length ? (
-            <div className="text-sm" style={{ color: 'var(--text-muted)' }}>Chưa có kì thi nào được publish.</div>
-          ) : (
-            <div className="space-y-3">
-              {publishedExams.map((ex) => {
-                const claimRes = claimResultByExamId[ex.id] || null
-                const claimErr = claimRes?.error ? String(claimRes.error) : ''
-                const attemptRaw = claimRes?.attempt?.raw_score ?? null
-                const attemptTotal = claimRes?.attempt?.total_score ?? null
-                const score = attemptRaw ?? (claimRes?.result?.score ?? null)
-                const imageUrl = claimRes?.result?.image_url ?? null
-                const attemptUrl = claimRes?.attempt?.url ?? null
-                return (
-                  <div key={ex.id} className="border rounded p-3 space-y-2" style={{ borderColor: 'var(--divider)' }}>
-                    <div className="font-semibold whitespace-normal break-words">{ex.title || ex.id}</div>
-                    <div className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                      {ex.exam_date ? <>Ngày thi: <span style={{ color: 'var(--text)' }}>{new Date(ex.exam_date).toLocaleDateString()}</span></> : null}
-                      {ex.published_at ? <> · Published: <span style={{ color: 'var(--text)' }}>{new Date(ex.published_at).toLocaleString()}</span></> : null}
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 items-end">
-                      <div className="sm:col-span-2">
-                        <div className="text-sm">SBD (student_code)</div>
-                        <Input
-                          value={studentCodeByExamId[ex.id] || ''}
-                          onChange={(e) => setStudentCodeByExamId(prev => ({ ...prev, [ex.id]: e.target.value }))}
-                          placeholder="Nhập SBD để claim"
-                        />
-                      </div>
-                      <Button disabled={!!claimLoadingByExamId[ex.id]} onClick={() => claimExam(ex.id)}>
-                        {claimLoadingByExamId[ex.id] ? 'Đang claim…' : 'Claim'}
-                      </Button>
-                    </div>
-                    {claimErr ? <div className="text-sm text-red-600">{claimErr}</div> : null}
-                    {claimRes && !claimErr ? (
-                      <div className="text-sm">
-                        <div>
-                          Kết quả:{' '}
-                          <b>
-                            {attemptRaw != null && attemptTotal != null
-                              ? `${String(attemptRaw)} / ${String(attemptTotal)}`
-                              : (score == null ? '—' : String(score))}
-                          </b>
-                        </div>
-                        <div className="flex gap-3 flex-wrap">
-                          {imageUrl ? <a className="underline" href={String(imageUrl)} target="_blank" rel="noreferrer">Xem ảnh bài làm</a> : null}
-                          {attemptUrl ? <a className="underline" href={String(attemptUrl)}>Xem bài làm trên ChemAI</a> : null}
-                        </div>
-                      </div>
-                    ) : null}
-                  </div>
-                )
-              })}
+            <div className="p-4 rounded-xl border bg-white/5" style={{ borderColor: 'var(--divider)' }}>
+              <div className="text-sm font-semibold">Đợi xíu nhé, bài của bạn đang load…</div>
+              <div className="mt-1 text-sm" style={{ color: 'var(--text-secondary)' }}>
+                Trong lúc chờ, vào follow Facebook ChemAI ngay nè:
+              </div>
+              <div className="mt-1 text-sm" style={{ color: 'var(--text-secondary)' }}>
+                Top 10 kỳ thi năm nay sắp lộ diện!
+              </div>
+              <a
+                className="mt-2 inline-flex items-center justify-center text-sm px-4 py-2.5 rounded-md border border-slate-200/25 bg-white/10 hover:bg-white/20 transition w-full"
+                href="https://www.facebook.com/profile.php?id=61578453523740"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Follow Facebook ChemAI
+              </a>
             </div>
-          )}
-        </CardContent>
-      </Card>
+
+            <div className="space-y-3">
+              <div className="h-2 w-full rounded bg-slate-700/40 overflow-hidden">
+                <div className="h-full w-1/2 bg-violet-500/70 animate-pulse" />
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+      <h1 className="text-2xl font-semibold">Hồ sơ</h1>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+        <Card>
+          <CardHeader>
+            <CardTitle>Kì thi trường (Official Exam)</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {publishedLoading ? <div className="text-sm" style={{ color: 'var(--text-muted)' }}>Đang tải…</div> : null}
+            {publishedError ? <div className="text-sm text-red-600">{publishedError}</div> : null}
+            {!publishedLoading && !publishedExams.length ? (
+              <div className="text-sm" style={{ color: 'var(--text-muted)' }}>Chưa có kì thi nào được publish.</div>
+            ) : (
+              <div className="space-y-3">
+                {publishedExams.map((ex) => {
+                  const claimRes = claimResultByExamId[ex.id] || null
+                  const claimErr = claimRes?.error ? String(claimRes.error) : ''
+                  const attemptRaw = claimRes?.attempt?.raw_score ?? null
+                  const attemptTotal = claimRes?.attempt?.total_score ?? null
+                  const score = attemptRaw ?? (claimRes?.result?.score ?? null)
+                  const imageUrl = claimRes?.result?.image_url ?? null
+                  const attemptUrl = claimRes?.attempt?.url ?? null
+                  return (
+                    <div key={ex.id} className="border rounded p-3 space-y-2 bg-orange-500/5" style={{ borderColor: 'rgba(251,146,60,0.45)' }}>
+                      <div className="font-semibold whitespace-normal break-words">{ex.title || ex.id}</div>
+                      <div className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                        {ex.exam_date ? <>Ngày thi: <span style={{ color: 'var(--text)' }}>{new Date(ex.exam_date).toLocaleDateString()}</span></> : null}
+                        {ex.published_at ? <> · Published: <span style={{ color: 'var(--text)' }}>{new Date(ex.published_at).toLocaleString()}</span></> : null}
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 items-end">
+                        <div className="sm:col-span-2">
+                          <div className="text-sm">SBD (7 chữ số)</div>
+                          <Input
+                            value={studentCodeByExamId[ex.id] || ''}
+                            onChange={(e) => setStudentCodeByExamId(prev => ({ ...prev, [ex.id]: e.target.value }))}
+                            placeholder="Nhập SBD 7 chữ số để claim"
+                          />
+                        </div>
+                        <Button disabled={!!claimLoadingByExamId[ex.id]} onClick={() => claimExam(ex.id)}>
+                          {claimLoadingByExamId[ex.id] ? 'Đang claim…' : 'Claim'}
+                        </Button>
+                      </div>
+                      {claimErr ? <div className="text-sm text-red-600">{claimErr}</div> : null}
+                      {claimRes && !claimErr ? (
+                        <div className="text-sm">
+                          <div>
+                            Kết quả:{' '}
+                            <b>
+                              {attemptRaw != null && attemptTotal != null
+                                ? `${String(attemptRaw)} / ${String(attemptTotal)}`
+                                : (score == null ? '—' : String(score))}
+                            </b>
+                          </div>
+                          <div className="flex gap-3 flex-wrap">
+                            {imageUrl ? <a className="underline" href={String(imageUrl)} target="_blank" rel="noreferrer">Xem ảnh bài làm</a> : null}
+                            {attemptUrl ? <a className="underline" href={String(attemptUrl)}>Xem bài làm trên ChemAI</a> : null}
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Thông tin</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={onSubmit} className="space-y-3">
+              <Input placeholder="Họ tên" value={fullName} onChange={e=>setFullName(e.target.value)} />
+              <div>
+                <label className="text-sm">Thành phố</label>
+                <select className="w-full mt-1 border rounded p-2 bg-transparent select-clean" value={cityId} onChange={e=>{ setCityId(e.target.value); setSchoolInput(''); setSelectedSchoolId(null); setSchoolId(''); setSchoolSuggestions([]); setClassId(''); setClassName('') }} disabled={!cities.length}>
+                  <option value="" disabled>Chọn thành phố</option>
+                  {cities.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-sm">Trường</label>
+                <div className="relative mt-1">
+                  <Input
+                    placeholder={cityId ? 'Nhập tên trường...' : 'Chọn thành phố trước'}
+                    value={schoolInput}
+                    onChange={(e) => {
+                      setSchoolInput(e.target.value)
+                      setSelectedSchoolId(null)
+                      setSchoolId('')
+                    }}
+                    disabled={!cityId}
+                  />
+                  {schoolLoading ? <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs opacity-70">...</div> : null}
+                </div>
+                {cityId && schoolInput.trim().length >= 2 ? (
+                  <div className="mt-2 border rounded overflow-hidden" style={{borderColor:'var(--divider)'}}>
+                    {schoolSuggestions.length ? (
+                      <div className="max-h-56 overflow-y-auto">
+                        {schoolSuggestions.map(s => (
+                          <button
+                            key={s.id}
+                            type="button"
+                            className="w-full text-left px-3 py-2 text-sm hover:bg-slate-900/10 flex items-center justify-between gap-3"
+                            onClick={() => {
+                              setSelectedSchoolId(String(s.id))
+                              setSchoolId(String(s.id))
+                              setSchoolInput(String(s.name || ''))
+                              setSchoolSuggestions([])
+                            }}
+                          >
+                            <span>{s.name}</span>
+                            <span className="text-xs opacity-70">{s.status === 'active' ? '' : '(đang xác minh)'}</span>
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        className="w-full text-left px-3 py-2 text-sm hover:bg-slate-900/10"
+                        onClick={() => {
+                          setSelectedSchoolId(null)
+                          setSchoolId('')
+                          setSchoolSuggestions([])
+                        }}
+                        disabled={isBadSchoolName(schoolInput)}
+                        title={isBadSchoolName(schoolInput) ? 'Tên trường tối thiểu 5 ký tự và không dùng tên vô nghĩa' : undefined}
+                      >
+                        + Thêm trường mới: “{schoolInput.trim()}”
+                      </button>
+                    )}
+                  </div>
+                ) : null}
+                {isBadSchoolName(schoolInput) && schoolInput.trim().length > 0 ? (
+                  <div className="text-xs mt-1 text-red-400">Tên trường không hợp lệ (tối thiểu 5 ký tự, không dùng tên vô nghĩa)</div>
+                ) : null}
+              </div>
+              <div>
+                <label className="text-sm">Khối</label>
+                <select className="w-full mt-1 border rounded p-2 bg-transparent select-clean" value={gradeId} onChange={e=>{ setGradeId(e.target.value); setClassId(''); setClassName('') }} disabled={!grades.length}>
+                  <option value="" disabled>Chọn khối</option>
+                  {grades.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-sm">Lớp</label>
+                <Input
+                  list="class-options"
+                  placeholder="VD: 10.1"
+                  value={className}
+                  onChange={(e) => {
+                    const v = e.target.value
+                    setClassName(v)
+                    const found = classes.find(c => String(c.name) === String(v))
+                    setClassId(found ? String(found.id) : '')
+                  }}
+                  disabled={!(gradeId && academicYearId && (schoolId || selectedSchoolId || schoolInput.trim()))}
+                />
+                <datalist id="class-options">
+                  {classes.map(c => <option key={c.id} value={c.name} />)}
+                </datalist>
+              </div>
+              <div>
+                <label className="text-sm">Năm học</label>
+                <select className="w-full mt-1 border rounded p-2 bg-transparent select-clean" value={academicYearId || ''} onChange={e=>{ setAcademicYearId(e.target.value || null); setClassId(''); setClassName('') }} disabled={!academicYears.length}>
+                  <option value="" disabled>Chọn năm học</option>
+                  {academicYears.map(ay => <option key={ay.id} value={ay.id}>{ay.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-sm">Ngày sinh</label>
+                <Input className="mt-1" placeholder="Ngày sinh" type="date" value={birthDate} onChange={e=>setBirthDate(e.target.value)} />
+              </div>
+              {error ? <div className="text-red-600 text-sm">{error}</div> : null}
+              <Button disabled={loading}>
+                {loading ? 'Đang lưu...' : 'Lưu hồ sơ'}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }

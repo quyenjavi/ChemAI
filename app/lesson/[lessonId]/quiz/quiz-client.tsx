@@ -74,7 +74,12 @@ export default function QuizClient({ lessonId, n }: { lessonId: string, n?: stri
         credentials: 'include',
         body: JSON.stringify({ subject })
       })
-      if (res.ok) setInterestFeedback('Đã ghi nhận! ChemAI sẽ gửi nội dung hữu ích sau.')
+      const j = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setInterestFeedback(String(j.error || 'Không thể lưu lựa chọn, vui lòng thử lại.'))
+        return
+      }
+      setInterestFeedback('Đã ghi nhận! ChemAI sẽ gửi nội dung hữu ích sau.')
     } finally {
       setInterestSaving(prev => ({ ...prev, [subject]: false }))
     }
@@ -93,7 +98,12 @@ export default function QuizClient({ lessonId, n }: { lessonId: string, n?: stri
         credentials: 'include',
         body: JSON.stringify({ subject: 'other', other_text: text })
       })
-      if (res.ok) setInterestFeedback('Đã ghi nhận! ChemAI sẽ gửi nội dung hữu ích sau.')
+      const j = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setInterestFeedback(String(j.error || 'Không thể lưu lựa chọn, vui lòng thử lại.'))
+        return
+      }
+      setInterestFeedback('Đã ghi nhận! ChemAI sẽ gửi nội dung hữu ích sau.')
     } finally {
       setInterestSaving(prev => ({ ...prev, other: false }))
     }
@@ -412,6 +422,24 @@ export default function QuizClient({ lessonId, n }: { lessonId: string, n?: stri
               {interestFeedback ? (
                 <div className="text-sm" style={{ color: 'var(--success)' }}>{interestFeedback}</div>
               ) : null}
+            </div>
+
+            <div className="p-4 rounded-xl border bg-white/5 space-y-2" style={{ borderColor: 'var(--divider)' }}>
+              <div className="text-sm font-semibold">Đợi xíu nhé, bài của bạn đang load…</div>
+              <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                Các phân tích lỗi sai, mẹo ôn tập và cập nhật quan trọng sẽ được đăng trên Facebook ChemAI.
+              </div>
+              <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                Follow ngay để không bỏ lỡ nhé!
+              </div>
+              <a
+                className="inline-flex items-center justify-center text-sm px-4 py-2.5 rounded-md border border-slate-200/25 bg-white/10 hover:bg-white/20 transition w-full"
+                href="https://www.facebook.com/profile.php?id=61578453523740"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Follow Facebook ChemAI
+              </a>
             </div>
 
             <div className="space-y-3">

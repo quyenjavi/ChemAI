@@ -68,7 +68,9 @@ async function fetchCandidates(opts: {
 }): Promise<Array<any>> {
   let query = opts.svc
     .from('questions')
-    .select('id, content, question_type, topic, topic_unit, difficulty, difficulty_academic, tip, explanation, image_url, image_alt, image_caption')
+    .select('id, lesson_id, content, question_type, topic, topic_unit, difficulty, difficulty_academic, tip, explanation, image_url, image_alt, image_caption, lessons!inner(lesson_type)')
+
+  query = query.eq('lessons.lesson_type', 'practice')
 
   if (opts.topic.topic_unit) {
     query = query.eq('topic_unit', opts.topic.topic_unit)
@@ -274,4 +276,3 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: e.message || 'Server error' }, { status: 500 })
   }
 }
-

@@ -710,8 +710,8 @@ export default function ResultPage() {
   const formatScore = (v: any) => {
     const n = Number(v)
     if (!Number.isFinite(n)) return '0'
-    const s = (Math.round(n * 100) / 100).toFixed(2)
-    return s.replace(/\.00$/, '').replace(/(\.\d)0$/, '$1')
+    const s = (Math.round(n * 1000) / 1000).toFixed(3)
+    return s.replace(/\.000$/, '').replace(/(\.\d\d?)0$/, '$1')
   }
 
   const formatDateTime = (v: any) => {

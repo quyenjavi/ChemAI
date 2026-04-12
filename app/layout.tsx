@@ -6,6 +6,7 @@ import { cookies } from 'next/headers'
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
 import SignOutButton from '@/components/SignOutButton'
 import { AuthProvider } from '@/components/AuthProvider'
+import { GoogleAnalytics } from '@/components/GoogleAnalytics'
 
 export const dynamic = 'force-dynamic'
 export const fetchCache = 'force-no-store'
@@ -31,6 +32,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   return (
     <html lang="vi">
       <body className="min-h-screen">
+        <GoogleAnalytics />
         <AuthProvider initialSession={session ?? null}>
           <header className="border-b border-[var(--divider)] bg-[rgba(255,255,255,0.06)] backdrop-blur">
             <div className="mx-auto max-w-6xl px-4 py-3 flex items-center justify-between">

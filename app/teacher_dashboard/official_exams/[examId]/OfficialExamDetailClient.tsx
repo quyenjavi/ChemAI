@@ -491,9 +491,10 @@ export default function OfficialExamDetailClient({ examId }: { examId: string })
           <CardTitle>Export</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2 text-sm">
-          <div className="flex gap-3 flex-wrap">
-            <a className="underline" href={`/api/teacher/official-exams/${examId}/export?group=class`}>Xuất theo lớp (CSV)</a>
-            <a className="underline" href={`/api/teacher/official-exams/${examId}/export?group=room`}>Xuất theo phòng (CSV)</a>
+          <div className="flex gap-3 flex-wrap items-center">
+            <a href={`/api/teacher/official-exams/${examId}/export-scores`}>
+              <Button>Xuất bảng điểm (Excel)</Button>
+            </a>
           </div>
         </CardContent>
       </Card>

@@ -1399,7 +1399,19 @@ export default function ResultPage() {
             </CardHeader>
             <CardContent className="space-y-4 p-5">
               {(() => {
-                const totalFromAttempt = Number((attempt as any).total_score)
+                const toNumLoose = (v: any): number | null => {
+                  if (v == null) return null
+                  if (typeof v === 'number') return Number.isFinite(v) ? v : null
+                  if (typeof v === 'object' && v && 'value' in v) return toNumLoose((v as any).value)
+                  const t = String(v ?? '').trim()
+                  if (!t) return null
+                  const m = t.replace(',', '.').match(/-?\d+(?:\.\d+)?/)
+                  if (!m) return null
+                  const n = Number(m[0])
+                  return Number.isFinite(n) ? n : null
+                }
+
+                const totalFromAttempt = toNumLoose((attempt as any).total_score) ?? 0
                 const derivedTotal = (() => {
                   let sum = 0
                   for (const q of answers) {
@@ -1412,9 +1424,19 @@ export default function ResultPage() {
                   }
                   return sum
                 })()
-                const total = Number.isFinite(totalFromAttempt) && totalFromAttempt > 0 ? totalFromAttempt : derivedTotal
-                const raw = Number((attempt as any).raw_score) || 0
-                const scorePct = total > 0 ? Math.max(0, Math.min(100, (raw / total) * 100)) : 0
+                const mcqMax = derivedTotal
+                const total = totalFromAttempt > 0 ? totalFromAttempt : mcqMax
+                const mcqScore = toNumLoose((attempt as any).raw_score) ?? 0
+
+                const essayMaxFromAttempt = toNumLoose((attempt as any).essay_max_score) ?? 0
+                const inferredEssayMax = total > mcqMax ? (total - mcqMax) : 0
+                const essayMax = essayMaxFromAttempt > 0 ? essayMaxFromAttempt : inferredEssayMax
+
+                const essayScore = toNumLoose((attempt as any).essay_score) ?? 0
+                const showEssay = essayMax > 0 || essayScore > 0 || total > mcqMax
+
+                const achieved = mcqScore + essayScore
+                const scorePct = total > 0 ? Math.max(0, Math.min(100, (achieved / total) * 100)) : 0
 
                 const correctUnits = typeof attempt.accuracy_correct_units === 'number' ? attempt.accuracy_correct_units : stats.correct
                 const totalUnits = typeof attempt.accuracy_total_units === 'number' ? attempt.accuracy_total_units : (stats.total || (attempt.total_questions ?? 0))
@@ -1422,7 +1444,14 @@ export default function ResultPage() {
                   ? attempt.accuracy_percent
                   : (totalUnits ? Math.round((correctUnits / totalUnits) * 100) : 0)
                 const wrongUnits = Math.max(0, (totalUnits || 0) - (correctUnits || 0))
-                const correctPct = totalUnits ? Math.max(0, Math.min(100, (correctUnits / totalUnits) * 100)) : 0
+                const mcqPct = mcqMax > 0 ? Math.max(0, Math.min(100, (mcqScore / mcqMax) * 100)) : 0
+                const essayPct = essayMax > 0 ? Math.max(0, Math.min(100, (essayScore / essayMax) * 100)) : 0
+
+                const ringColor = acc >= 80
+                  ? 'rgba(34,197,94,0.85)'
+                  : acc >= 60
+                    ? 'rgba(251,191,36,0.85)'
+                    : 'rgba(251,146,60,0.85)'
 
                 const r = 54
                 const c = 2 * Math.PI * r
@@ -1438,7 +1467,7 @@ export default function ResultPage() {
                             cx="70"
                             cy="70"
                             r={r}
-                            stroke="rgba(251,191,36,0.85)"
+                            stroke={ringColor}
                             strokeWidth="10"
                             fill="none"
                             strokeLinecap="round"
@@ -1449,7 +1478,7 @@ export default function ResultPage() {
                         </svg>
                         <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
                           <div className="text-[28px] font-semibold leading-none" style={{ color: 'rgba(254,243,199,0.98)' }}>
-                            {formatScore(raw as any)}
+                            {formatScore(achieved as any)}
                           </div>
                           <div className="mt-1 text-xs" style={{ color: 'var(--text-secondary)' }}>
                             / {formatScore(total as any)}
@@ -1480,7 +1509,7 @@ export default function ResultPage() {
                       ) : null}
 
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                        <SummaryStat label="Tổng câu" value={String(totalUnits || 0)} tone="neutral" />
+                        <SummaryStat label="Tổng câu trắc nghiệm" value={String(totalUnits || 0)} tone="neutral" />
                         <SummaryStat label="Đúng" value={String(correctUnits || 0)} tone="success" />
                         <SummaryStat label="Sai" value={String(wrongUnits)} tone="error" />
                         <SummaryStat label="Tỉ lệ đúng" value={`${acc}%`} tone="primary" />
@@ -1488,28 +1517,52 @@ export default function ResultPage() {
 
                       <div className="grid grid-cols-2 gap-3">
                         <div className="rounded-xl border p-3 bg-white/5" style={{ borderColor: 'var(--divider)' }}>
-                          <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>Tiến độ làm đúng</div>
+                          <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>Điểm trắc nghiệm</div>
                           <div className="mt-2 h-2 w-full rounded-full overflow-hidden bg-slate-800/60 border border-slate-700/60">
-                            <div className="h-full bg-emerald-500/70" style={{ width: `${correctPct}%` }} />
+                            <div className="h-full bg-emerald-500/70" style={{ width: `${mcqPct}%` }} />
                           </div>
                           <div className="mt-2 text-xs" style={{ color: 'var(--text-secondary)' }}>
-                            Đúng {correctUnits || 0} • Sai {wrongUnits}
+                            {formatScore(mcqScore as any)} / {formatScore(mcqMax as any)}
                           </div>
                         </div>
                         <div className="rounded-xl border p-3 bg-white/5" style={{ borderColor: 'var(--divider)' }}>
-                          <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>Gợi ý</div>
-                          <div className="mt-1 text-sm font-semibold" style={{ color: 'rgba(254,243,199,0.95)' }}>
-                            Xem Nhận xét AI & Kế hoạch học tập
-                          </div>
-                          <div className="mt-1 text-xs" style={{ color: 'var(--text-secondary)' }}>
-                            Ưu tiên luyện phần sai trước để tăng điểm nhanh.
-                          </div>
+                          {showEssay ? (
+                            <>
+                              <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>Điểm essay</div>
+                              <div className="mt-2 h-2 w-full rounded-full overflow-hidden bg-slate-800/60 border border-slate-700/60">
+                                <div className="h-full bg-purple-500/70" style={{ width: `${essayPct}%` }} />
+                              </div>
+                              <div className="mt-1 text-sm font-semibold" style={{ color: 'rgba(254,243,199,0.95)' }}>
+                                {formatScore(essayScore as any)} / {formatScore(essayMax as any)}
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>Gợi ý</div>
+                              <div className="mt-1 text-sm font-semibold" style={{ color: 'rgba(254,243,199,0.95)' }}>
+                                Xem Nhận xét AI & Kế hoạch học tập
+                              </div>
+                              <div className="mt-1 text-xs" style={{ color: 'var(--text-secondary)' }}>
+                                Ưu tiên luyện phần sai trước để tăng điểm nhanh.
+                              </div>
+                            </>
+                          )}
                         </div>
                       </div>
 
                       {attempt.created_at ? (
-                        <div className="text-sm" style={{color:'var(--text-muted)'}}>
-                          Thời gian nộp bài: {formatDateTime(attempt.created_at)}
+                        <div className="text-sm flex flex-wrap items-center gap-2" style={{color:'var(--text-muted)'}}>
+                          <span>Thời gian nộp bài: {formatDateTime(attempt.created_at)}</span>
+                          {(() => {
+                            const url = String((attempt as any).paper_image_url || '').trim()
+                            if (!url) return null
+                            return (
+                              <>
+                                <span style={{ color: 'var(--text-muted)' }}>•</span>
+                                <a className="underline" href={url} target="_blank" rel="noreferrer">Xem bài đã làm</a>
+                              </>
+                            )
+                          })()}
                         </div>
                       ) : null}
                     </div>

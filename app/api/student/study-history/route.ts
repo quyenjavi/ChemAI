@@ -8,6 +8,7 @@ type AttemptRow = {
   total_questions: number | null
   correct_answers: number | null
   score_percent: number | null
+  paper_image_url?: string | null
   lessons?: { title?: string | null } | null
 }
 
@@ -37,7 +38,7 @@ export async function GET() {
 
     const { data: attemptsRaw, error: attemptsErr } = await svc
       .from('quiz_attempts')
-      .select('id, lesson_id, created_at, total_questions, correct_answers, score_percent, lessons(title), status')
+      .select('id, lesson_id, created_at, total_questions, correct_answers, score_percent, paper_image_url, lessons(title), status')
       .eq('user_id', user.id)
       .eq('status', 'submitted')
       .order('created_at', { ascending: false })
@@ -172,7 +173,8 @@ export async function GET() {
         percent,
         has_report: !!hasReportByAttempt[a.id],
         reviewed: !!reviewedByAttempt[a.id],
-        has_adjustment: !!hasAdjustmentByAttempt[a.id]
+        has_adjustment: !!hasAdjustmentByAttempt[a.id],
+        paper_image_url: (a as any).paper_image_url ? String((a as any).paper_image_url) : null
       }
     })
 

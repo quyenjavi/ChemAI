@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server'
 import { createSupabaseServer, serviceRoleClient } from '@/lib/supabase/server'
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 const parseSelectedBool = (v: any): boolean | null => {
   if (v === true || v === 'true') return true
   if (v === false || v === 'false') return false
@@ -18,6 +21,15 @@ const getStatementCorrect = (row: any): boolean | null => {
   return null
 }
 
+const toNumber = (v: any): number | null => {
+  if (v == null) return null
+  if (typeof v === 'number') return Number.isFinite(v) ? v : null
+  const s = String(v).trim()
+  if (!s) return null
+  const n = Number(s.replace(',', '.'))
+  return Number.isFinite(n) ? n : null
+}
+
 export async function GET(_: Request, { params }: { params: { attemptId: string } }) {
   try {
     const supabase = createSupabaseServer()
@@ -29,7 +41,7 @@ export async function GET(_: Request, { params }: { params: { attemptId: string 
     // 1. Get attempt to verify ownership
     const { data: att, error: attErr } = await svc
       .from('quiz_attempts')
-      .select('id,user_id,lesson_id,total_questions,correct_answers,score_percent,created_at,mode,raw_score,total_score,accuracy_correct_units,accuracy_total_units,accuracy_percent,status, lessons(title, lesson_type)')
+      .select('id,user_id,lesson_id,total_questions,correct_answers,score_percent,created_at,mode,raw_score,total_score,accuracy_correct_units,accuracy_total_units,accuracy_percent,status,essay_score,essay_max_score,paper_image_url,lessons(title,lesson_type)')
       .eq('id', params.attemptId)
       .maybeSingle()
     
@@ -80,6 +92,9 @@ export async function GET(_: Request, { params }: { params: { attemptId: string 
       score_percent: att.score_percent,
       raw_score: att.raw_score,
       total_score: att.total_score,
+      essay_score: toNumber((att as any).essay_score) ?? 0,
+      essay_max_score: toNumber((att as any).essay_max_score) ?? 0,
+      paper_image_url: (att as any).paper_image_url ?? null,
       accuracy_correct_units: gradingReport?.accuracy_correct_units,
       accuracy_total_units: gradingReport?.accuracy_total_units,
       accuracy_percent: gradingReport?.accuracy_percent,
@@ -92,7 +107,12 @@ export async function GET(_: Request, { params }: { params: { attemptId: string 
       .eq('attempt_id', params.attemptId)
     
     if (ansErr) throw ansErr
-    if (!answerRows || answerRows.length === 0) return NextResponse.json({ attempt: finalAttempt, report: reportContent, answers: [] })
+    if (!answerRows || answerRows.length === 0) {
+      return NextResponse.json(
+        { attempt: finalAttempt, report: reportContent, answers: [] },
+        { headers: { 'Cache-Control': 'no-store' } }
+      )
+    }
 
     // 3. Get unique question IDs
     const qIds = Array.from(new Set(answerRows.map((r: any) => r.question_id).filter(Boolean)))
@@ -326,30 +346,17 @@ export async function GET(_: Request, { params }: { params: { attemptId: string 
     })
 
     const finalPayload = {
-      attempt: {
-        id: att.id,
-        lesson_id: att.lesson_id,
-        lesson_title: lessonTitle,
-        lesson_type: lessonType,
-        created_at: att.created_at,
-        mode: att.mode,
-        status: att.status,
-        total_questions: att.total_questions,
-        correct_answers: att.correct_answers,
-        score_percent: att.score_percent,
-        raw_score: att.raw_score,
-        total_score: att.total_score,
-        accuracy_correct_units: gradingReport?.accuracy_correct_units,
-        accuracy_total_units: gradingReport?.accuracy_total_units,
-        accuracy_percent: gradingReport?.accuracy_percent,
-      },
+      attempt: finalAttempt,
       report: reportContent,
       answers: payload,
     }
 
-    return NextResponse.json(finalPayload)
+    return NextResponse.json(finalPayload, { headers: { 'Cache-Control': 'no-store' } })
   } catch (e: any) {
     console.error('Error in answers route:', e)
-    return NextResponse.json({ error: e.message || 'Server error' }, { status: 500 })
+    return NextResponse.json(
+      { error: e.message || 'Server error' },
+      { status: 500, headers: { 'Cache-Control': 'no-store' } }
+    )
   }
 }

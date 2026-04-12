@@ -25,6 +25,7 @@ type AttemptItem = {
   has_report: boolean
   reviewed: boolean
   has_adjustment: boolean
+  paper_image_url?: string | null
 }
 
 type PracticeOption = { key: string, text: string, is_correct: boolean }
@@ -289,8 +290,23 @@ export default function StudyHistoryPage() {
                     Điểm: {a.correct}/{a.total} ({a.percent}%)
                   </div>
                   {a.created_at ? (
-                    <div className="text-xs text-slate-500">
-                      Thời gian: {new Date(a.created_at).toLocaleString()}
+                    <div className="text-xs text-slate-500 flex flex-wrap items-center gap-2">
+                      <span>Thời gian: {new Date(a.created_at).toLocaleString()}</span>
+                      {a.paper_image_url ? (
+                        <>
+                          <span style={{ color: 'var(--text-muted)' }}>•</span>
+                          <button
+                            className="underline"
+                            onClick={(e) => {
+                              e.preventDefault()
+                              e.stopPropagation()
+                              window.open(String(a.paper_image_url), '_blank', 'noopener,noreferrer')
+                            }}
+                          >
+                            Xem bài đã làm
+                          </button>
+                        </>
+                      ) : null}
                     </div>
                   ) : null}
                 </a>

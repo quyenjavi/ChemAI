@@ -101,7 +101,7 @@ export async function POST(req: Request) {
 
     const { data: sheets } = await svc
       .from('official_exam_sheets')
-      .select('id, image_url, ocr_json, match_status, process_status, reviewed_at, paper_id, student_id')
+      .select('id, image_url, max_score, essay_score, essay_max_score, ocr_json, match_status, process_status, reviewed_at, paper_id, student_id')
       .eq('official_exam_id', exam_id)
       .eq('student_id', student.id)
       .limit(200000)
@@ -139,6 +139,9 @@ export async function POST(req: Request) {
     if (!lesson_id) return NextResponse.json({ error: 'Paper not configured: missing lesson_id' }, { status: 400 })
 
     const score = getOcrTotalScore(sheet?.ocr_json)
+    const sheetMcqMax = toScore((sheet as any)?.max_score) || 0
+    const sheetEssayScore = toScore((sheet as any)?.essay_score) || 0
+    const sheetEssayMax = toScore((sheet as any)?.essay_max_score) || 0
 
     let attempt_id: string | null = null
     if (sheet && lesson_id) {
@@ -275,13 +278,39 @@ export async function POST(req: Request) {
       if (!submitRes.ok) {
         return NextResponse.json({ error: submitJson.error || 'Submit failed' }, { status: 500 })
       }
+
+      const { data: curAttempt } = await svc
+        .from('quiz_attempts')
+        .select('id, raw_score')
+        .eq('id', attempt_id)
+        .maybeSingle()
+
+      const mcqScore = toScore((curAttempt as any)?.raw_score) || 0
+      const totalMax = sheetMcqMax + sheetEssayMax
+      const totalAchieved = mcqScore + sheetEssayScore
+      const scorePercent = totalMax > 0 ? (Math.round((totalAchieved / totalMax) * 10000) / 100) : 0
+
+      const updatePrimary = await svc
+        .from('quiz_attempts')
+        .update({
+          essay_score: sheetEssayScore,
+          essay_max_score: sheetEssayMax,
+          total_score: totalMax,
+          score_percent: scorePercent,
+          paper_image_url: sheet.image_url ? String(sheet.image_url) : null
+        } as any)
+        .eq('id', attempt_id)
+
+      if (updatePrimary.error) {
+        return NextResponse.json({ error: updatePrimary.error.message }, { status: 500 })
+      }
     }
 
     let attemptInfo: any = null
     if (attempt_id) {
       const { data: attRow } = await svc
         .from('quiz_attempts')
-        .select('id, raw_score, total_score, status')
+        .select('id, raw_score, total_score, essay_score, essay_max_score, paper_image_url, status')
         .eq('id', attempt_id)
         .maybeSingle()
       attemptInfo = {
@@ -290,6 +319,9 @@ export async function POST(req: Request) {
         url: `/attempt/${attempt_id}/result`,
         raw_score: attRow?.raw_score ?? null,
         total_score: attRow?.total_score ?? null,
+        essay_score: (attRow as any)?.essay_score ?? null,
+        essay_max_score: (attRow as any)?.essay_max_score ?? null,
+        paper_image_url: (attRow as any)?.paper_image_url ?? null,
         status: attRow?.status ?? null
       }
     }

@@ -473,7 +473,7 @@ export default function ProfilePage() {
                   const attemptRaw = claimRes?.attempt?.raw_score ?? null
                   const attemptTotal = claimRes?.attempt?.total_score ?? null
                   const score = attemptRaw ?? (claimRes?.result?.score ?? null)
-                  const imageUrl = claimRes?.result?.image_url ?? null
+                  const imageUrl = claimRes?.result?.image_url ?? claimRes?.attempt?.paper_image_url ?? null
                   const attemptUrl = claimRes?.attempt?.url ?? null
                   return (
                     <div key={ex.id} className="border rounded p-3 space-y-2 bg-orange-500/5" style={{ borderColor: 'rgba(251,146,60,0.45)' }}>

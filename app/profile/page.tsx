@@ -30,6 +30,70 @@ function isBadSchoolName(input: string) {
   return false
 }
 
+function formatScore(v: any) {
+  const n = typeof v === 'number' ? v : Number(String(v ?? '').replace(',', '.'))
+  if (!Number.isFinite(n)) return '0'
+  const s = (Math.round(n * 1000) / 1000).toFixed(3)
+  return s.replace(/\.000$/, '').replace(/(\.\d\d?)0$/, '$1')
+}
+
+function ScoreRing({ achieved, total, percent }: { achieved: number, total: number, percent: number }) {
+  const pct = total > 0 ? Math.max(0, Math.min(100, percent)) : 0
+  const r = 42
+  const c = 2 * Math.PI * r
+  const offset = c - (pct / 100) * c
+  const ringColor = pct >= 80
+    ? 'rgba(34,197,94,0.85)'
+    : pct >= 60
+      ? 'rgba(251,191,36,0.85)'
+      : 'rgba(251,146,60,0.85)'
+  return (
+    <div className="relative w-[110px] h-[110px]">
+      <svg width="110" height="110" viewBox="0 0 110 110" className="block">
+        <circle cx="55" cy="55" r={r} stroke="rgba(255,255,255,0.10)" strokeWidth="10" fill="none" />
+        <circle
+          cx="55"
+          cy="55"
+          r={r}
+          stroke={ringColor}
+          strokeWidth="10"
+          fill="none"
+          strokeLinecap="round"
+          strokeDasharray={c}
+          strokeDashoffset={offset}
+          transform="rotate(-90 55 55)"
+        />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+        <div className="text-[26px] font-semibold leading-none" style={{ color: 'rgba(254,243,199,0.98)' }}>
+          {formatScore(achieved)}
+        </div>
+        <div className="mt-1 text-xs" style={{ color: 'var(--text-secondary)' }}>
+          / {formatScore(total)}
+        </div>
+        <div className="mt-1 text-xs" style={{ color: 'var(--text-secondary)' }}>
+          {Math.round(pct)}%
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function encouragementText(totalScore: number) {
+  const s = Number.isFinite(totalScore) ? totalScore : 0
+  const bucket = s >= 9.999 ? 10 : Math.max(1, Math.min(10, Math.floor(s)))
+  if (bucket === 1) return 'Ối giời ơi, phải học lên thôi em ơi.'
+  if (bucket === 2) return 'Ui ui, chưa ổn rồi, kéo lại còn kịp nhé.'
+  if (bucket === 3) return 'Ái chà, có tia hi vọng rồi đó, cố thêm chút nào.'
+  if (bucket === 4) return 'Ê cũng có nền đó nha, học thêm là bật lên liền.'
+  if (bucket === 5) return 'Oke rồi đó, qua nửa đường rồi nè.'
+  if (bucket === 6) return 'Ui cha, ổn áp dần rồi đó.'
+  if (bucket === 7) return 'Oho, điểm này là bắt đầu có mùi học bá rồi nha.'
+  if (bucket === 8) return 'Xịn à nha, làm bài chắc tay ghê.'
+  if (bucket === 9) return 'Ui cha, học bá đây rồi chứ đâu nữa.'
+  return 'Trời ơi đỉnh quá, xin vía học giỏi liền.'
+}
+
 export default function ProfilePage() {
   const [fullName, setFullName] = useState('')
   const [cities, setCities] = useState<Array<{id:string,name:string}>>([])
@@ -470,9 +534,16 @@ export default function ProfilePage() {
                 {publishedExams.map((ex) => {
                   const claimRes = claimResultByExamId[ex.id] || null
                   const claimErr = claimRes?.error ? String(claimRes.error) : ''
-                  const attemptRaw = claimRes?.attempt?.raw_score ?? null
-                  const attemptTotal = claimRes?.attempt?.total_score ?? null
-                  const score = attemptRaw ?? (claimRes?.result?.score ?? null)
+                  const attemptRaw = Number(claimRes?.attempt?.raw_score ?? 0) || 0
+                  const attemptTotal = Number(claimRes?.attempt?.total_score ?? 0) || 0
+                  const essayScore = Number(claimRes?.attempt?.essay_score ?? 0) || 0
+                  const essayMax = Number(claimRes?.attempt?.essay_max_score ?? 0) || 0
+                  const achieved = attemptRaw + essayScore
+                  const percent = attemptTotal > 0 ? (achieved / attemptTotal) * 100 : 0
+                  const mcqMax = Math.max(0, attemptTotal - essayMax)
+                  const mcqPct = mcqMax > 0 ? Math.max(0, Math.min(100, (attemptRaw / mcqMax) * 100)) : 0
+                  const essayPct = essayMax > 0 ? Math.max(0, Math.min(100, (essayScore / essayMax) * 100)) : 0
+                  const encouragement = encouragementText(achieved)
                   const imageUrl = claimRes?.result?.image_url ?? claimRes?.attempt?.paper_image_url ?? null
                   const attemptUrl = claimRes?.attempt?.url ?? null
                   return (
@@ -497,18 +568,59 @@ export default function ProfilePage() {
                       </div>
                       {claimErr ? <div className="text-sm text-red-600">{claimErr}</div> : null}
                       {claimRes && !claimErr ? (
-                        <div className="text-sm">
-                          <div>
-                            Kết quả:{' '}
-                            <b>
-                              {attemptRaw != null && attemptTotal != null
-                                ? `${String(attemptRaw)} / ${String(attemptTotal)}`
-                                : (score == null ? '—' : String(score))}
-                            </b>
+                        <div className="space-y-3">
+                          <div className="flex flex-wrap items-center gap-4">
+                            <ScoreRing achieved={achieved} total={attemptTotal} percent={percent} />
+                            <div className="flex-1 min-w-[220px] space-y-3">
+                              <div className="rounded-xl border p-3 bg-white/5" style={{ borderColor: 'var(--divider)' }}>
+                                <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>Điểm trắc nghiệm</div>
+                                <div className="mt-2 h-2 w-full rounded-full overflow-hidden bg-slate-800/60 border border-slate-700/60">
+                                  <div className="h-full bg-emerald-500/70" style={{ width: `${mcqPct}%` }} />
+                                </div>
+                                <div className="mt-2 text-xs" style={{ color: 'var(--text-secondary)' }}>
+                                  {formatScore(attemptRaw)} / {formatScore(mcqMax)}
+                                </div>
+                              </div>
+
+                              <div className="rounded-xl border p-3 bg-white/5" style={{ borderColor: 'var(--divider)' }}>
+                                <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>Điểm essay</div>
+                                <div className="mt-2 h-2 w-full rounded-full overflow-hidden bg-slate-800/60 border border-slate-700/60">
+                                  <div className="h-full bg-purple-500/70" style={{ width: `${essayPct}%` }} />
+                                </div>
+                                <div className="mt-2 text-xs" style={{ color: 'var(--text-secondary)' }}>
+                                  {formatScore(essayScore)} / {formatScore(essayMax)}
+                                </div>
+                              </div>
+
+                              <div className="text-sm font-semibold" style={{ color: 'rgba(254,243,199,0.95)' }}>
+                                {encouragement}
+                              </div>
+                            </div>
                           </div>
-                          <div className="flex gap-3 flex-wrap">
-                            {imageUrl ? <a className="underline" href={String(imageUrl)} target="_blank" rel="noreferrer">Xem ảnh bài làm</a> : null}
-                            {attemptUrl ? <a className="underline" href={String(attemptUrl)}>Xem bài làm trên ChemAI</a> : null}
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <Button
+                              className="w-full"
+                              disabled={!attemptUrl}
+                              onClick={() => {
+                                if (!attemptUrl) return
+                                router.push(String(attemptUrl))
+                              }}
+                            >
+                              Xem bảng điểm
+                            </Button>
+                            <Button
+                              className="w-full"
+                              variant="outline"
+                              disabled={!imageUrl}
+                              onClick={() => {
+                                if (!imageUrl) return
+                                window.open(String(imageUrl), '_blank', 'noopener,noreferrer')
+                              }}
+                              style={{ borderColor: 'rgba(236,72,153,0.55)', color: 'rgba(251,207,232,0.95)', background: 'rgba(236,72,153,0.08)' }}
+                            >
+                              Xem ảnh bài làm
+                            </Button>
                           </div>
                         </div>
                       ) : null}

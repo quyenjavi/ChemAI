@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createSupabaseServer, serviceRoleClient } from '@/lib/supabase/server'
+import { POST as submitAttempt } from '@/app/api/attempts/submit/route'
 
 export const maxDuration = 300
 
@@ -267,13 +268,13 @@ export async function POST(req: Request) {
         answersPayload.push({ questionId: qid })
       }
 
-      const origin = new URL(req.url).origin
       const cookie = req.headers.get('cookie') || ''
-      const submitRes = await fetch(`${origin}/api/attempts/submit`, {
+      const submitReq = new Request('http://internal/api/attempts/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', cookie },
         body: JSON.stringify({ attemptId: attempt_id, answers: answersPayload })
       })
+      const submitRes = await submitAttempt(submitReq)
       const submitJson = await submitRes.json().catch(() => ({}))
       if (!submitRes.ok) {
         return NextResponse.json({ error: submitJson.error || 'Submit failed' }, { status: 500 })

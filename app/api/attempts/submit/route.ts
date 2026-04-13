@@ -160,22 +160,41 @@ export async function POST(request: Request) {
         const st = statementsByQ[qid] || []
         const payload = answerMap[qid]
         const stAns = payload?.statement_answers || {}
-        for (const s of st) {
+        const prepared = st.map((s: any) => {
           const correctVal = getStatementCorrect(s)
           const picked = typeof stAns?.[s.id] === 'boolean' ? stAns[s.id] : null
           const isCorrect = (picked != null && correctVal != null) ? picked === correctVal : null
           const maxScore = (typeof s.score === 'number')
             ? s.score
             : (typeof s.max_score === 'number' ? s.max_score : 0)
+          return { s, picked, isCorrect, maxScore }
+        })
+
+        const groupMax = prepared.reduce((acc: number, it: any) => acc + (Number(it.maxScore) || 0), 0)
+        const correctCount = prepared.filter((it: any) => it.isCorrect === true).length
+        const ratio = correctCount >= 4 ? 1
+          : correctCount === 3 ? 0.5
+            : correctCount === 2 ? 0.25
+              : correctCount === 1 ? 0.125
+                : 0
+        const groupAward = groupMax * ratio
+        const sumMaxCorrect = prepared
+          .filter((it: any) => it.isCorrect === true)
+          .reduce((acc: number, it: any) => acc + (Number(it.maxScore) || 0), 0)
+
+        for (const it of prepared) {
+          const award = (it.isCorrect === true && sumMaxCorrect > 0)
+            ? (groupAward * (Number(it.maxScore) || 0) / sumMaxCorrect)
+            : 0
           inserts.push({
             attempt_id: attemptId,
             question_id: qid,
-            statement_id: s.id,
-            selected_answer: picked == null ? null : (picked ? 'A' : 'B'),
-            is_correct: isCorrect,
-            score_awarded: isCorrect === true ? maxScore : 0,
-            max_score: maxScore,
-            grading_method: 'true_false_statement',
+            statement_id: it.s.id,
+            selected_answer: it.picked == null ? null : (it.picked ? 'A' : 'B'),
+            is_correct: it.isCorrect,
+            score_awarded: award,
+            max_score: it.maxScore,
+            grading_method: 'true_false_group_partial',
             created_at: now
           })
         }
